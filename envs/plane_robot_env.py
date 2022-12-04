@@ -47,7 +47,11 @@ class PlaneRobotEnv(gym.Env):
             - first two dimensions: the 2D postion of the goal position
             - second two dimensions: the 2D postion of the robot arm tip
         """
-        self.observation_space = spaces.Box(-self._robot_arm.arm_length, self._robot_arm.arm_length, (4, 1))
+        self.observation_space = spaces.Box(
+            -self._robot_arm.arm_length,
+            self._robot_arm.arm_length, 
+            (2 + 2 + self._robot_arm.n_joints, 1)
+            )
 
     def get_goal_position(self, radius: float):
         """
@@ -70,7 +74,12 @@ class PlaneRobotEnv(gym.Env):
         self._robot_arm.set(new_angles)
 
     def _observe(self):
-        return np.concatenate((self._goal_postion, self._robot_arm.end_postion))
+        return np.concatenate(
+            (
+                self._goal_postion, 
+                self._robot_arm.end_postion,
+                self._robot_arm.angles)
+            )
 
     def reset(self) -> Any:
         self._robot_arm.reset()

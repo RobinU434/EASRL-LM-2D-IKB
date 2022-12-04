@@ -77,6 +77,8 @@ class PlaneRobotEnv(gym.Env):
 
         self._goal_postion = self.get_goal_position(self._robot_arm.arm_length)
 
+        return self._observe()
+
     def step(self, action: np.array) -> Tuple[np.array, float, bool, Dict[str, Any]]:
         """_summary_
 
@@ -120,7 +122,7 @@ class PlaneRobotEnv(gym.Env):
 
     def draw_joints(self, draw, origin, scale_factor: float = 20):
          for postion in self._robot_arm._postions[:-1].copy():
-            # scale 
+            # scale
             postion *= scale_factor
             
             # move the segment

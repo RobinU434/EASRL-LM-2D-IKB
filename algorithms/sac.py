@@ -36,15 +36,25 @@ class ReplayBuffer():
             done_mask = 0.0 if done else 1.0 
             done_mask_lst.append([done_mask])
         
-        return torch.tensor(s_lst, dtype=torch.float), torch.tensor(a_lst, dtype=torch.float), \
-                torch.tensor(r_lst, dtype=torch.float), torch.tensor(s_prime_lst, dtype=torch.float), \
+        return  torch.tensor(s_lst, dtype=torch.float), \
+                torch.tensor(a_lst, dtype=torch.float), \
+                torch.tensor(r_lst, dtype=torch.float), \
+                torch.tensor(s_prime_lst, dtype=torch.float), \
                 torch.tensor(done_mask_lst, dtype=torch.float)
     
     def size(self):
         return len(self.buffer)
 
+ 
 class PolicyNet(nn.Module):
-    def __init__(self, learning_rate, input_size, output_size, init_alpha, lr_alpha):
+    def __init__(
+        self,
+        learning_rate,
+        input_size,
+        output_size,
+        init_alpha,
+        lr_alpha
+        ):
         super(PolicyNet, self).__init__()
         self.fc1 = nn.Linear(input_size, 128)
         
@@ -77,7 +87,7 @@ class PolicyNet(nn.Module):
         a, log_prob = self.forward(s)
         entropy = -self.log_alpha.exp() * log_prob
 
-        q1_val, q2_val = q1(s,a), q2(s,a)
+        q1_val, q2_val = q1(s, a), q2(s, a)
         q1_q2 = torch.cat([q1_val, q2_val], dim=1)
         min_q = torch.min(q1_q2, 1, keepdim=True)[0]
 
@@ -91,8 +101,14 @@ class PolicyNet(nn.Module):
         alpha_loss.backward()
         self.log_alpha_optimizer.step()
 
+
 class QNet(nn.Module):
-    def __init__(self, learning_rate, input_size: int, output_size: int = 1):
+    def __init__(
+        self,
+        learning_rate,
+        input_size: int,
+        output_size: int = 1
+        ):
         super(QNet, self).__init__()
         self.fc_s = nn.Linear(input_size, 64)
         self.fc_a = nn.Linear(1, 64)
@@ -143,6 +159,8 @@ class SAC:
         gamma = 0.98,
         batch_size = 32,
         buffer_limit = 50000,
+        start_buffer_size = 1000,
+        train_iterations = 20,
         tau = 0.01, # for target network soft update,
         target_entropy = -1.0, # for automated alpha update,
         lr_alpha = 0.001,  # for automated alpha update
@@ -150,27 +168,37 @@ class SAC:
         
         self._env = env 
         #Hyperparameters
-        self._lr_pi           = lr_pi
-        self._lr_q            = lr_q
-        self._init_alpha      = init_alpha
-        self._gamma           = gamma
-        self._batch_size      = batch_size
-        self._buffer_limit    = buffer_limit
-        self._tau             = tau # for target network soft update
-        self._target_entropy  = target_entropy # for automated alpha update
-        self._lr_alpha        = lr_alpha  # for automated alpha update
+        self._lr_pi             = lr_pi
+        self._lr_q              = lr_q
+        self._init_alpha        = init_alpha
+        self._gamma             = gamma
+        self._batch_size        = batch_size
+        self._buffer_limit      = buffer_limit
+        self._start_buffer_size = start_buffer_size
+        self._train_iterations  = train_iterations
+        self._tau               = tau # for target network soft update
+        self._target_entropy    = target_entropy # for automated alpha update
+        self._lr_alpha          = lr_alpha  # for automated alpha update
 
+        # Replay-Buffer
         self._memory = ReplayBuffer(buffer_limit=buffer_limit)
 
+        # Define networks
         input_size = env.observation_space.shape
         output_size = env.action_space.shape
 
-        self._q1 = QNet(lr_q)
-        self._q2 = QNet(lr_q)
-        self._q1_target = QNet(lr_q)
-        self._q2_target = QNet(lr_q)
+        self._q1 = QNet(lr_q, input_size)
+        self._q2 = QNet(lr_q, input_size)
+        self._q1_target = QNet(lr_q, input_size)
+        self._q2_target = QNet(lr_q, input_size)
 
-        self._pi = PolicyNet(lr_pi)
+        self._pi = PolicyNet(
+            lr_pi,
+            input_size,
+            output_size,
+            self._init_alpha,
+            self._lr_alpha
+            )
 
     def train(self, n_epochs):
         self._q1_target.load_state_dict(self._q1.state_dict())
@@ -184,28 +212,30 @@ class SAC:
             done = False
 
             while not done:
-                a, log_prob= self._pi(torch.from_numpy(s).float())
+                a, log_prob = self._pi(torch.from_numpy(s).float())
                 s_prime, r, done, info = self._env.step([2.0*a.item()])
-                self._memory.put((s, a.item(), r/10.0, s_prime, done))
+                self._memory.put((s, a.item(), r / 10.0, s_prime, done))  # why is the reward divided by 10?????
                 score +=r
                 s = s_prime
                     
-            if self._memory.size()>1000:
-                for i in range(20):
+            if self._memory.size() > self._start_buffer_size:
+                for i in range(self._train_iterations):
                     mini_batch = self._memory.sample(self._batch_size)
                     td_target = calc_target(
                         self._pi, 
                         self._q1_target, 
                         self._q2_target, 
-                        mini_batch)
+                        mini_batch, 
+                        self._gamma)
                     self._q1.train_net(td_target, mini_batch)
                     self._q2.train_net(td_target, mini_batch)
                     entropy = self._pi.train_net(
                         self._q1, 
                         self._q2, 
-                        mini_batch)
-                    self._q1.soft_update(self._q1_target)
-                    self._q2.soft_update(self._q2_target)
+                        mini_batch,
+                        self._target_entropy)
+                    self._q1.soft_update(self._q1_target, self._tau)
+                    self._q2.soft_update(self._q2_target, self._tau)
                     
             if n_epi%print_interval==0 and n_epi!=0:
                 print("# of episode :{}, avg score : {:.1f} alpha:{:.4f}".format(n_epi, score/print_interval, self._pi.log_alpha.exp()))

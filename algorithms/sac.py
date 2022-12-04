@@ -23,7 +23,7 @@ class ReplayBuffer():
     def put(self, transition):
         self.buffer.append(transition)
     
-    def sample(self, n):
+    def sample(self, n, dtype = torch.float):
         mini_batch = random.sample(self.buffer, n)
         s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst = [], [], [], [], []
 
@@ -33,15 +33,16 @@ class ReplayBuffer():
             a_lst.append([a])
             r_lst.append([r])
             s_prime_lst.append(s_prime)
-            done_mask = 0.0 if done else 1.0 
+            done_mask = float(done)
             done_mask_lst.append([done_mask])
         
-        return  torch.tensor(s_lst, dtype=torch.float), \
-                torch.tensor(a_lst, dtype=torch.float), \
-                torch.tensor(r_lst, dtype=torch.float), \
-                torch.tensor(s_prime_lst, dtype=torch.float), \
-                torch.tensor(done_mask_lst, dtype=torch.float)
+        return  torch.tensor(s_lst, dtype=dtype), \
+                torch.tensor(a_lst, dtype=dtype), \
+                torch.tensor(r_lst, dtype=dtype), \
+                torch.tensor(s_prime_lst, dtype=dtype), \
+                torch.tensor(done_mask_lst, dtype=dtype)
     
+    @property
     def size(self):
         return len(self.buffer)
 
@@ -218,7 +219,7 @@ class SAC:
                 score +=r
                 s = s_prime
                     
-            if self._memory.size() > self._start_buffer_size:
+            if self._memory.size > self._start_buffer_size:
                 for i in range(self._train_iterations):
                     mini_batch = self._memory.sample(self._batch_size)
                     td_target = calc_target(

@@ -81,14 +81,14 @@ class SAC:
 
         return target
 
-    def train(self, n_epochs):
+    def train(self, n_epochs, print_interval: int = 20):
+        # target networks are initiated as copies from the actual q networks
         self._q1_target.load_state_dict(self._q1.state_dict())
         self._q2_target.load_state_dict(self._q2.state_dict())
 
         score = 0.0
-        print_interval = 20
 
-        for n_epi in range(n_epochs):
+        for epoch_idx in range(n_epochs):
             s = self._env.reset()
             done = False
 
@@ -116,8 +116,8 @@ class SAC:
                     self._q1.soft_update(self._q1_target, self._tau)
                     self._q2.soft_update(self._q2_target, self._tau)
                     
-            if n_epi%print_interval==0 and n_epi!=0:
-                print("# of episode :{}, avg score : {:.1f} alpha:{:.4f}".format(n_epi, score/print_interval, self._pi.log_alpha.exp()))
+            if epoch_idx%print_interval == 0 and epoch_idx != 0:
+                print("# of episode :{}, avg score : {:.1f} alpha:{:.4f}".format(epoch_idx, score/print_interval, self._pi.log_alpha.exp()))
                 score = 0.0
 
         self._env.close()

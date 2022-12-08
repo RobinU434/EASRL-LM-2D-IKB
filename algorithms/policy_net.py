@@ -41,9 +41,11 @@ class PolicyNet(nn.Module):
         log_prob = dist.log_prob(action)
 
         real_action = torch.tanh(action)
-        real_log_prob = log_prob - torch.log(1-torch.tanh(action).pow(2) + 1e-7)
-        
+        real_log_prob = log_prob - torch.log(1 - torch.tanh(action).pow(2) + 1e-7)
+
         return real_action, real_log_prob
+
+
 
     def train_net(self, q1, q2, mini_batch, target_entropy):
         s, _, _, _, _ = mini_batch

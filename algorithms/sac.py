@@ -11,40 +11,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Normal
 import numpy as np
-import collections, random
+
+from algorithms.buffer import ReplayBuffer
 
 from envs.plane_robot_env import PlaneRobotEnv
-
-
-class ReplayBuffer():
-    def __init__(self, buffer_limit):
-        self.buffer = collections.deque(maxlen=buffer_limit)
-
-    def put(self, transition):
-        self.buffer.append(transition)
-    
-    def sample(self, n, dtype = torch.float):
-        mini_batch = random.sample(self.buffer, n)
-        s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst = [], [], [], [], []
-
-        for transition in mini_batch:
-            s, a, r, s_prime, done = transition
-            s_lst.append(s)
-            a_lst.append([a])
-            r_lst.append([r])
-            s_prime_lst.append(s_prime)
-            done_mask = float(done)
-            done_mask_lst.append([done_mask])
-        
-        return  torch.tensor(s_lst, dtype=dtype), \
-                torch.tensor(a_lst, dtype=dtype), \
-                torch.tensor(r_lst, dtype=dtype), \
-                torch.tensor(s_prime_lst, dtype=dtype), \
-                torch.tensor(done_mask_lst, dtype=dtype)
-    
-    @property
-    def size(self):
-        return len(self.buffer)
 
  
 class PolicyNet(nn.Module):
@@ -136,19 +106,6 @@ class QNet(nn.Module):
         for param_target, param in zip(net_target.parameters(), self.parameters()):
             param_target.data.copy_(param_target.data * (1.0 - tau) + param.data * tau)
 
-def calc_target(pi, q1, q2, mini_batch, gamma):
-    s, a, r, s_prime, done = mini_batch
-
-    with torch.no_grad():
-        a_prime, log_prob= pi(s_prime)
-        entropy = -pi.log_alpha.exp() * log_prob
-        q1_val, q2_val = q1(s_prime,a_prime), q2(s_prime,a_prime)
-        q1_q2 = torch.cat([q1_val, q2_val], dim=1)
-        min_q = torch.min(q1_q2, 1, keepdim=True)[0]
-        target = r + gamma * done * (min_q + entropy)
-
-    return target
-
 
 class SAC:
     def __init__(
@@ -201,6 +158,22 @@ class SAC:
             self._lr_alpha
             )
 
+    def calc_target(self, mini_batch):
+        s, a, r, s_prime, done = mini_batch
+
+        with torch.no_grad():
+            a_prime, log_prob= self._pi(s_prime)
+            entropy = -self._pi.log_alpha.exp() * log_prob
+            
+            q1_val = self.q1(s_prime,a_prime), 
+            q2_val = self.q2(s_prime,a_prime)
+            q1_q2 = torch.cat([q1_val, q2_val], dim=1)
+            min_q = torch.min(q1_q2, 1, keepdim=True)[0]
+            
+            target = r + self._gamma * done * (min_q + entropy)
+
+        return target
+
     def train(self, n_epochs):
         self._q1_target.load_state_dict(self._q1.state_dict())
         self._q2_target.load_state_dict(self._q2.state_dict())
@@ -219,22 +192,20 @@ class SAC:
                 score +=r
                 s = s_prime
                     
-            if self._memory.size > self._start_buffer_size:
-                for i in range(self._train_iterations):
+            if len(self._memory) > self._start_buffer_size:
+                for _ in range(self._train_iterations):
                     mini_batch = self._memory.sample(self._batch_size)
-                    td_target = calc_target(
-                        self._pi, 
-                        self._q1_target, 
-                        self._q2_target, 
-                        mini_batch, 
-                        self._gamma)
+                    td_target = self.calc_target(mini_batch)
+                    
                     self._q1.train_net(td_target, mini_batch)
                     self._q2.train_net(td_target, mini_batch)
+                    
                     entropy = self._pi.train_net(
                         self._q1, 
                         self._q2, 
                         mini_batch,
                         self._target_entropy)
+                    
                     self._q1.soft_update(self._q1_target, self._tau)
                     self._q2.soft_update(self._q2_target, self._tau)
                     

@@ -6,105 +6,12 @@
 
 import gym
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.distributions import Normal
-import numpy as np
 
 from algorithms.buffer import ReplayBuffer
+from algorithms.q_net import QNet
+from algorithms.policy_net import PolicyNet
 
 from envs.plane_robot_env import PlaneRobotEnv
-
- 
-class PolicyNet(nn.Module):
-    def __init__(
-        self,
-        learning_rate,
-        input_size,
-        output_size,
-        init_alpha,
-        lr_alpha
-        ):
-        super(PolicyNet, self).__init__()
-        self.fc1 = nn.Linear(input_size, 128)
-        
-        self.fc_mu = nn.Linear(128, 1)
-        self.fc_std  = nn.Linear(128, output_size)
-
-        self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
-
-        self.log_alpha = torch.tensor(np.log(init_alpha))
-        self.log_alpha.requires_grad = True
-        self.log_alpha_optimizer = optim.Adam([self.log_alpha], lr=lr_alpha)
-
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-
-        mu = self.fc_mu(x)
-        std = F.softplus(self.fc_std(x))
-
-        dist = Normal(mu, std)
-        action = dist.rsample()
-        log_prob = dist.log_prob(action)
-
-        real_action = torch.tanh(action)
-        real_log_prob = log_prob - torch.log(1-torch.tanh(action).pow(2) + 1e-7)
-        
-        return real_action, real_log_prob
-
-    def train_net(self, q1, q2, mini_batch, target_entropy):
-        s, _, _, _, _ = mini_batch
-        a, log_prob = self.forward(s)
-        entropy = -self.log_alpha.exp() * log_prob
-
-        q1_val, q2_val = q1(s, a), q2(s, a)
-        q1_q2 = torch.cat([q1_val, q2_val], dim=1)
-        min_q = torch.min(q1_q2, 1, keepdim=True)[0]
-
-        loss = -min_q - entropy # for gradient ascent
-        self.optimizer.zero_grad()
-        loss.mean().backward()
-        self.optimizer.step()
-
-        self.log_alpha_optimizer.zero_grad()
-        alpha_loss = -(self.log_alpha.exp() * (log_prob + target_entropy).detach()).mean()
-        alpha_loss.backward()
-        self.log_alpha_optimizer.step()
-
-
-class QNet(nn.Module):
-    def __init__(
-        self,
-        learning_rate,
-        input_size: int,
-        output_size: int = 1
-        ):
-        super(QNet, self).__init__()
-        self.fc_s = nn.Linear(input_size, 64)
-        self.fc_a = nn.Linear(1, 64)
-        self.fc_cat = nn.Linear(128, 32)
-        self.fc_out = nn.Linear(32, output_size)
-        self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
-
-    def forward(self, x, a):
-        h1 = F.relu(self.fc_s(x))
-        h2 = F.relu(self.fc_a(a))
-        cat = torch.cat([h1,h2], dim=1)
-        q = F.relu(self.fc_cat(cat))
-        q = self.fc_out(q)
-        return q
-
-    def train_net(self, target, mini_batch):
-        s, a, r, s_prime, done = mini_batch
-        loss = F.smooth_l1_loss(self.forward(s, a) , target)
-        self.optimizer.zero_grad()
-        loss.mean().backward()
-        self.optimizer.step()
-
-    def soft_update(self, net_target, tau):
-        for param_target, param in zip(net_target.parameters(), self.parameters()):
-            param_target.data.copy_(param_target.data * (1.0 - tau) + param.data * tau)
 
 
 class SAC:

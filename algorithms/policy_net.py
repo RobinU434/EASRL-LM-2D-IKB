@@ -45,8 +45,6 @@ class PolicyNet(nn.Module):
 
         return real_action, real_log_prob
 
-
-
     def train_net(self, q1, q2, mini_batch, target_entropy):
         s, _, _, _, _ = mini_batch
         a, log_prob = self.forward(s)

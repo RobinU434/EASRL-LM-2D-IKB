@@ -16,6 +16,7 @@ class PlaneRobotEnv(gym.Env):
         segment_lenght: float = 1,
         constraints: np.array = None,
         task: BaseTask = None,
+        discrete_mode: bool = False,
         ) -> None:
 
         self._robot_arm = RobotArm(n_joints, segment_lenght)
@@ -28,7 +29,11 @@ class PlaneRobotEnv(gym.Env):
             self._constraints = np.zeros((self._robot_arm.n_joints, 2))
         self._constraints = constraints
 
-        self._goal_postion = self.get_goal_position(self._robot_arm.arm_length)
+        # discrete mode = True is for discrete actions (+-1 / +-0 degrees)
+        # discrete mode = False is for continuous actions
+        self._discrete_mode = discrete_mode
+
+        self._goal_postion = self.get_target_position(self._robot_arm.arm_length)
 
         self._task = task
         self.set_action_space()
@@ -39,7 +44,10 @@ class PlaneRobotEnv(gym.Env):
         an action is either +1 degree, -1 degree or 0 degrees of rotation per joint
         Therefor is one action a tensor with the length equal to the number of joints. 
         """
-        self.action_space = spaces.Box(-1, 1, (self._robot_arm.n_joints, 1))
+        if self._discrete_mode:
+            self.action_space = spaces.Box(-1, 1, (self._robot_arm.n_joints, 1))
+        else:
+            self.action_space = spaces.Box(0, 2 * np.pi, (self._robot_arm.n_joints, 1))
 
     def set_observation_space(self) -> None:
         """
@@ -53,7 +61,7 @@ class PlaneRobotEnv(gym.Env):
             (2 + 2 + self._robot_arm.n_joints, 1)
             )
 
-    def get_goal_position(self, radius: float):
+    def get_target_position(self, radius: float):
         """
         sample goal postion in a circular shape around the origin
         """
@@ -62,16 +70,18 @@ class PlaneRobotEnv(gym.Env):
 
         return radius * np.array([np.cos(theta), np.sin(theta)])
 
-    def apply_action(self, action: np.array):
+    def _apply_action(self, action: np.array):
         """apply +-1 action on robot arm
         TODO: check for constraints
 
         Args:
             action (np.array): +-1 action
         """
-        new_angles = self._robot_arm.angles + action
+        # with discrete actions the action is -1 +1 or 0 which will be added ontop of the current angle
+        # with continuous actions the action itself is the delta angle which will be also added ontop of the current angle
+        action = self._robot_arm.angles + action
 
-        self._robot_arm.set(new_angles)
+        self._robot_arm.set(action)
 
     def _observe(self):
         return np.concatenate(
@@ -84,7 +94,7 @@ class PlaneRobotEnv(gym.Env):
     def reset(self) -> Any:
         self._robot_arm.reset()
 
-        self._goal_postion = self.get_goal_position(self._robot_arm.arm_length)
+        self._goal_postion = self.get_target_position(self._robot_arm.arm_length)
 
         return self._observe()
 
@@ -98,7 +108,7 @@ class PlaneRobotEnv(gym.Env):
             Tuple[np.array, float, bool, Dict[str, Any]]: _description_
         """
 
-        self.apply_action(action)
+        self._apply_action(action)
 
         reward = self._task.reward(self._robot_arm.end_postion, self._goal_postion)
 
@@ -117,19 +127,19 @@ class PlaneRobotEnv(gym.Env):
         origin = (render_size[0] / 2, render_size[1] / 2)
         scale_factor = 20
         
-        self.draw_goal(draw, origin + self._goal_postion * scale_factor)
-        self.draw_segments(draw, origin, scale_factor)
-        self.draw_joints(draw, origin, scale_factor)
+        self._draw_goal(draw, origin + self._goal_postion * scale_factor)
+        self._draw_segments(draw, origin, scale_factor)
+        self._draw_joints(draw, origin, scale_factor)
 
         img.save(path)
 
-    def draw_goal(self, draw, origin: np.array = np.zeros((2)), radius=4):
+    def _draw_goal(self, draw, origin: np.array = np.zeros((2)), radius=4):
         x, y = origin
         # distances to origin
         # (left, upper, right, lower)
         draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=(255, 0, 0), outline=(0, 0, 0))
 
-    def draw_joints(self, draw, origin, scale_factor: float = 20):
+    def _draw_joints(self, draw, origin, scale_factor: float = 20):
          for postion in self._robot_arm._postions[:-1].copy():
             # scale
             postion *= scale_factor
@@ -137,9 +147,9 @@ class PlaneRobotEnv(gym.Env):
             # move the segment
             postion += origin
 
-            self.draw_joint(draw, postion)
+            self._draw_joint(draw, postion)
 
-    def draw_segments(self, draw, origin, scale_factor: float = 20):
+    def _draw_segments(self, draw, origin, scale_factor: float = 20):
         for idx in range(self._robot_arm.n_joints):
             start = self._robot_arm._postions[idx].copy()
             end =  self._robot_arm._postions[idx + 1].copy()
@@ -156,7 +166,7 @@ class PlaneRobotEnv(gym.Env):
 
 
     @staticmethod
-    def draw_joint(draw, origin: Tuple[float, float] = (0, 0), radius=4):
+    def _draw_joint(draw, origin: Tuple[float, float] = (0, 0), radius=4):
         """draws joint from robot arm as a grey circle
 
         Args:

@@ -7,7 +7,10 @@
 import gym
 import torch
 
+import numpy as np
+
 from algorithms.buffer import ReplayBuffer
+from algorithms.helper import get_space_size
 from algorithms.q_net import QNet
 from algorithms.policy_net import PolicyNet
 
@@ -49,13 +52,13 @@ class SAC:
         self._memory = ReplayBuffer(buffer_limit=buffer_limit)
 
         # Define networks
-        input_size = env.observation_space.shape
-        output_size = env.action_space.shape
+        input_size = get_space_size(env.observation_space.shape)
+        output_size = get_space_size(env.action_space.shape)
 
-        self._q1 = QNet(lr_q, input_size)
-        self._q2 = QNet(lr_q, input_size)
-        self._q1_target = QNet(lr_q, input_size)
-        self._q2_target = QNet(lr_q, input_size)
+        self._q1 = QNet(lr_q, input_size_state=input_size, input_size_action=output_size)
+        self._q2 = QNet(lr_q, input_size_state=input_size, input_size_action=output_size)
+        self._q1_target = QNet(lr_q, input_size_state=input_size, input_size_action=output_size)
+        self._q2_target = QNet(lr_q, input_size_state=input_size, input_size_action=output_size)
 
         self._pi = PolicyNet(
             lr_pi,
@@ -72,8 +75,8 @@ class SAC:
             a_prime, log_prob= self._pi(s_prime)
             entropy = -self._pi.log_alpha.exp() * log_prob
             
-            q1_val = self.q1(s_prime,a_prime), 
-            q2_val = self.q2(s_prime,a_prime)
+            q1_val = self._q1(s_prime, a_prime)
+            q2_val = self._q2(s_prime, a_prime)
             q1_q2 = torch.cat([q1_val, q2_val], dim=1)
             min_q = torch.min(q1_q2, 1, keepdim=True)[0]
             
@@ -83,9 +86,10 @@ class SAC:
 
     def train(self, n_epochs, print_interval: int = 20):
         # target networks are initiated as copies from the actual q networks
-        self._q1_target.load_state_dict(self._q1.state_dict())
-        self._q2_target.load_state_dict(self._q2.state_dict())
-
+        self._q1_target.load_state_dict(self._q1.state_dict().copy())
+        self._q2_target.load_state_dict(self._q2.state_dict().copy())
+        
+        # print(id(self._q1), id(self._q2))
         score = 0.0
 
         for epoch_idx in range(n_epochs):
@@ -94,8 +98,10 @@ class SAC:
 
             while not done:
                 a, log_prob = self._pi(torch.from_numpy(s).float())
-                s_prime, r, done, info = self._env.step([2.0*a.item()])
-                self._memory.put((s, a.item(), r / 10.0, s_prime, done))  # why is the reward divided by 10?????
+                # detach grad from action to apply it to the environment where it is converted into a numpy.ndarray
+                a = a.detach()
+                s_prime, r, done, info = self._env.step(a * 2)
+                self._memory.put((s, a, r / 10.0 , s_prime, done))  # why is the reward divided by 10?????
                 score +=r
                 s = s_prime
                     
@@ -116,7 +122,7 @@ class SAC:
                     self._q1.soft_update(self._q1_target, self._tau)
                     self._q2.soft_update(self._q2_target, self._tau)
                     
-            if epoch_idx%print_interval == 0 and epoch_idx != 0:
+            if epoch_idx % print_interval == 0 and epoch_idx != 0:
                 print("# of episode :{}, avg score : {:.1f} alpha:{:.4f}".format(epoch_idx, score/print_interval, self._pi.log_alpha.exp()))
                 score = 0.0
 

@@ -4,10 +4,9 @@
 # (date: 04.12.2022)
 # =====================================================================================================================
 
-import collections
-from random import random
-
 import torch
+import random
+import collections
 
 
 class ReplayBuffer():
@@ -24,14 +23,14 @@ class ReplayBuffer():
         for transition in mini_batch:
             s, a, r, s_prime, done = transition
             s_lst.append(s)
-            a_lst.append([a])
+            a_lst.append(a)
             r_lst.append([r])
             s_prime_lst.append(s_prime)
             done_mask = float(done)
             done_mask_lst.append([done_mask])
-        
+
         return  torch.tensor(s_lst, dtype=dtype), \
-                torch.tensor(a_lst, dtype=dtype), \
+                torch.stack(a_lst), \
                 torch.tensor(r_lst, dtype=dtype), \
                 torch.tensor(s_prime_lst, dtype=dtype), \
                 torch.tensor(done_mask_lst, dtype=dtype)

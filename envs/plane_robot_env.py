@@ -1,9 +1,10 @@
-from typing import Any, Dict, Tuple
-from gym import spaces
 import gym
+import torch
 import numpy as np
 
+from gym import spaces
 from PIL import Image, ImageDraw
+from typing import Any, Dict, Tuple
 
 from envs.robots.robot_arm import RobotArm
 from envs.task.base_task import BaseTask
@@ -19,6 +20,7 @@ class PlaneRobotEnv(gym.Env):
         discrete_mode: bool = False,
         ) -> None:
 
+        self._task = task
         self._robot_arm = RobotArm(n_joints, segment_lenght)
         # init angles and other 
         self.reset()
@@ -33,9 +35,8 @@ class PlaneRobotEnv(gym.Env):
         # discrete mode = False is for continuous actions
         self._discrete_mode = discrete_mode
 
-        self._goal_postion = self.get_target_position(self._robot_arm.arm_length)
+        self._target_postion = self.get_target_position(self._robot_arm.arm_length)
 
-        self._task = task
         self.set_action_space()
         self.set_observation_space()
 
@@ -77,24 +78,40 @@ class PlaneRobotEnv(gym.Env):
         Args:
             action (np.array): +-1 action
         """
+        if type(action) == torch.Tensor:
+            # detach if the action tensor requires grad = True
+            action = action.detach().numpy()
+
         # with discrete actions the action is -1 +1 or 0 which will be added ontop of the current angle
         # with continuous actions the action itself is the delta angle which will be also added ontop of the current angle
+        action = np.squeeze(action)
         action = self._robot_arm.angles + action
 
         self._robot_arm.set(action)
 
-    def _observe(self):
-        return np.concatenate(
+    def _observe(self, normalize: bool = True):
+        if normalize:
+            # normalize observations 
+            target_position = self._target_postion / self._robot_arm.arm_length
+            arm_end_position = self._robot_arm.end_postion / self._robot_arm.arm_length
+        else:
+            target_position = self._target_postion
+            arm_end_position = self._robot_arm.end_postion
+
+        obs = np.concatenate(
             (
-                self._goal_postion, 
-                self._robot_arm.end_postion,
+                target_position, 
+                arm_end_position,
                 self._robot_arm.angles)
             )
 
+        return obs
+
     def reset(self) -> Any:
         self._robot_arm.reset()
+        self._task.reset()
 
-        self._goal_postion = self.get_target_position(self._robot_arm.arm_length)
+        self._target_postion = self.get_target_position(self._robot_arm.arm_length)
 
         return self._observe()
 
@@ -107,18 +124,18 @@ class PlaneRobotEnv(gym.Env):
         Returns:
             Tuple[np.array, float, bool, Dict[str, Any]]: _description_
         """
-
         self._apply_action(action)
 
-        reward = self._task.reward(self._robot_arm.end_postion, self._goal_postion)
+        reward = self._task.reward(self._robot_arm.end_postion, self._target_postion)
 
         obs = self._observe()
 
-        done = self._task.done()
+        done = self._task.done(self._robot_arm.end_postion, self._target_postion, )
 
-        return obs, reward, done
+        return obs, reward, done, {}
         
-    def render(self, render_size: Tuple[int, int] = (500, 300), path: str = "test.png"):
+    def render(self, path: str = "test.png"):
+        render_size = (int(self._robot_arm.arm_length * 1.1), int(self._robot_arm.arm_length * 1.1))
         # origin is in the upper left corner
         img = Image.new("RGB", render_size, (256, 256, 256))
         draw = ImageDraw.Draw(img)
@@ -127,7 +144,7 @@ class PlaneRobotEnv(gym.Env):
         origin = (render_size[0] / 2, render_size[1] / 2)
         scale_factor = 20
         
-        self._draw_goal(draw, origin + self._goal_postion * scale_factor)
+        self._draw_goal(draw, origin + self._target_postion * scale_factor)
         self._draw_segments(draw, origin, scale_factor)
         self._draw_joints(draw, origin, scale_factor)
 

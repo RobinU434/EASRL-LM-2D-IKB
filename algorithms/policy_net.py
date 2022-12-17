@@ -7,6 +7,8 @@ import torch.nn.functional as F
 import numpy as np
 
 from torch.distributions import Normal
+from torch.distributions import constraints
+
 
 
 class PolicyNet(nn.Module):
@@ -31,17 +33,22 @@ class PolicyNet(nn.Module):
         self.log_alpha_optimizer = optim.Adam([self.log_alpha], lr=lr_alpha)
 
     def forward(self, x):
+        # squeeze input tensor from (x, 1) to (x, )
+        x = np.squeeze(x)
         x = F.relu(self.fc1(x))
-
         mu = self.fc_mu(x)
         std = F.softplus(self.fc_std(x))
-
-        dist = Normal(mu, std)
+        
+        dist = Normal(mu, std, validate_args={"scale": constraints.greater_than_eq})
         action = dist.rsample()
         log_prob = dist.log_prob(action)
+        # sum log prob
+        log_prob =  log_prob.sum()
 
         real_action = torch.tanh(action)
-        real_log_prob = log_prob - torch.log(1 - torch.tanh(action).pow(2) + 1e-7)
+        # Squash correction (from original SAC implementation)
+        # this comes from the fact that tanh is bijective and differentiable
+        real_log_prob = log_prob - torch.sum(torch.log(1 - torch.tanh(action).pow(2) + 1e-7))
 
         return real_action, real_log_prob
 

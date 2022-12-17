@@ -23,17 +23,16 @@ class RobotArm:
         Args:
             angles (np.array): array with same length as number of joints
         """
-        self._angles = angles
-
+        self._angles = angles % (2 * np.pi)
         for idx in range(self._n_joints):
-            orign = self._postions[idx]
+            origin = self._postions[idx]
             
             # enw postion
             new_pos = np.array([np.cos(self._angles[idx]), np.sin(self._angles[idx])])
             new_pos *= self._segemnt_length
 
             # translate position
-            new_pos += orign
+            new_pos += origin
 
             self._postions[idx + 1] = new_pos
 

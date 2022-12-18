@@ -9,6 +9,8 @@ import torch
 
 import numpy as np
 
+from torch.utils.tensorboard import SummaryWriter
+
 from algorithms.buffer import ReplayBuffer
 from algorithms.helper import get_space_size
 from algorithms.q_net import QNet
@@ -21,6 +23,7 @@ class SAC:
     def __init__(
         self, 
         env: gym.Env,
+        logging_writer: SummaryWriter,
         lr_pi = 0.0005, 
         lr_q = 0.001,
         init_alpha = 0.01,
@@ -35,6 +38,7 @@ class SAC:
         ) -> None:
         
         self._env = env 
+        self._logger = logging_writer
         #Hyperparameters
         self._lr_pi             = lr_pi
         self._lr_q              = lr_q
@@ -89,10 +93,10 @@ class SAC:
         self._q1_target.load_state_dict(self._q1.state_dict().copy())
         self._q2_target.load_state_dict(self._q2.state_dict().copy())
         
-        # print(id(self._q1), id(self._q2))
         score = 0.0
+        num_steps = 0
 
-        for epoch_idx in range(n_epochs):
+        for epoch_idx in range(n_epochs + 1):
             s = self._env.reset()
             done = False
 
@@ -104,6 +108,8 @@ class SAC:
                 self._memory.put((s, a, r / 10.0 , s_prime, done))  # why is the reward divided by 10?????
                 score +=r
                 s = s_prime
+            
+            num_steps += self._env.num_steps
                     
             if len(self._memory) > self._start_buffer_size:
                 for _ in range(self._train_iterations):
@@ -123,8 +129,15 @@ class SAC:
                     self._q2.soft_update(self._q2_target, self._tau)
                     
             if epoch_idx % print_interval == 0 and epoch_idx != 0:
-                print("# of episode :{}, avg score : {:.1f} alpha:{:.4f}".format(epoch_idx, score/print_interval, self._pi.log_alpha.exp()))
+                avg_episode_len = num_steps / print_interval 
+                avg_score = score / num_steps
+                print("# of episode :{}, avg score : {:.1f} alpha:{:.4f}".format(epoch_idx, avg_score, self._pi.log_alpha.exp()))
+                # log metrics
+                self._logger.add_scalar("mean_reward", avg_score, epoch_idx)
+                self._logger.add_scalar("mean_episode_len", avg_episode_len, epoch_idx)
+                self._logger.add_scalar("alpha", self._pi.log_alpha.exp(), epoch_idx)
                 score = 0.0
+                num_steps = 0
 
         self._env.close()
 

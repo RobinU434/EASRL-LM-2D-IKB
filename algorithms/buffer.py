@@ -18,22 +18,25 @@ class ReplayBuffer():
     
     def sample(self, n, dtype = torch.float):
         mini_batch = random.sample(self.buffer, n)
-        s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst = [], [], [], [], []
 
-        for transition in mini_batch:
+        # look at first element from minibatch to determine the shape of action, observation, ...
+        s, a, r, s_prime, done = mini_batch[0]
+        s_lst = torch.empty((n, *s.shape))
+        a_lst = torch.empty((n, *a.shape))
+        r_lst = torch.empty((n, 1))
+        s_prime_lst = torch.empty((n, *s_prime.shape))
+        done_mask_lst = torch.empty((n, 1))
+
+        for idx, transition in enumerate(mini_batch):
             s, a, r, s_prime, done = transition
-            s_lst.append(s)
-            a_lst.append(a)
-            r_lst.append([r])
-            s_prime_lst.append(s_prime)
+            s_lst[idx] = torch.tensor(s)
+            a_lst[idx] = a
+            r_lst[idx] = torch.tensor([r])
+            s_prime_lst[idx] = torch.tensor(s_prime)
             done_mask = float(done)
-            done_mask_lst.append([done_mask])
+            done_mask_lst[idx] = torch.tensor([done_mask])
 
-        return  torch.tensor(s_lst, dtype=dtype), \
-                torch.stack(a_lst), \
-                torch.tensor(r_lst, dtype=dtype), \
-                torch.tensor(s_prime_lst, dtype=dtype), \
-                torch.tensor(done_mask_lst, dtype=dtype)
+        return  s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst 
     
     @property
     def size(self):

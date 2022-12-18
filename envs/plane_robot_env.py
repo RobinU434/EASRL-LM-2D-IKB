@@ -40,6 +40,8 @@ class PlaneRobotEnv(gym.Env):
         self.set_action_space()
         self.set_observation_space()
 
+        self._step_counter = 0
+
     def set_action_space(self) -> None:
         """
         an action is either +1 degree, -1 degree or 0 degrees of rotation per joint
@@ -111,6 +113,8 @@ class PlaneRobotEnv(gym.Env):
         self._robot_arm.reset()
         self._task.reset()
 
+        self._step_counter = 0
+
         self._target_postion = self.get_target_position(self._robot_arm.arm_length)
 
         return self._observe()
@@ -124,9 +128,12 @@ class PlaneRobotEnv(gym.Env):
         Returns:
             Tuple[np.array, float, bool, Dict[str, Any]]: _description_
         """
+        self._step_counter += 1
         self._apply_action(action)
-
-        reward = self._task.reward(self._robot_arm.end_postion, self._target_postion)
+        
+        # the target could be two times the arm length away from the end position
+        normalize_factor = 1 / (2 * self._robot_arm.arm_length) 
+        reward = self._task.reward(self._robot_arm.end_postion, self._target_postion, normalize_factor) 
 
         obs = self._observe()
 
@@ -208,7 +215,10 @@ class PlaneRobotEnv(gym.Env):
         """
         coord = [start[0], start[1], end[0], end[1]]
         draw.line(coord, fill=(255, 255, 0), width=width)
-
+        
+    @property
+    def num_steps(self):
+        return self._step_counter
         
 
 if __name__ == "__main__":

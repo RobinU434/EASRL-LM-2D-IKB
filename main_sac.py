@@ -4,12 +4,12 @@ import torch
 
 from torch.utils.tensorboard import SummaryWriter
 
-from algorithms.sac import SAC
+from algorithms.sac.sac import SAC
 from envs.plane_robot_env import PlaneRobotEnv
 from envs.task.reach_goal import ReachGoalTask
 
 
-num_joints = 10
+num_joints = 20
 
 for i in range(10):
   seed = torch.seed()

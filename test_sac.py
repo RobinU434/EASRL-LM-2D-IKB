@@ -127,7 +127,7 @@ def calc_target(pi, q1, q2, mini_batch):
         target = r + gamma * done * (min_q + entropy)
 
     return target
-    
+
 def main():
     env = gym.make('Pendulum-v1')
     memory = ReplayBuffer()
@@ -142,10 +142,12 @@ def main():
 
     for n_epi in range(10000):
         s = env.reset()
+        print(type(s))
         done = False
 
         while not done:
             a, log_prob= pi(torch.from_numpy(s).float())
+            print(a)
             s_prime, r, done, info = env.step([2.0*a.item()])
             memory.put((s, a.item(), r/10.0, s_prime, done))
             score +=r

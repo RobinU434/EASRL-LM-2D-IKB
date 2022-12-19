@@ -93,10 +93,11 @@ class PPO:
 
     def train(self, n_epochs):
         score = 0.0
+        num_steps = 0
         print_interval = 20
         rollout = []
 
-        for n_epi in range(n_epochs):
+        for epoch_idx in range(n_epochs):
             # sample rollout 
             s = self.env.reset()
             done = False
@@ -118,14 +119,22 @@ class PPO:
 
                     s = s_prime
                     score += r
+                    num_steps += 1
                     if done:
                         break
 
                 self.train_net()
 
-            if n_epi%print_interval==0 and n_epi!=0:
-                print("# of episode :{}, avg score : {:.1f}, opt step: {}".format(n_epi, score/print_interval, self.model.optimization_step))
+            if epoch_idx % print_interval == 0 and epoch_idx != 0:
+                avg_episode_len = num_steps / print_interval 
+                mean_reward = score / num_steps
+                print("# of episode :{}, mean reward / step : {:.1f}, opt step: {}".format(epoch_idx, num_steps, self.model.optimization_step))
+                self._logger.add_scalar("mean_reward", mean_reward, epoch_idx)
+                self._logger.add_scalar("mean_episode_len", avg_episode_len, epoch_idx)
+                self._logger.add_scalar("alpha", self._pi.log_alpha.exp(), epoch_idx)
+                
                 score = 0.0
+                num_steps = 0
 
         self.env.close()
 

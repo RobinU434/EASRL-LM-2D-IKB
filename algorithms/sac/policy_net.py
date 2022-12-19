@@ -43,7 +43,8 @@ class PolicyNet(nn.Module):
         action = dist.rsample()
         log_prob = dist.log_prob(action)
         # sum log prob
-        log_prob =  log_prob.sum()
+        log_prob =  log_prob.sum() # independence assumption between individual propabbilities
+        # log(p(a1, a2)) = log(p(a1) * p(a2)) = log(p(a1)) + log(p(a2))
 
         real_action = torch.tanh(action)
         # Squash correction (from original SAC implementation)

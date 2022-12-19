@@ -15,7 +15,7 @@ class PPO:
     def __init__(
         self,
         env : gym.Env, 
-        logger: SummaryWriter, 
+        logging_writer: SummaryWriter, 
         learning_rate = 0.0003,
         gamma = 0.9,
         lmbda = 0.9,
@@ -28,7 +28,7 @@ class PPO:
         
         self.env = env
         
-        self.logger = logger
+        self.logger = logging_writer
 
         self.memory = RolloutBuffer(buffer_size)
 
@@ -105,10 +105,13 @@ class PPO:
                     mu, std = self.model.pi(torch.from_numpy(s).float())
                     dist = Normal(mu, std)
                     a = dist.sample()
+                    a = a.detach()
                     log_prob = dist.log_prob(a)
-                    s_prime, r, done, info = self.env.step([a.item()])
+                    log_prob = torch.sum(log_prob)  # independence assumption between individual propabbilities
+                    # log(p(a1, a2)) = log(p(a1) * p(a2)) = log(p(a1)) + log(p(a2))
+                    s_prime, r, done, info = self.env.step(a)
 
-                    rollout.append((s, a, r/10.0, s_prime, log_prob.item(), done))
+                    rollout.append((s, a, r/10.0, s_prime, log_prob, done))
                     if len(rollout) == self.rollout_len:
                         self.memory.put(rollout)
                         rollout = []

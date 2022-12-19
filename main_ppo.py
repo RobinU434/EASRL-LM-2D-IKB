@@ -1,9 +1,28 @@
 import gym
+import torch
+
+from torch.utils.tensorboard import SummaryWriter
 
 from algorithms.ppo.ppo import PPO
+from envs.plane_robot_env import PlaneRobotEnv
+from envs.task.reach_goal import ReachGoalTask
 
-env = gym.make('Pendulum-v1')
+num_joints = 2
 
-ppo = PPO(env, None)
+for i in range(1):
+  seed = torch.seed()
+  task = ReachGoalTask(epsilon=0.1)
 
-ppo.train(1000)
+  env = PlaneRobotEnv(
+    n_joints=num_joints,
+    segment_lenght=1,
+    task=task)
+
+  logger = SummaryWriter(f"results/ppo/{num_joints}_{seed}")
+
+  ppo = PPO(
+    env,
+    logging_writer=logger
+    )
+
+  ppo.train(1000)

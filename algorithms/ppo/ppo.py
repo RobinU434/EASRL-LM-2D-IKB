@@ -97,7 +97,7 @@ class PPO:
         print_interval = 20
         rollout = []
 
-        for epoch_idx in range(n_epochs):
+        for epoch_idx in range(n_epochs + 1):  # plus 1 for logging
             # sample rollout 
             s = self._env.reset()
             done = False

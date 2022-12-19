@@ -73,7 +73,6 @@ class PPO:
 
     def train_net(self):
         if len(self.memory) == self.minibatch_size * self.buffer_size:
-            print(len(self.memory))
             data = self.memory.make_batch(self.minibatch_size)
             data = self.calc_advantage(data)
 

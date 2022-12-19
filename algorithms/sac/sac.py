@@ -12,7 +12,7 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 from algorithms.sac.buffer import ReplayBuffer
-from algorithms.sac.helper import get_space_size
+from algorithms.helper.helper import get_space_size
 from algorithms.sac.q_net import QNet
 from algorithms.sac.policy_net import PolicyNet
 

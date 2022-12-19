@@ -104,9 +104,9 @@ class SAC:
                 a, log_prob = self._pi(torch.from_numpy(s).float())
                 # detach grad from action to apply it to the environment where it is converted into a numpy.ndarray
                 a = a.detach()
-                s_prime, r, done, info = self._env.step(a * 2)
-                self._memory.put((s, a, r / 10.0 , s_prime, done))  # why is the reward divided by 10?????
-                score +=r
+                s_prime, r, done, info = self._env.step(a)
+                self._memory.put((s, a, r, s_prime, done))  # why is the reward divided by 10?????
+                score += r
                 s = s_prime
             
             num_steps += self._env.num_steps
@@ -130,10 +130,10 @@ class SAC:
                     
             if epoch_idx % print_interval == 0 and epoch_idx != 0:
                 avg_episode_len = num_steps / print_interval 
-                avg_score = score / num_steps
-                print("# of episode :{}, avg score : {:.1f} alpha:{:.4f}".format(epoch_idx, avg_score, self._pi.log_alpha.exp()))
+                mean_reward = score / num_steps
+                print("# of episode :{}, mean reward / step : {:.1f} alpha:{:.4f}".format(epoch_idx, mean_reward, self._pi.log_alpha.exp()))
                 # log metrics
-                self._logger.add_scalar("mean_reward", avg_score, epoch_idx)
+                self._logger.add_scalar("mean_reward", mean_reward, epoch_idx)
                 self._logger.add_scalar("mean_episode_len", avg_episode_len, epoch_idx)
                 self._logger.add_scalar("alpha", self._pi.log_alpha.exp(), epoch_idx)
                 score = 0.0

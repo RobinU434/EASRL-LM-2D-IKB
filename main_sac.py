@@ -20,7 +20,7 @@ for i in range(10):
     segment_lenght=1,
     task=task)
 
-  logger = SummaryWriter(f"results/{num_joints}_{seed}")
+  logger = SummaryWriter(f"results/sac/{num_joints}_{seed}")
 
   sac = SAC(
     env,

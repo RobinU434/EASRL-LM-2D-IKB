@@ -26,26 +26,26 @@ class PPO:
         minibatch_size = 32
         ) -> None:
         
-        self.env = env
+        self._env = env
         
-        self.logger = logging_writer
+        self._logger = logging_writer
 
-        self.memory = RolloutBuffer(buffer_size)
+        self._memory = RolloutBuffer(buffer_size)
 
-        self.learning_rate  = learning_rate
-        self.gamma = gamma
-        self.lmbda = lmbda
-        self.eps_clip = eps_clip
-        self.K_epoch = K_epoch
-        self.rollout_len = rollout_len
-        self.buffer_size = buffer_size
-        self.minibatch_size = minibatch_size
+        self._learning_rate  = learning_rate
+        self._gamma = gamma
+        self._lmbda = lmbda
+        self._eps_clip = eps_clip
+        self._K_epoch = K_epoch
+        self._rollout_len = rollout_len
+        self._buffer_size = buffer_size
+        self._minibatch_size = minibatch_size
 
         # define model
-        input_size = get_space_size(self.env.observation_space.shape)
-        output_size = get_space_size(self.env.action_space.shape)
+        input_size = get_space_size(self._env.observation_space.shape)
+        output_size = get_space_size(self._env.action_space.shape)
 
-        self.model = Module(learning_rate, input_size, output_size)
+        self._model = Module(learning_rate, input_size, output_size)
 
     def calc_advantage(self, data):
         data_with_adv = []
@@ -56,14 +56,14 @@ class PPO:
             s, a, r, s_prime, done_mask, old_log_prob = mini_batch
 
             with torch.no_grad():
-                td_target = r + self.gamma * self.model.value(s_prime) * done_mask
-                delta = td_target - self.model.value(s)
+                td_target = r + self._gamma * self._model.value(s_prime) * done_mask
+                delta = td_target - self._model.value(s)
             delta = delta.numpy()
 
             advantage_lst = []
             advantage = 0.0
             for delta_t in delta[::-1]:
-                advantage = self.gamma * self.lmbda * advantage + delta_t[0]
+                advantage = self._gamma * self._lmbda * advantage + delta_t[0]
                 advantage_lst.append([advantage])
             advantage_lst.reverse()
             advantage = torch.tensor(advantage_lst, dtype=torch.float)
@@ -72,24 +72,24 @@ class PPO:
         return data_with_adv
 
     def train_net(self):
-        if len(self.memory) == self.minibatch_size * self.buffer_size:
-            data = self.memory.make_batch(self.minibatch_size)
+        if len(self._memory) == self._minibatch_size * self._buffer_size:
+            data = self._memory.make_batch(self._minibatch_size)
             data = self.calc_advantage(data)
 
-            for i in range(self.K_epoch):
+            for i in range(self._K_epoch):
                 for mini_batch in data:
                     s, a, r, s_prime, done_mask, old_log_prob, td_target, advantage = mini_batch
 
-                    mu, std = self.model.pi(s, softmax_dim=1)
+                    mu, std = self._model.pi(s, softmax_dim=1)
                     dist = Normal(mu, std)
                     log_prob = dist.log_prob(a)
                     ratio = torch.exp(log_prob - old_log_prob)  # a/b == exp(log(a)-log(b))
 
                     surr1 = ratio * advantage
-                    surr2 = torch.clamp(ratio, 1 - self.eps_clip, 1 + self.eps_clip) * advantage
-                    loss = -torch.min(surr1, surr2) + F.smooth_l1_loss(self.model.value(s) , td_target)
+                    surr2 = torch.clamp(ratio, 1 - self._eps_clip, 1 + self._eps_clip) * advantage
+                    loss = -torch.min(surr1, surr2) + F.smooth_l1_loss(self._model.value(s) , td_target)
 
-                    self.model.train(loss)
+                    self._model.train(loss)
 
     def train(self, n_epochs):
         score = 0.0
@@ -99,22 +99,22 @@ class PPO:
 
         for epoch_idx in range(n_epochs):
             # sample rollout 
-            s = self.env.reset()
+            s = self._env.reset()
             done = False
             while not done:
-                for t in range(self.rollout_len):
-                    mu, std = self.model.pi(torch.from_numpy(s).float())
+                for t in range(self._rollout_len):
+                    mu, std = self._model.pi(torch.from_numpy(s).float())
                     dist = Normal(mu, std)
                     a = dist.sample()
                     a = a.detach()
                     log_prob = dist.log_prob(a)
                     log_prob = torch.sum(log_prob)  # independence assumption between individual propabbilities
                     # log(p(a1, a2)) = log(p(a1) * p(a2)) = log(p(a1)) + log(p(a2))
-                    s_prime, r, done, info = self.env.step(a)
+                    s_prime, r, done, info = self._env.step(a)
 
                     rollout.append((s, a, r/10.0, s_prime, log_prob, done))
-                    if len(rollout) == self.rollout_len:
-                        self.memory.put(rollout)
+                    if len(rollout) == self._rollout_len:
+                        self._memory.put(rollout)
                         rollout = []
 
                     s = s_prime
@@ -128,7 +128,7 @@ class PPO:
             if epoch_idx % print_interval == 0 and epoch_idx != 0:
                 avg_episode_len = num_steps / print_interval 
                 mean_reward = score / num_steps
-                print("# of episode :{}, mean reward / step : {:.1f}, opt step: {}".format(epoch_idx, num_steps, self.model.optimization_step))
+                print("# of episode :{}, mean reward / step : {:.1f}, opt step: {}".format(epoch_idx, num_steps, self._model.optimization_step))
                 self._logger.add_scalar("mean_reward", mean_reward, epoch_idx)
                 self._logger.add_scalar("mean_episode_len", avg_episode_len, epoch_idx)
                 self._logger.add_scalar("alpha", self._pi.log_alpha.exp(), epoch_idx)
@@ -136,5 +136,5 @@ class PPO:
                 score = 0.0
                 num_steps = 0
 
-        self.env.close()
+        self._env.close()
 

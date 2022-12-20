@@ -112,7 +112,7 @@ class PPO:
                     # log(p(a1, a2)) = log(p(a1) * p(a2)) = log(p(a1)) + log(p(a2))
                     s_prime, r, done, info = self._env.step(a)
 
-                    rollout.append((s, a, r/10.0, s_prime, log_prob, done))
+                    rollout.append((s, a, r, s_prime, log_prob, done))
                     if len(rollout) == self._rollout_len:
                         self._memory.put(rollout)
                         rollout = []

@@ -2,7 +2,7 @@
 import torch
 import numpy as np
 
-from algorithms.buffer import ReplayBuffer
+from algorithms.sac.buffer import ReplayBuffer
 
 
 def test_put_buffer():

@@ -3,10 +3,13 @@ import torch
 
 
 class RolloutBuffer:
-    def __init__(self, buffer_size) -> None:
+    def __init__(self, n_mini_batches) -> None:
         # elementes in data are entire rollouts (sequences of transitions)
         self.data = []
-        self.buffer_size = buffer_size
+
+        # relevant for self.make_batch
+        # number of mini_batches with size batch_size
+        self.buffer_size = n_mini_batches 
 
     def put(self, transition):
         self.data.append(transition)

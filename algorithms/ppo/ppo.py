@@ -129,8 +129,8 @@ class PPO:
                 avg_episode_len = num_steps / print_interval 
                 mean_reward = score / num_steps
                 print("# of episode :{}, mean reward / step : {:.1f}, opt step: {}".format(epoch_idx, mean_reward, self._model.optimization_step))
-                self._logger.add_scalar("mean_reward", mean_reward, epoch_idx)
-                self._logger.add_scalar("mean_episode_len", avg_episode_len, epoch_idx)
+                self._logger.add_scalar("/stats/mean_reward", mean_reward, epoch_idx)
+                self._logger.add_scalar("/stats/mean_episode_len", avg_episode_len, epoch_idx)
                 
                 score = 0.0
                 num_steps = 0

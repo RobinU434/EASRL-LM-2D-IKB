@@ -133,9 +133,9 @@ class SAC:
                 mean_reward = score / num_steps
                 print("# of episode :{}, mean reward / step : {:.1f} alpha:{:.4f}".format(epoch_idx, mean_reward, self._pi.log_alpha.exp()))
                 # log metrics
-                self._logger.add_scalar("mean_reward", mean_reward, epoch_idx)
-                self._logger.add_scalar("mean_episode_len", avg_episode_len, epoch_idx)
-                self._logger.add_scalar("alpha", self._pi.log_alpha.exp(), epoch_idx)
+                self._logger.add_scalar("stats/mean_reward", mean_reward, epoch_idx)
+                self._logger.add_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
+                self._logger.add_scalar("sac/alpha", self._pi.log_alpha.exp(), epoch_idx)
                 score = 0.0
                 num_steps = 0
 

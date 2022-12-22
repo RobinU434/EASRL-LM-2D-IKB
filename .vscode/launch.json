@@ -5,10 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "main.py",
+            "name": "main_sac.py",
             "type": "python",
             "request": "launch",
-            "program": "main.py",
+            "program": "main_sac.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "main_ppo.py",
+            "type": "python",
+            "request": "launch",
+            "program": "main_ppo.py",
             "console": "integratedTerminal",
             "justMyCode": false
         }

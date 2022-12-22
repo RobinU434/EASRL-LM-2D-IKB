@@ -23,9 +23,14 @@ class Module(nn.Module):
 
     def pi(self, state, softmax_dim = 0):
         hidden = F.relu(self.fc1(state))
-        
+
         mu = torch.tanh(self.fc_mu(hidden))
         std = F.softplus(self.fc_std(hidden))
+
+        if torch.isnan(std).any():
+            # access point for debugging if the weights become nan
+            # why is this happening?????!!!!
+            print("found mal value")
 
         return mu, std
 

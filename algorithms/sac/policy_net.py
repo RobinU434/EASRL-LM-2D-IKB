@@ -62,11 +62,13 @@ class PolicyNet(nn.Module):
         q1_q2 = torch.cat([q1_val, q2_val], dim=1)
         min_q = torch.min(q1_q2, 1, keepdim=True)[0]
 
+        
         loss = -min_q - entropy # for gradient ascent
         self.optimizer.zero_grad()
         loss.mean().backward()
         self.optimizer.step()
 
+        # learn alpha parameter
         self.log_alpha_optimizer.zero_grad()
         alpha_loss = -(self.log_alpha.exp() * (log_prob + target_entropy).detach()).mean()
         alpha_loss.backward()

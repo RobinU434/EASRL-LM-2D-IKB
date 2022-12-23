@@ -5,6 +5,7 @@
 # =====================================================================================================================
 
 import gym
+from sacred import Experiment
 import torch
 
 import numpy as np
@@ -24,6 +25,7 @@ class SAC:
         self, 
         env: gym.Env,
         logging_writer: SummaryWriter,
+        sacred_experiment: Experiment = None,
         lr_pi = 0.0005, 
         lr_q = 0.001,
         init_alpha = 0.01,
@@ -39,6 +41,7 @@ class SAC:
         
         self._env = env 
         self._logger = logging_writer
+        self._sacred_ex = sacred_experiment
         #Hyperparameters
         self._lr_pi             = lr_pi
         self._lr_q              = lr_q
@@ -133,9 +136,17 @@ class SAC:
                 mean_reward = score / num_steps
                 print("# of episode :{}, mean reward / step : {:.1f} alpha:{:.4f}".format(epoch_idx, mean_reward, self._pi.log_alpha.exp()))
                 # log metrics
+                # in tensorboard
                 self._logger.add_scalar("stats/mean_reward", mean_reward, epoch_idx)
                 self._logger.add_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
                 self._logger.add_scalar("sac/alpha", self._pi.log_alpha.exp(), epoch_idx)
+                
+                # log sacred data
+                if self._sacred_ex is not None:
+                    self._sacred_ex.log_scalar("stats/mean_reward", float(mean_reward), epoch_idx)
+                    self._sacred_ex.log_scalar("stats/mean_episode_len", float(avg_episode_len), epoch_idx)
+                    self._sacred_ex.log_scalar("sac/alpha", float(self._pi.log_alpha.exp()), epoch_idx)
+                
                 score = 0.0
                 num_steps = 0
 

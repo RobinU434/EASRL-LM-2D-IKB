@@ -7,6 +7,7 @@ import torch.nn.functional as F
 
 from torch.distributions import Normal
 from torch.utils.tensorboard import SummaryWriter
+from sacred import Experiment
 
 from algorithms.ppo.buffer import RolloutBuffer
 from algorithms.ppo.model import Module
@@ -18,6 +19,7 @@ class PPO:
         self,
         env : gym.Env, 
         logging_writer: SummaryWriter, 
+        sacred_experiment: Experiment = None,
         learning_rate = 0.0003,
         gamma = 0.9,
         lmbda = 0.9,
@@ -32,6 +34,7 @@ class PPO:
         self._env = env
         
         self._logger = logging_writer
+        self._sacred_ex = sacred_experiment
 
         self._memory = RolloutBuffer(buffer_size)
 
@@ -142,10 +145,17 @@ class PPO:
                 avg_episode_len = num_steps / self._print_interval 
                 mean_reward = score / num_steps
                 print("# of episode :{}, mean reward / step : {:.1f}, opt step: {}".format(epoch_idx, mean_reward, self._model.optimization_step))
+                # log metrics
+                # in tensorboard
                 self._logger.add_scalar("stats/mean_reward", mean_reward, epoch_idx)
                 self._logger.add_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
-
                 self._logger.add_scalar("ppo/kl_div", np.mean(self._kl_div))
+                
+                # log sacred data
+                if self._sacred_ex is not None:
+                    self._sacred_ex.log_scalar("stats/mean_reward", mean_reward, epoch_idx)
+                    self._sacred_ex.log_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
+                    self._sacred_ex.log_scalar("ppo/kl_div", np.mean(self._kl_div))
                 
                 score = 0.0
                 num_steps = 0

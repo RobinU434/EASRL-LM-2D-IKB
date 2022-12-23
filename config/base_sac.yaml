@@ -10,3 +10,4 @@ train_iterations: 20
 tau: 0.01  # for target network soft update,
 target_entropy: -1.0 # for automated alpha update,
 lr_alpha: 0.001
+n_epochs: 1000

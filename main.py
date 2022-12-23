@@ -51,7 +51,7 @@ def main(_config):
 
     env = PlaneRobotEnv(
         n_joints=_config["n_joints"],
-        segment_lenght=1,
+        segment_lenght=_config["segement_length"],
         task=task)
 
     # pth for file system logging

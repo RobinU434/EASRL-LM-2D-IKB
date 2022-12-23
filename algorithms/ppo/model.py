@@ -40,3 +40,19 @@ class Module(nn.Module):
         nn.utils.clip_grad_norm_(self.parameters(), 1.0)
         self.optimizer.step()
         self.optimization_step += 1
+
+    def get_weights(self):
+        """
+        returns all weights in a single 1 dimensional tensor.
+        Function will be used to determine the distribution for kullback leiber divergence (KL-Divergnece)
+        """
+
+        result = []
+        weights = self.state_dict().values()
+        
+        for weight in weights:
+            result.append(torch.flatten(weight))
+
+        result = torch.cat(result)
+
+        return result

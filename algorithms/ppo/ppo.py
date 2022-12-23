@@ -1,4 +1,5 @@
 import gym
+import numpy as np
 import torch
 
 import torch.nn as nn
@@ -10,6 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from algorithms.ppo.buffer import RolloutBuffer
 from algorithms.ppo.model import Module
 from algorithms.helper.helper  import get_space_size
+from algorithms.helper.kl_div import kl_divergence_from_weights
 
 class PPO:
     def __init__(
@@ -23,7 +25,8 @@ class PPO:
         K_epoch = 10,
         rollout_len = 3,
         buffer_size = 30,
-        minibatch_size = 32
+        minibatch_size = 32,
+        print_interval = 20
         ) -> None:
         
         self._env = env
@@ -40,12 +43,16 @@ class PPO:
         self._rollout_len = rollout_len
         self._buffer_size = buffer_size
         self._minibatch_size = minibatch_size
+        self._print_interval = print_interval
 
         # define model
         input_size = get_space_size(self._env.observation_space.shape)
         output_size = get_space_size(self._env.action_space.shape)
 
         self._model = Module(learning_rate, input_size, output_size)
+
+        # logging parameters
+        self._kl_div = []
 
     def calc_advantage(self, data):
         data_with_adv = []
@@ -76,6 +83,8 @@ class PPO:
             data = self._memory.make_batch(self._minibatch_size)
             data = self.calc_advantage(data)
 
+            prev_weight_dist = self._model.get_weights()
+
             for i in range(self._K_epoch):
                 for mini_batch in data:
                     s, a, r, s_prime, done_mask, old_log_prob, td_target, advantage = mini_batch
@@ -91,13 +100,17 @@ class PPO:
 
                     self._model.train(loss)
 
+            current_weight_dist = self._model.get_weights()
+
+            _, _, kl_div = kl_divergence_from_weights(prev_weight_dist, current_weight_dist)
+            self._kl_div.append(kl_div)
+
     def train(self, n_epochs):
         score = 0.0
         num_steps = 0
-        print_interval = 20
         rollout = []
 
-        for epoch_idx in range(n_epochs + 1):  # plus 1 for logging
+        for epoch_idx in range(1, n_epochs + 1):  # plus 1 for logging
             # sample rollout 
             s = self._env.reset()
             done = False
@@ -125,15 +138,18 @@ class PPO:
 
                 self.train_net()
 
-            if epoch_idx % print_interval == 0 and epoch_idx != 0:
-                avg_episode_len = num_steps / print_interval 
+            if epoch_idx % self._print_interval == 0:
+                avg_episode_len = num_steps / self._print_interval 
                 mean_reward = score / num_steps
                 print("# of episode :{}, mean reward / step : {:.1f}, opt step: {}".format(epoch_idx, mean_reward, self._model.optimization_step))
-                self._logger.add_scalar("/stats/mean_reward", mean_reward, epoch_idx)
-                self._logger.add_scalar("/stats/mean_episode_len", avg_episode_len, epoch_idx)
+                self._logger.add_scalar("stats/mean_reward", mean_reward, epoch_idx)
+                self._logger.add_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
+
+                self._logger.add_scalar("ppo/kl_div", np.mean(self._kl_div))
                 
                 score = 0.0
                 num_steps = 0
+                self._kl_div = []
 
         self._env.close()
 

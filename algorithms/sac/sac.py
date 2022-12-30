@@ -26,17 +26,19 @@ class SAC:
         env: gym.Env,
         logging_writer: SummaryWriter,
         sacred_experiment: Experiment = None,
-        lr_pi = 0.0005, 
-        lr_q = 0.001,
-        init_alpha = 0.01,
-        gamma = 0.98,
-        batch_size = 32,
-        buffer_limit = 50000,
-        start_buffer_size = 1000,
-        train_iterations = 20,
-        tau = 0.01, # for target network soft update,
-        target_entropy = -1.0, # for automated alpha update,
-        lr_alpha = 0.001,  # for automated alpha update
+        lr_pi: float = 0.0005, 
+        lr_q: float = 0.001,
+        init_alpha: float = 0.01,
+        gamma: float = 0.98,
+        batch_size: float = 32,
+        buffer_limit: float = 50000,
+        start_buffer_size: float = 1000,
+        train_iterations: float = 20,
+        tau: float = 0.01, # for target network soft update,
+        target_entropy: float = -1.0, # for automated alpha update,
+        lr_alpha: float = 0.001,  # for automated alpha update
+        action_covariance_decay: float = 0.5,
+        action_covariance_mode: str = "indipendent"
         ) -> None:
         
         self._env = env 
@@ -54,7 +56,9 @@ class SAC:
         self._tau               = tau # for target network soft update
         self._target_entropy    = target_entropy # for automated alpha update
         self._lr_alpha          = lr_alpha  # for automated alpha update
-
+        self._action_covariance_decay = action_covariance_decay
+        self._action_covariance_mode = action_covariance_mode
+        
         # Replay-Buffer
         self._memory = ReplayBuffer(buffer_limit=buffer_limit)
 
@@ -72,7 +76,9 @@ class SAC:
             input_size,
             output_size,
             self._init_alpha,
-            self._lr_alpha
+            self._lr_alpha,
+            self._action_covariance_mode,
+            self._action_covariance_decay
             )
 
     def calc_target(self, mini_batch):

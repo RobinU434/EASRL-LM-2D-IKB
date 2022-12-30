@@ -1,4 +1,3 @@
-
 lr_pi: 0.0005
 lr_q: 0.001
 init_alpha: 0.01
@@ -11,3 +10,5 @@ tau: 0.01  # for target network soft update,
 target_entropy: -1.0 # for automated alpha update,
 lr_alpha: 0.001
 n_epochs: 1000
+action_covariance_mode: exp_decay
+action_covariance_decay: 0.5

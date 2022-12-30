@@ -16,12 +16,11 @@ from algorithms.sac.sac import SAC
 SETTINGS["CONFIG"]["READ_ONLY_CONFIG"] = False
 
 ex = Experiment("robot_arm")
-
-
 ex.observers.append(MongoObserver(
     url='mongodb://mongo_user:mongo_password@127.0.0.1:27017',
-    db_name='sacred'))
-
+    db_name='sacred'
+    )
+)
 
 @ex.config
 def my_config():
@@ -37,10 +36,11 @@ def my_config():
         else:
             raise NotImplementedError
     except AttributeError:
-        raise ValueError("You have to specifiy the algorithm manually. It is either SAc or PPO possible.")
+        raise ValueError("You have to specify the algorithm manually. It is either SAC or PPO possible.")
 
     # load base config for the environment
     ex.add_config("config/env.yaml")
+
 
 @ex.main
 def main(_config):
@@ -51,19 +51,22 @@ def main(_config):
 
     env = PlaneRobotEnv(
         n_joints=_config["n_joints"],
-        segment_lenght=_config["segement_length"],
+        segment_lenght=_config["segment_length"],
         task=task)
 
     # pth for file system logging
-    logging_path = f"results/{_config['algo'].lower()}/{_config['n_joints']}_{_config['seed']}"
+    logging_path = f"results/{_config['algo'].lower()}/{_config['subdir']}/{_config['n_joints']}_{_config['seed']}"
     logger = SummaryWriter(logging_path)
     ex.observers.append(FileStorageObserver(logging_path))
+
 
     if _config["algo"].lower() == "sac":
         algorithm = SAC(
             env,
             logging_writer=logger, 
-            sacred_experiment = ex
+            sacred_experiment = ex,
+            action_covariance_decay = _config["action_covariance_decay"],
+            action_covariance_mode = _config["action_covariance_mode"]
             )
     elif _config["algo"].lower() == "ppo":
         algorithm = PPO(

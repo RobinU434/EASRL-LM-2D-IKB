@@ -2,40 +2,42 @@ import gym
 import numpy as np
 import torch
 
-import torch.nn as nn
 import torch.nn.functional as F
 
 from torch.distributions import Normal
 from torch.utils.tensorboard import SummaryWriter
-from sacred import Experiment
 
 from algorithms.ppo.buffer import RolloutBuffer
 from algorithms.ppo.model import Module
 from algorithms.helper.helper  import get_space_size
 from algorithms.helper.kl_div import kl_divergence_from_weights
 
+from logger.fs_logger import FileSystemLogger
+
 class PPO:
     def __init__(
         self,
         env : gym.Env, 
-        logging_writer: SummaryWriter, 
-        sacred_experiment: Experiment = None,
-        learning_rate = 0.0003,
-        gamma = 0.9,
-        lmbda = 0.9,
-        eps_clip = 0.2,
-        K_epoch = 10,
-        rollout_len = 3,
-        buffer_size = 30,
-        minibatch_size = 32,
-        print_interval = 20
+        logging_writer: SummaryWriter,
+        fs_logger: FileSystemLogger,
+        learning_rate: float = 0.0003,
+        gamma: float = 0.9,
+        lmbda: float = 0.9,
+        eps_clip: float = 0.2,
+        K_epoch: float = 10,
+        rollout_len: float = 3,
+        buffer_size: float = 30,
+        minibatch_size: float = 32,
+        print_interval: float = 20,
+        action_covariance_decay: float = 0.5,
+        action_covariance_mode: str = "independent"
         ) -> None:
         
         self._env = env
         
         self._logger = logging_writer
-        self._sacred_ex = sacred_experiment
-
+        self._fs_logger = fs_logger
+        
         self._memory = RolloutBuffer(buffer_size)
 
         self._learning_rate  = learning_rate
@@ -47,6 +49,8 @@ class PPO:
         self._buffer_size = buffer_size
         self._minibatch_size = minibatch_size
         self._print_interval = print_interval
+        self._action_covariance_decay = action_covariance_decay
+        self._action_covariance_mode = action_covariance_mode
 
         # define model
         input_size = get_space_size(self._env.observation_space.shape)
@@ -93,6 +97,7 @@ class PPO:
                     s, a, r, s_prime, done_mask, old_log_prob, td_target, advantage = mini_batch
 
                     mu, std = self._model.pi(s, softmax_dim=1)
+                    # dist = get_distribution(loc=mu, std=std, mode=self._action_covariance_mode, decay=self._action_covariance_decay)
                     dist = Normal(mu, std)
                     log_prob = dist.log_prob(a)
                     ratio = torch.exp(log_prob - old_log_prob)  # a/b == exp(log(a)-log(b))
@@ -147,19 +152,22 @@ class PPO:
                 print("# of episode :{}, mean reward / step : {:.1f}, opt step: {}".format(epoch_idx, mean_reward, self._model.optimization_step))
                 # log metrics
                 # in tensorboard
-                self._logger.add_scalar("stats/mean_reward", mean_reward, epoch_idx)
-                self._logger.add_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
-                self._logger.add_scalar("ppo/kl_div", np.mean(self._kl_div))
+                if self._logger is not None:
+                    self._logger.add_scalar("stats/mean_reward", mean_reward, epoch_idx)
+                    self._logger.add_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
+                    self._logger.add_scalar("ppo/kl_div", np.mean(self._kl_div))
                 
-                # log sacred data
-                if self._sacred_ex is not None:
-                    self._sacred_ex.log_scalar("stats/mean_reward", mean_reward, epoch_idx)
-                    self._sacred_ex.log_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
-                    self._sacred_ex.log_scalar("ppo/kl_div", np.mean(self._kl_div))
-                
+                # log in filesystem 
+                if self._fs_logger is not None:
+                    self._fs_logger.add_scalar("stats/mean_reward", mean_reward, epoch_idx)
+                    self._fs_logger.add_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
+                    self._fs_logger.add_scalar("ppo/kl_div", np.mean(self._kl_div))
+                    
                 score = 0.0
                 num_steps = 0
                 self._kl_div = []
+
+        self._fs_logger.dump()
 
         self._env.close()
 

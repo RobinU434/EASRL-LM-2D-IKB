@@ -5,17 +5,19 @@
 # =====================================================================================================================
 
 import gym
-from sacred import Experiment
+from matplotlib import pyplot as plt
+import numpy as np
 import torch
 
-import numpy as np
-
 from torch.utils.tensorboard import SummaryWriter
+from algorithms.helper.plot import scatter_end_points
 
 from algorithms.sac.buffer import ReplayBuffer
 from algorithms.helper.helper import get_space_size
 from algorithms.sac.q_net import QNet
 from algorithms.sac.policy_net import PolicyNet
+
+from logger.fs_logger import FileSystemLogger
 
 from envs.plane_robot_env import PlaneRobotEnv
 
@@ -25,7 +27,7 @@ class SAC:
         self, 
         env: gym.Env,
         logging_writer: SummaryWriter,
-        sacred_experiment: Experiment = None,
+        fs_logger: FileSystemLogger,
         lr_pi: float = 0.0005, 
         lr_q: float = 0.001,
         init_alpha: float = 0.01,
@@ -41,9 +43,15 @@ class SAC:
         action_covariance_mode: str = "indipendent"
         ) -> None:
         
-        self._env = env 
+        self._env: PlaneRobotEnv = env 
+
         self._logger = logging_writer
-        self._sacred_ex = sacred_experiment
+        self._fs_logger = fs_logger
+        # logging every print interval one trajectory and store it
+        # x0 -> episode
+        # x1 -> time step 
+        self._trajectory_logger = FileSystemLogger(fs_logger._path)
+
         #Hyperparameters
         self._lr_pi             = lr_pi
         self._lr_q              = lr_q
@@ -97,7 +105,7 @@ class SAC:
 
         return target
 
-    def train(self, n_epochs, print_interval: int = 20):
+    def train(self, n_epochs, print_interval: int = 20, yield_trajectory: bool = False):
         # target networks are initiated as copies from the actual q networks
         self._q1_target.load_state_dict(self._q1.state_dict().copy())
         self._q2_target.load_state_dict(self._q2.state_dict().copy())
@@ -105,6 +113,7 @@ class SAC:
         score = 0.0
         num_steps = 0
 
+        end_pos = []
         for epoch_idx in range(n_epochs + 1):
             s = self._env.reset()
             done = False
@@ -117,7 +126,19 @@ class SAC:
                 self._memory.put((s, a, r, s_prime, done))  # why is the reward divided by 10?????
                 score += r
                 s = s_prime
-            
+
+                # log trajectory
+                if epoch_idx % print_interval == 0:
+                    self._trajectory_logger.add_scalar("state", s, epoch_idx, self._env.num_steps)
+                    self._trajectory_logger.add_scalar("action", a, epoch_idx, self._env.num_steps)
+                    self._trajectory_logger.add_scalar("reward", r, epoch_idx, self._env.num_steps)
+                    self._trajectory_logger.add_scalar("s_prime", s_prime, epoch_idx, self._env.num_steps)
+                    self._trajectory_logger.add_scalar("done", done, epoch_idx, self._env.num_steps)
+
+                # append end positions for plotting exploration
+                end_pos.append(s[2: 4]) 
+                
+                    
             num_steps += self._env.num_steps
                     
             if len(self._memory) > self._start_buffer_size:
@@ -140,21 +161,33 @@ class SAC:
             if epoch_idx % print_interval == 0 and epoch_idx != 0:
                 avg_episode_len = num_steps / print_interval 
                 mean_reward = score / num_steps
-                print("# of episode :{}, mean reward / step : {:.1f} alpha:{:.4f}".format(epoch_idx, mean_reward, self._pi.log_alpha.exp()))
+                print("# of episode: {}, mean reward / step : {:.1f} alpha:{:.4f}".format(epoch_idx, mean_reward, self._pi.log_alpha.exp()))
                 # log metrics
                 # in tensorboard
-                self._logger.add_scalar("stats/mean_reward", mean_reward, epoch_idx)
-                self._logger.add_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
-                self._logger.add_scalar("sac/alpha", self._pi.log_alpha.exp(), epoch_idx)
-                
-                # log sacred data
-                if self._sacred_ex is not None:
-                    self._sacred_ex.log_scalar("stats/mean_reward", float(mean_reward), epoch_idx)
-                    self._sacred_ex.log_scalar("stats/mean_episode_len", float(avg_episode_len), epoch_idx)
-                    self._sacred_ex.log_scalar("sac/alpha", float(self._pi.log_alpha.exp()), epoch_idx)
-                
+                if self._logger is not None:
+                    self._logger.add_scalar("stats/mean_reward", mean_reward, epoch_idx)
+                    self._logger.add_scalar("stats/mean_episode_len", avg_episode_len, epoch_idx)
+                    self._logger.add_scalar("sac/alpha", self._pi.log_alpha.exp(), epoch_idx)
+
+                # in file system
+                if self._fs_logger is not None:
+                    self._fs_logger.add_scalar("stats/mean_reward", float(mean_reward), epoch_idx)
+                    self._fs_logger.add_scalar("stats/mean_episode_len", float(avg_episode_len), epoch_idx)
+                    self._fs_logger.add_scalar("sac/alpha", float(self._pi.log_alpha.exp()), epoch_idx)
+
+                # plot exploration
+                end_pos = np.array(end_pos)
+                fig = scatter_end_points(end_pos[:, 0], end_pos[:, 1])
+                fig.savefig(self._fs_logger._path + f"/polar_exploration_{epoch_idx}.png")
+                plt.close()
+
                 score = 0.0
                 num_steps = 0
+                end_pos = []
+        
+        # store metrics in a csv file
+        self._fs_logger.dump()
+        self._trajectory_logger.dump("trajectory.csv")
 
         self._env.close()
 

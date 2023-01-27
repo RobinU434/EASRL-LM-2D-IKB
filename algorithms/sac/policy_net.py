@@ -10,6 +10,7 @@ from torch.distributions import Normal
 from torch.distributions import constraints
 
 from algorithms.common.distributions import get_distribution
+from algorithms.sac.actor import Actor
 
 class PolicyNet(nn.Module):
     def __init__(
@@ -23,12 +24,7 @@ class PolicyNet(nn.Module):
         covariance_decay: float = 0.5
         ):
         super(PolicyNet, self).__init__()
-        self.fc1 = nn.Linear(input_size, 128)
-        
-        self.fc_mu = nn.Linear(128, output_size)
-        self.fc_std  = nn.Linear(128, output_size)
-
-        self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        self.actor = Actor(input_size, output_size, learning_rate)
 
         self.log_alpha = torch.tensor(np.log(init_alpha))
         self.log_alpha.requires_grad = True
@@ -41,9 +37,7 @@ class PolicyNet(nn.Module):
     def forward(self, x):
         # squeeze input tensor from (x, 1) to (x, )
         x = np.squeeze(x)
-        x = F.relu(self.fc1(x))
-        mu = self.fc_mu(x)
-        std = F.softplus(self.fc_std(x))
+        mu, std = self.actor.forward(x)
         
         # dist = Normal(mu, std, validate_args={"scale": constraints.greater_than_eq})
         dist = self.action_sampling_func(mu, std, self.action_sampling_mode, self.covariance_decay)
@@ -51,8 +45,8 @@ class PolicyNet(nn.Module):
         # shape action for buffer layout
         action = action.squeeze()
         log_prob = dist.log_prob(action)
-        # sum log prob
-        log_prob =  log_prob.sum() # independence assumption between individual propabbilities
+        # sum log prob TODO: Does this still hold with dependent log probabilities?
+        log_prob =  log_prob.sum() # independence assumption between individual probabilities
         # log(p(a1, a2)) = log(p(a1) * p(a2)) = log(p(a1)) + log(p(a2))
 
         real_action = torch.tanh(action)
@@ -70,12 +64,9 @@ class PolicyNet(nn.Module):
         q1_val, q2_val = q1(s, a), q2(s, a)
         q1_q2 = torch.cat([q1_val, q2_val], dim=1)
         min_q = torch.min(q1_q2, 1, keepdim=True)[0]
-
         
-        loss = -min_q - entropy # for gradient ascent
-        self.optimizer.zero_grad()
-        loss.mean().backward()
-        self.optimizer.step()
+        loss = (-min_q - entropy).mean() # for gradient ascent
+        self.actor.train(loss)
 
         # learn alpha parameter
         self.log_alpha_optimizer.zero_grad()

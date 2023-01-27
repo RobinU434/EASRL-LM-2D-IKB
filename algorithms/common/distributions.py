@@ -27,12 +27,13 @@ def get_distribution(loc: torch.tensor, std: torch.tensor,  mode: str = "indepen
         independent.__name__: independent,
         sparse.__name__: sparse,
         exp_decay.__name__: exp_decay,
-    }       
+    }
+
     batch_size, n = get_dim(loc.size())
     covariance_matrix = func_dict[mode](n, decay)
     covariance_matrix = scale_matrix(covariance_matrix, batch_size)
 
-    # get unit matrix
+    # get unit matrix with same shape as covariance matrix
     unit_matrix = independent(n, 0)
     unit_matrix = scale_matrix(unit_matrix, batch_size)
     unit_matrix *= std.unsqueeze(1)

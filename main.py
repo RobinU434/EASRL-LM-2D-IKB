@@ -1,9 +1,7 @@
+import yaml
 import torch
 
-from sacred import Experiment
-from sacred import SETTINGS
-from sacred.observers import MongoObserver
-from sacred.observers import FileStorageObserver
+from argparse import ArgumentParser, Namespace
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -11,76 +9,115 @@ from envs.plane_robot_env import PlaneRobotEnv
 from envs.task.reach_goal import ReachGoalTask
 from algorithms.ppo.ppo import PPO
 from algorithms.sac.sac import SAC
+from logger.fs_logger import FileSystemLogger
 
 
-SETTINGS["CONFIG"]["READ_ONLY_CONFIG"] = False
+def setup_parser(parser: ArgumentParser) -> ArgumentParser:
+    parser.add_argument("algorithm", type=str, help="specify which algorithm to use")
+    parser.add_argument("subdir", type=str, default="test", help="specifies in which subdirectory to store the results")
 
-ex = Experiment("robot_arm")
-ex.observers.append(MongoObserver(
-    url='mongodb://mongo_user:mongo_password@127.0.0.1:27017',
-    db_name='sacred'
-    )
-)
+    # overwrites for the config file
 
-@ex.config
-def my_config():
-    algo = None
 
+    return parser
+
+def load_config(args: Namespace) -> dict:
+    # First the env config file
+    with open("config/env.yaml") as f:
+        config = yaml.safe_load(f)
+
+    # than add the algorithm config file
+    algo = args.algorithm
     try:
         if algo.lower() == "sac":
             # load sac config
-            ex.add_config("config/base_sac.yaml")
+            with open("config/base_sac.yaml") as f:
+                config = {**config, **yaml.safe_load(f)}
         elif algo.lower() == "ppo":
             # load ppo config
-            ex.add_config("config/base_ppo.yaml")
+            with open("config/base_ppo.yaml") as f:
+                config = {**config, **yaml.safe_load(f)}
         else:
             raise NotImplementedError
     except AttributeError:
         raise ValueError("You have to specify the algorithm manually. It is either SAC or PPO possible.")
 
-    # load base config for the environment
-    ex.add_config("config/env.yaml")
+    # add current seed into config
+    config["seed"] = torch.seed()
 
+    # finally add all arguments into config and maybe do an overwrite
+    config = {**config, **vars(args)}
+    
+    return config
+            
 
-@ex.main
-def main(_config):
-    # set torch.seed
-    torch.manual_seed(_config["seed"])
-
-    task = ReachGoalTask(epsilon=0.1)
+def main(config):
+    task = ReachGoalTask(epsilon=config["target_epsilon"])
 
     env = PlaneRobotEnv(
-        n_joints=_config["n_joints"],
-        segment_lenght=_config["segment_length"],
+        n_joints=config["n_joints"],
+        segment_length=config["segment_length"],
         task=task)
 
     # pth for file system logging
-    logging_path = f"results/{_config['algo'].lower()}/{_config['subdir']}/{_config['n_joints']}_{_config['seed']}"
+    logging_path = f"results/{config['algorithm'].lower()}/{config['subdir']}/{config['n_joints']}_{config['seed']}"
     logger = SummaryWriter(logging_path)
-    ex.observers.append(FileStorageObserver(logging_path))
 
+    # store config 
+    with open(logging_path + "/config.yaml", "w") as config_file:
+        yaml.dump(config, config_file)
+    # log config
+    logger.add_hparams(config, {})
+    
 
-    if _config["algo"].lower() == "sac":
+    if config["algorithm"].lower() == "sac":
         algorithm = SAC(
             env,
-            logging_writer=logger, 
-            sacred_experiment = ex,
-            action_covariance_decay = _config["action_covariance_decay"],
-            action_covariance_mode = _config["action_covariance_mode"]
+            logging_writer=logger,
+            fs_logger=FileSystemLogger(logging_path),
+            lr_pi=config["lr_pi"],
+            lr_q=config["lr_q"],
+            init_alpha=config["init_alpha"],
+            gamma=config["gamma"],
+            batch_size=config["batch_size"],
+            buffer_limit=config["buffer_limit"],
+            start_buffer_size=config["start_buffer_size"],
+            train_iterations=config["train_iterations"],
+            tau=config["tau"],
+            target_entropy=config["target_entropy"],
+            lr_alpha=config["lr_alpha"],
+            action_covariance_decay = config["action_covariance_decay"],
+            action_covariance_mode = config["action_covariance_mode"]
             )
-    elif _config["algo"].lower() == "ppo":
+    elif config["algorithm"].lower() == "ppo":
         algorithm = PPO(
             env,
             logging_writer=logger,
-            sacred_experiment = ex
+            fs_logger=FileSystemLogger(logging_path),
+            learning_rate=config["learning_rate"],
+            gamma=config["gamma"],
+            lmbda=config["lmbda"],
+            eps_clip=config["eps_clip"],
+            K_epoch=config["K_epoch"],
+            rollout_len=config["rollout_len"],
+            buffer_size=config["buffer_size"],
+            minibatch_size=config["minibatch_size"],
+            action_covariance_decay = config["action_covariance_decay"],
+            action_covariance_mode = config["action_covariance_mode"]
             )
     else:
         raise NotImplementedError
 
-    algorithm.train(_config["n_epochs"])
-
-    task 
+    algorithm.train(config["n_epochs"], yield_trajectory=False)
 
 
 if __name__ == "__main__":
-    ex.run_commandline()
+    # check which algorithm
+    parser = setup_parser(ArgumentParser())
+
+    args = parser.parse_args()
+    # load config file
+    config = load_config(args)
+    main(config)
+
+   

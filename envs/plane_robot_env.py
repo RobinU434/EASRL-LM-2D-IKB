@@ -5,6 +5,7 @@ import numpy as np
 from gym import spaces
 from PIL import Image, ImageDraw
 from typing import Any, Dict, Tuple
+from envs.common.sample_target import sample_target
 
 from envs.robots.robot_arm import RobotArm
 from envs.task.base_task import BaseTask
@@ -14,14 +15,14 @@ class PlaneRobotEnv(gym.Env):
     def __init__(
         self, 
         n_joints: int = 1,
-        segment_lenght: float = 1,
+        segment_length: float = 1,
         constraints: np.array = None,
         task: BaseTask = None,
         discrete_mode: bool = False,
         ) -> None:
 
         self._task = task
-        self._robot_arm = RobotArm(n_joints, segment_lenght)
+        self._robot_arm: RobotArm = RobotArm(n_joints, segment_length)
         # init angles and other 
         self.reset()
         
@@ -35,7 +36,7 @@ class PlaneRobotEnv(gym.Env):
         # discrete mode = False is for continuous actions
         self._discrete_mode = discrete_mode
 
-        self._target_postion = self.get_target_position(self._robot_arm.arm_length)
+        self._target_position = self.get_target_position(self._robot_arm.arm_length)
 
         self.set_action_space()
         self.set_observation_space()
@@ -55,8 +56,8 @@ class PlaneRobotEnv(gym.Env):
     def set_observation_space(self) -> None:
         """
         observation space is a 4 dimensional tensor.
-            - first two dimensions: the 2D postion of the goal position
-            - second two dimensions: the 2D postion of the robot arm tip
+            - first two dimensions: the 2D position of the goal position
+            - second two dimensions: the 2D position of the robot arm tip
         """
         self.observation_space = spaces.Box(
             -self._robot_arm.arm_length,
@@ -64,14 +65,9 @@ class PlaneRobotEnv(gym.Env):
             (2 + 2 + self._robot_arm.n_joints, 1)
             )
 
-    def get_target_position(self, radius: float):
-        """
-        sample goal postion in a circular shape around the origin
-        """
-        # angle to sample from
-        theta = np.random.uniform(0, 2 * np.pi)
-
-        return radius * np.array([np.cos(theta), np.sin(theta)])
+    @staticmethod
+    def get_target_position(radius: float):
+        return sample_target(radius)
 
     def _apply_action(self, action: np.array):
         """apply +-1 action on robot arm
@@ -84,8 +80,8 @@ class PlaneRobotEnv(gym.Env):
             # detach if the action tensor requires grad = True
             action = action.detach().numpy()
 
-        # with discrete actions the action is -1 +1 or 0 which will be added ontop of the current angle
-        # with continuous actions the action itself is the delta angle which will be also added ontop of the current angle
+        # with discrete actions the action is -1 +1 or 0 which will be added on top of the current angle
+        # with continuous actions the action itself is the delta angle which will be also added on top of the current angle
         action = np.squeeze(action)
         action = self._robot_arm.angles + action
 
@@ -94,11 +90,11 @@ class PlaneRobotEnv(gym.Env):
     def _observe(self, normalize: bool = True):
         if normalize:
             # normalize observations 
-            target_position = self._target_postion / self._robot_arm.arm_length
-            arm_end_position = self._robot_arm.end_postion / self._robot_arm.arm_length
+            target_position = self._target_position / self._robot_arm.arm_length
+            arm_end_position = self._robot_arm.end_position / self._robot_arm.arm_length
         else:
-            target_position = self._target_postion
-            arm_end_position = self._robot_arm.end_postion
+            target_position = self._target_position
+            arm_end_position = self._robot_arm.end_position
 
         obs = np.concatenate(
             (
@@ -115,7 +111,7 @@ class PlaneRobotEnv(gym.Env):
 
         self._step_counter = 0
 
-        self._target_postion = self.get_target_position(self._robot_arm.arm_length)
+        self._target_position = self.get_target_position(self._robot_arm.arm_length)
 
         return self._observe()
 
@@ -133,11 +129,11 @@ class PlaneRobotEnv(gym.Env):
         
         # the target could be two times the arm length away from the end position
         normalize_factor = 1 / (2 * self._robot_arm.arm_length) 
-        reward = self._task.reward(self._robot_arm.end_postion, self._target_postion, normalize_factor) 
+        reward = self._task.reward(self._robot_arm.end_position, self._target_position, normalize_factor) 
 
         obs = self._observe()
 
-        done = self._task.done(self._robot_arm.end_postion, self._target_postion, )
+        done = self._task.done(self._robot_arm.end_position, self._target_position, )
 
         return obs, reward, done, {}
         
@@ -151,7 +147,7 @@ class PlaneRobotEnv(gym.Env):
         origin = (render_size[0] / 2, render_size[1] / 2)
         scale_factor = 20
         
-        self._draw_goal(draw, origin + self._target_postion * scale_factor)
+        self._draw_goal(draw, origin + self._target_position * scale_factor)
         self._draw_segments(draw, origin, scale_factor)
         self._draw_joints(draw, origin, scale_factor)
 
@@ -164,19 +160,19 @@ class PlaneRobotEnv(gym.Env):
         draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=(255, 0, 0), outline=(0, 0, 0))
 
     def _draw_joints(self, draw, origin, scale_factor: float = 20):
-         for postion in self._robot_arm._postions[:-1].copy():
+         for position in self._robot_arm._positions[:-1].copy():
             # scale
-            postion *= scale_factor
+            position *= scale_factor
             
             # move the segment
-            postion += origin
+            position += origin
 
-            self._draw_joint(draw, postion)
+            self._draw_joint(draw, position)
 
     def _draw_segments(self, draw, origin, scale_factor: float = 20):
         for idx in range(self._robot_arm.n_joints):
-            start = self._robot_arm._postions[idx].copy()
-            end =  self._robot_arm._postions[idx + 1].copy()
+            start = self._robot_arm._positions[idx].copy()
+            end =  self._robot_arm._positions[idx + 1].copy()
 
             # scale 
             start *= scale_factor
@@ -209,8 +205,8 @@ class PlaneRobotEnv(gym.Env):
 
         Args:
             draw (_type_): draw object to draw in
-            start (Tuple[float, float], optional): start postion from line: (x, y). Defaults to (0, 0).
-            end (Tuple[float, float], optional): end postion from line: (x, y). Defaults to (1, 1).
+            start (Tuple[float, float], optional): start position from line: (x, y). Defaults to (0, 0).
+            end (Tuple[float, float], optional): end position from line: (x, y). Defaults to (1, 1).
             width (float, optional): width from line. Defaults to 2.
         """
         coord = [start[0], start[1], end[0], end[1]]

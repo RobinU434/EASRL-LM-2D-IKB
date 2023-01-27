@@ -17,7 +17,7 @@ class BaseQNet(nn.Module):
     def train_net(self, target, mini_batch):
         s, a, r, s_prime, done = mini_batch
         q_val = self.forward(s, a)
-        # print(target.size(), q_val.size())
+        
         loss = F.smooth_l1_loss(q_val, target)
         print(loss.size(), loss.mean())
         self.optimizer.zero_grad()
@@ -47,6 +47,7 @@ class QNet(nn.Module):
     def forward(self, s, a):
         h1 = F.relu(self.fc_s(s))
         h2 = F.relu(self.fc_a(a))
+        
         cat = torch.cat([h1, h2], dim=1)
         q = F.relu(self.fc_cat(cat))
         q = self.fc_out(q)

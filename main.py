@@ -16,6 +16,7 @@ from logger.fs_logger import FileSystemLogger
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
     parser.add_argument("algorithm", type=str, help="specify which algorithm to use")
     parser.add_argument("subdir", type=str, default="test", help="specifies in which subdirectory to store the results")
+    parser.add_argument("num_runs", type=int, default=1, help="number of runs you want to do with the experiment")
 
     return parser
 
@@ -36,7 +37,7 @@ def load_config(args: Namespace) -> dict:
             with open("config/base_ppo.yaml") as f:
                 config = {**config, **yaml.safe_load(f)}
         else:
-            raise NotImplementedError
+            raise NotImplementedError(f"Use an algorithm form this list: [sac, ppo], you used{algo}")
     except AttributeError:
         raise ValueError("You have to specify the algorithm manually. It is either SAC or PPO possible.")
 
@@ -133,6 +134,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # load config file
     config = load_config(args)
-    main(config)
+
+    print(f"Start to do {args.num_runs} experiment")
+    for i in range(args.num_runs):
+        print(f"Started {i}th experiment")
+        main(config)
+        print(f"completed {i}th experiment")
 
    

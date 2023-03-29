@@ -1,7 +1,9 @@
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from matplotlib.figure import Figure
-import numpy as np
-import matplotlib.pyplot as plt
 
 from envs.robots.robot_arm import RobotArm
 
@@ -14,6 +16,23 @@ def scatter_end_points(x_end: np.array, y_end: np.array) -> Figure:
     theta = np.arctan2(y_end, x_end)
 
     ax.scatter(theta, radius, alpha=0.3)
+
+    return fig
+
+def kde_end_points(x_end: np.array, y_end: np.array, x_target: np.array, y_target: np.array) -> Figure:
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    
+    ax.set_xlim([-1, 1])
+    ax.set_ylim([-1, 1])
+
+    end_pos = np.stack([x_end, y_end], axis=1)
+    df = pd.DataFrame(end_pos)
+    df.columns = ["x", "y"]
+
+    sns.kdeplot(df, x="x", y="y", ax=ax)
+
+    ax.scatter(x_target, y_target, color="r", s=1.5)
 
     return fig
 

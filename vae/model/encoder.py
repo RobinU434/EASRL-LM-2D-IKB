@@ -6,13 +6,13 @@ class Encoder(nn.Module):
 
         self.linear = nn.Sequential(
             nn.Linear(input_dim, 512),
-            nn.ReLU(),
+            # nn.ReLU(),
+            # nn.Linear(512, 512),
+            # nn.ReLU(),
             nn.Linear(512, 512),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(512, 512),
-            nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.ReLU()
+            nn.ELU()
         )
         self.linear_mu = nn.Linear(512, latent_dims)
         self.linear_std = nn.Linear(512, latent_dims)

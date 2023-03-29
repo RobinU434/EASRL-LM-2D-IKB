@@ -14,7 +14,11 @@ class BaseTask:
     def reset(self):
          self._step_counter = 0
 
-    def reward(self):
+    def reward(self, *args):
+        self.update()
+        return self._reward(*args)
+
+    def _reward(self, *args):
         raise NotImplementedError
 
     def done(self):

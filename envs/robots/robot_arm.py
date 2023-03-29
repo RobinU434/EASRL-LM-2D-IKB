@@ -27,12 +27,13 @@ class RobotArm:
         Args:
             angles (np.array): array with same length as number of joints
         """
-        self._angles = angles % (2 * np.pi)
-        # cumsum = self._angles.cumsum()
+        # TODO: make env easier
+        self._angles = angles # % (2 * np.pi)
+
         for idx in range(self._n_joints):
             origin = self._positions[idx]
             
-            # enw postion
+            # new position
             new_pos = np.array([np.cos(self._angles[idx]), np.sin(self._angles[idx])])
             # new_pos = np.array([np.cos(cumsum[idx]), np.sin(cumsum[idx])])
             new_pos *= self._segment_length
@@ -73,8 +74,14 @@ class RobotArm:
         return self._arm_length
 
     @property
+    def positions(self):
+        return self._positions
+    
+    @property
     def end_position(self):
         return self._positions[-1]
+    
+
 
 
 if __name__ == "__main__":

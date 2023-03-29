@@ -1,3 +1,4 @@
+import logging
 import gym
 import torch
 import numpy as np
@@ -5,10 +6,12 @@ import numpy as np
 from gym import spaces
 from PIL import Image, ImageDraw
 from typing import Any, Dict, Tuple
-from envs.common.sample_target import sample_target
 
+from envs.common.sample_target import sample_target
 from envs.robots.robot_arm import RobotArm
 from envs.task.base_task import BaseTask
+from envs.task.imitation_learning import ImitationTask
+from envs.task.reach_goal import ReachGoalTask
 
 
 class PlaneRobotEnv(gym.Env):
@@ -19,6 +22,7 @@ class PlaneRobotEnv(gym.Env):
         constraints: np.array = None,
         task: BaseTask = None,
         discrete_mode: bool = False,
+        action_mode: str = "strategic"
         ) -> None:
 
         self._task = task
@@ -35,6 +39,13 @@ class PlaneRobotEnv(gym.Env):
         # discrete mode = True is for discrete actions (+-1 / +-0 degrees)
         # discrete mode = False is for continuous actions
         self._discrete_mode = discrete_mode
+
+        if action_mode == "strategic":
+            self._strategic_mode = 1
+        elif action_mode == "one_shot":
+            self._strategic_mode = 0
+        else:
+            logging.error("action mode has to be either 'strategic' or 'one_shot'")
 
         self._target_position = self.get_target_position(self._robot_arm.arm_length)
 
@@ -83,8 +94,8 @@ class PlaneRobotEnv(gym.Env):
         # with discrete actions the action is -1 +1 or 0 which will be added on top of the current angle
         # with continuous actions the action itself is the delta angle which will be also added on top of the current angle
         action = np.squeeze(action)
-        action = self._robot_arm.angles + action
-
+        action = self._robot_arm.angles * self._strategic_mode + action
+        
         self._robot_arm.set(action)
 
     def _observe(self, normalize: bool = True):
@@ -102,7 +113,26 @@ class PlaneRobotEnv(gym.Env):
                 arm_end_position,
                 self._robot_arm.angles)
             )
+        
+        # TODO: make env easier
+        # obs = np.concatenate([
+        #     np.ones(2), np.zeros(4)
+        # ])
 
+        # TODO: make env easier
+        # obs = np.concatenate([
+        #     target_position,
+        #     np.zeros_like(arm_end_position),
+        #     np.zeros_like(self._robot_arm.angles)
+        #     ])
+        
+        # TODO: make env easier
+        # obs = np.concatenate([
+        #     target_position,
+        #     arm_end_position,
+        #     np.zeros_like(self._robot_arm.angles)
+        #     ])
+        
         return obs
 
     def reset(self) -> Any:
@@ -128,11 +158,18 @@ class PlaneRobotEnv(gym.Env):
         self._apply_action(action)
         
         # the target could be two times the arm length away from the end position
-        normalize_factor = 1 / (2 * self._robot_arm.arm_length) 
-        reward = self._task.reward(self._robot_arm.end_position, self._target_position, normalize_factor) 
+        normalize_factor = 1 / (2 * self._robot_arm.arm_length)
 
+        # calculate reward
+        if type(self._task) == ReachGoalTask:
+            reward = self._task.reward(self._robot_arm.end_position, self._target_position, normalize_factor) 
+        elif type(self._task) == ImitationTask:
+            reward = self._task.reward(self._target_position, self._robot_arm.angles)
+
+        # get observation
         obs = self._observe()
 
+        # determine if the env is done
         done = self._task.done(self._robot_arm.end_position, self._target_position, )
 
         return obs, reward, done, {}

@@ -1,0 +1,13 @@
+num_joints: 2
+latent_dim: 2
+device: "cpu"
+dataset: "action"  # "action" "action_target" "conditional_action_target"
+dataset_mode: "relative_tanh" # "const" "random" "relative_uniform" "relative_tanh" # const is a dataset created with a constant start position -> one action for one target position, with random -> multiple actions for one target positions are possible 
+batch_size: 256
+shuffle_data: False
+epochs: 201
+val_interval: 5
+learning_rate: 0.0012
+kl_loss_weight: 0.00001
+reconstruction_loss_weight: 1
+normalize: True

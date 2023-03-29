@@ -6,6 +6,7 @@ from argparse import ArgumentParser, Namespace
 from torch.utils.tensorboard import SummaryWriter
 
 from envs.plane_robot_env import PlaneRobotEnv
+from envs.task.imitation_learning import ImitationTask
 from envs.task.reach_goal import ReachGoalTask
 from algorithms.ppo.ppo import PPO
 from algorithms.sac.sac import SAC
@@ -15,9 +16,6 @@ from logger.fs_logger import FileSystemLogger
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
     parser.add_argument("algorithm", type=str, help="specify which algorithm to use")
     parser.add_argument("subdir", type=str, default="test", help="specifies in which subdirectory to store the results")
-
-    # overwrites for the config file
-
 
     return parser
 
@@ -52,15 +50,26 @@ def load_config(args: Namespace) -> dict:
             
 
 def main(config):
-    task = ReachGoalTask(epsilon=config["target_epsilon"])
+    # select task
+    print(config["task"])
+    if config["task"] == ReachGoalTask.__name__:
+        task = ReachGoalTask(config = config)
+    elif config["task"] == ImitationTask.__name__:
+        task = ImitationTask(config=config)
+    print(config["n_joints"], " joints")
 
     env = PlaneRobotEnv(
         n_joints=config["n_joints"],
         segment_length=config["segment_length"],
-        task=task)
+        task=task, 
+        action_mode=config["action_mode"]
+        )
+    
+    print("action mode: ", config["action_mode"])
+    print("action magnitude: ", config["action_magnitude"])
 
     # pth for file system logging
-    logging_path = f"results/{config['algorithm'].lower()}/{config['subdir']}/{config['n_joints']}_{config['seed']}"
+    logging_path = f"results/{config['algorithm'].lower()}/{config['subdir']}/{config['action_mode']}/{config['n_joints']}_{config['seed']}"
     logger = SummaryWriter(logging_path)
 
     # store config 
@@ -70,6 +79,11 @@ def main(config):
     logger.add_hparams(config, {})
     
 
+    print("")
+    print("SAC:")
+    print("target entropy", config["target_entropy"])
+    print("gamma: ", config["gamma"])
+    
     if config["algorithm"].lower() == "sac":
         algorithm = SAC(
             env,
@@ -87,7 +101,8 @@ def main(config):
             target_entropy=config["target_entropy"],
             lr_alpha=config["lr_alpha"],
             action_covariance_decay = config["action_covariance_decay"],
-            action_covariance_mode = config["action_covariance_mode"]
+            action_covariance_mode = config["action_covariance_mode"],
+            action_magnitude=config["action_magnitude"],
             )
     elif config["algorithm"].lower() == "ppo":
         algorithm = PPO(
@@ -108,7 +123,7 @@ def main(config):
     else:
         raise NotImplementedError
 
-    algorithm.train(config["n_epochs"], yield_trajectory=False)
+    algorithm.train(config["n_epochs"])
 
 
 if __name__ == "__main__":

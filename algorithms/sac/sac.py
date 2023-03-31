@@ -40,7 +40,7 @@ class SAC:
         target_entropy: float = -1.0, # for automated alpha update,
         lr_alpha: float = 0.001,  # for automated alpha update
         action_covariance_decay: float = 0.5,
-        action_covariance_mode: str = "indipendent",
+        action_covariance_mode: str = "independent",
         action_magnitude: float = 1,
         ) -> None:
         
@@ -107,14 +107,6 @@ class SAC:
             q1_q2 = torch.cat([q1_val, q2_val], dim=1)
             min_q = torch.min(q1_q2, 1, keepdim=True)[0]
             target = r + self._gamma * done * (min_q + entropy)
-        
-        # print("????")
-        # print(r)
-        # print(entropy)
-        # print(min_q)
-        # print(done)
-        # print(self._gamma)
-        # print(target)
         return target
 
     def train(self, n_epochs, print_interval: int = 20):
@@ -128,6 +120,7 @@ class SAC:
         end_pos = []
         target_pos = []
         for epoch_idx in range(n_epochs + 1):
+            actions = torch.tensor([])
             log_probs = torch.tensor([])
             
             s = self._env.reset()
@@ -139,6 +132,7 @@ class SAC:
 
                 a, log_prob = self._pi.forward(s_input)
                 log_probs = torch.cat([log_probs, torch.tensor([log_prob])])
+                actions = torch.cat([actions, a.detach()])
 
                 # detach grad from action to apply it to the environment where it is converted into a numpy.ndarray
                 a = a.detach()
@@ -187,7 +181,9 @@ class SAC:
 
                     self._q1.soft_update(self._q1_target, self._tau)
                     self._q2.soft_update(self._q2_target, self._tau)
-                    
+
+            
+            # log metrics
             if epoch_idx % print_interval == 0 and epoch_idx != 0:
                 avg_episode_len = num_steps / print_interval 
                 mean_reward = score / num_steps
@@ -203,6 +199,7 @@ class SAC:
                     self._logger.add_scalar("sac/critic_loss", torch.tensor(critic_losses).mean(), epoch_idx)
                     self._logger.add_scalar("sac/alpha_loss", torch.tensor(alpha_losses).mean(), epoch_idx)
                     self._logger.add_scalar("sac/log_prob", np.array(log_probs).mean(), epoch_idx)
+                    self._logger.add_histogram("sac/action_distr", actions, epoch_idx)
 
                 # in file system
                 if self._fs_logger is not None:
@@ -224,6 +221,23 @@ class SAC:
                 fig.savefig(self._fs_logger._path + f"/polar_exploration_{epoch_idx}.png")
                 self._logger.add_figure("sac/polar_exploration", fig, epoch_idx)
                 plt.close()
+
+                # save model
+                torch.save({
+                    'epoch': epoch_idx,
+                    'pi_model_state_dict': self._pi.state_dict(),
+                    'pi_optimizer_state_dict': self._pi.optimizer.state_dict(),
+                    'q1_model_state_dict': self._q1.state_dict(),
+                    'q1_optimizer_state_dict': self._q1.optimizer.state_dict(),
+                    'q2_model_state_dict': self._q2.state_dict(),
+                    'q2_optimizer_state_dict': self._q2.optimizer.state_dict(),
+                    'q1_target_model_state_dict': self._q1_target.state_dict(),
+                    'q1_target_optimizer_state_dict': self._q1_target.optimizer.state_dict(),
+                    'q2_target_model_state_dict': self._q2_target.state_dict(),
+                    'q2_target_optimizer_state_dict': self._q2_target.optimizer.state_dict(),
+                    
+                    'reward': float(mean_reward),
+                }, self._fs_logger.path + f"/model_{epoch_idx}_reward_{mean_reward:.4f}.pt")     
 
                 score = 0.0
                 num_steps = 0

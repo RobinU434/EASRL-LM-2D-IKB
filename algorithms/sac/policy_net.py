@@ -110,3 +110,7 @@ class PolicyNet(nn.Module):
         self.log_alpha_optimizer.step()
 
         return entropy, loss, alpha_loss
+
+    @property
+    def optimizer(self):
+        return self.actor.optimizer

@@ -23,6 +23,10 @@ class FileSystemLogger:
         df = DataFrame(self._data)
         df.to_csv(self._path + "/" + file_name)
 
+    @property
+    def path(self):
+        return self._path
+
 
 if __name__ == "__main__":
     logger = FileSystemLogger(".")

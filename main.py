@@ -1,3 +1,4 @@
+import time
 import yaml
 import torch
 
@@ -41,9 +42,6 @@ def load_config(args: Namespace) -> dict:
     except AttributeError:
         raise ValueError("You have to specify the algorithm manually. It is either SAC or PPO possible.")
 
-    # add current seed into config
-    config["seed"] = torch.seed()
-
     # finally add all arguments into config and maybe do an overwrite
     config = {**config, **vars(args)}
     
@@ -51,6 +49,10 @@ def load_config(args: Namespace) -> dict:
             
 
 def main(config):
+    # reseed the environment
+    time_stamp = int(time.time())
+    torch.manual_seed(time_stamp)
+
     # select task
     print(config["task"])
     if config["task"] == ReachGoalTask.__name__:
@@ -70,7 +72,7 @@ def main(config):
     print("action magnitude: ", config["action_magnitude"])
 
     # pth for file system logging
-    logging_path = f"results/{config['algorithm'].lower()}/{config['subdir']}/{config['action_mode']}/{config['n_joints']}_{config['seed']}"
+    logging_path = f"results/{config['algorithm'].lower()}/{config['subdir']}/{config['action_mode']}/{config['n_joints']}_{time_stamp}"
     logger = SummaryWriter(logging_path)
 
     # store config 
@@ -138,7 +140,11 @@ if __name__ == "__main__":
     print(f"Start to do {args.num_runs} experiment")
     for i in range(args.num_runs):
         print(f"Started {i}th experiment")
-        main(config)
+        try:
+            main(config)
+        except ValueError:
+            # Because some wierd nan values during sampling
+            continue
         print(f"completed {i}th experiment")
 
    

@@ -135,13 +135,16 @@ class PlaneRobotEnv(gym.Env):
         
         return obs
 
-    def reset(self) -> Any:
+    def reset(self, target_position: np.array = None) -> Any:
         self._robot_arm.reset()
         self._task.reset()
 
         self._step_counter = 0
-
-        self._target_position = self.get_target_position(self._robot_arm.arm_length)
+        
+        if target_position is None or len(target_position) != 2:
+            self._target_position = self.get_target_position(self._robot_arm.arm_length)
+        else:
+            self._target_position = target_position
 
         return self._observe()
 

@@ -51,7 +51,11 @@ class SAC:
         # logging every print interval one trajectory and store it
         # x0 -> episode
         # x1 -> time step 
-        self._trajectory_logger = FileSystemLogger(fs_logger._path)
+
+        if self._fs_logger is not None:
+            self._trajectory_logger = FileSystemLogger(fs_logger._path)
+        else:
+            self._trajectory_logger = None
 
         #Hyperparameters
         self._lr_pi             = lr_pi
@@ -142,7 +146,7 @@ class SAC:
                 s = s_prime
 
                 # log trajectory
-                if epoch_idx % print_interval == 0:
+                if epoch_idx % print_interval == 0 and self._trajectory_logger is not None:
                     self._trajectory_logger.add_scalar("state", s, epoch_idx, self._env.num_steps)
                     self._trajectory_logger.add_scalar("action", a.tolist(), epoch_idx, self._env.num_steps)
                     self._trajectory_logger.add_scalar("reward", r, epoch_idx, self._env.num_steps)
@@ -200,6 +204,13 @@ class SAC:
                     self._logger.add_scalar("sac/alpha_loss", torch.tensor(alpha_losses).mean(), epoch_idx)
                     self._logger.add_scalar("sac/log_prob", np.array(log_probs).mean(), epoch_idx)
                     self._logger.add_histogram("sac/action_distr", actions, epoch_idx)
+                    # plot exploration
+                    end_pos = np.array(end_pos)
+                    target_pos = np.array(target_pos) 
+                    fig = kde_end_points(end_pos[:, 0], end_pos[:, 1], target_pos[:, 0], target_pos[:, 1])
+                    fig.savefig(self._fs_logger._path + f"/polar_exploration_{epoch_idx}.png")
+                    self._logger.add_figure("sac/polar_exploration", fig, epoch_idx)
+                    plt.close()
 
                 # in file system
                 if self._fs_logger is not None:
@@ -211,16 +222,6 @@ class SAC:
                     self._fs_logger.add_scalar("sac/critic_loss", torch.tensor(critic_losses).mean(), epoch_idx)
                     self._fs_logger.add_scalar("sac/alpha_loss", torch.tensor(alpha_losses).mean(), epoch_idx)
                     self._fs_logger.add_scalar("sac/log_prob", np.array(log_probs).mean(), epoch_idx)
-
-                # plot exploration
-                end_pos = np.array(end_pos)
-                target_pos = np.array(target_pos)
-                # fig = scatter_end_points(end_pos[:, 0], end_pos[:, 1])
-                # TODO: make env easier
-                fig = kde_end_points(end_pos[:, 0], end_pos[:, 1], target_pos[:, 0], target_pos[:, 1])
-                fig.savefig(self._fs_logger._path + f"/polar_exploration_{epoch_idx}.png")
-                self._logger.add_figure("sac/polar_exploration", fig, epoch_idx)
-                plt.close()
 
                 # save model
                 torch.save({
@@ -235,7 +236,6 @@ class SAC:
                     'q1_target_optimizer_state_dict': self._q1_target.optimizer.state_dict(),
                     'q2_target_model_state_dict': self._q2_target.state_dict(),
                     'q2_target_optimizer_state_dict': self._q2_target.optimizer.state_dict(),
-                    
                     'reward': float(mean_reward),
                 }, self._fs_logger.path + f"/model_{epoch_idx}_reward_{mean_reward:.4f}.pt")     
 
@@ -245,10 +245,37 @@ class SAC:
                 target_pos = []
         
         # store metrics in a csv file
-        self._fs_logger.dump()
-        self._trajectory_logger.dump("trajectory.csv")
+        if self._fs_logger is not None:
+            self._fs_logger.dump()
+        if self._trajectory_logger is not None:
+            self._trajectory_logger.dump("trajectory.csv")
 
         self._env.close()
+
+    def load_checkpoint(self, path):
+        checkpoint = torch.load(path)
+        self._pi.load_state_dict(checkpoint["pi_model_state_dict"])
+        self._q1.load_state_dict(checkpoint["q1_model_state_dict"])
+        self._q2.load_state_dict(checkpoint["q2_model_state_dict"])
+        self._q1_target.load_state_dict(checkpoint["q1_target_model_state_dict"])
+        self._q2_target.load_state_dict(checkpoint["q2_target_model_state_dict"])
+
+    def inference(self, target_positions: np.array):
+        for target_position in target_positions:
+            s = self._env.reset(target_position)
+            done = False
+            while not done:
+                # introduce batch size 1
+                s_input = torch.from_numpy(s).float()
+                s_input = s_input.unsqueeze(dim=0)
+                a, log_prob = self._pi.forward(s_input)
+                # detach grad from action to apply it to the environment where it is converted into a numpy.ndarray
+                a = a.detach()
+                s_prime, r, done, info = self._env.step(a)
+                s = s_prime
+
+            print(self._env._step_counter)
+            print(self._env._robot_arm.positions)
 
 
 if __name__ == '__main__':

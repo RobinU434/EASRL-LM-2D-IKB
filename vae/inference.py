@@ -57,7 +57,6 @@ def load_model(path: str, config: dict) -> VariationalAutoencoder:
         output_dim  = config["num_joints"]
         enhance_dim = 2
     
-    
     model = VariationalAutoencoder(
         input_dim=input_dim,
         latent_dim=latent_dim,

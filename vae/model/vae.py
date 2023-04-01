@@ -7,7 +7,7 @@ from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 
 from vae.model.decoder import Decoder
-from vae.model.encoder import Encoder
+from vae.model.encoder import VariationalEncoder
 
 
 class VariationalAutoencoder(nn.Module):
@@ -18,7 +18,7 @@ class VariationalAutoencoder(nn.Module):
         self.latent_dim = latent_dim
         self.output_dim = output_dim
 
-        self.encoder = Encoder(input_dim, latent_dim)
+        self.encoder = VariationalEncoder(input_dim, latent_dim)
         self.decoder = Decoder(latent_dim + self.enhanced_latent_dim, output_dim)
 
         self.N = torch.distributions.Normal(0, 1)

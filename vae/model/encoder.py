@@ -1,8 +1,8 @@
 import torch.nn as nn
 
-class Encoder(nn.Module):
+class VariationalEncoder(nn.Module):
     def __init__(self, input_dim, latent_dims):
-        super(Encoder, self).__init__()
+        super(VariationalEncoder, self).__init__()
 
         self.linear = nn.Sequential(
             nn.Linear(input_dim, 512),
@@ -23,3 +23,24 @@ class Encoder(nn.Module):
         # linear_std is calculating the log std
         log_std = self.linear_std(x)
         return mu, log_std
+
+
+class Encoder(nn.Module):
+    def __init__(self, input_dim, latent_dims):
+        super(Encoder, self).__init__()
+
+        self.linear = nn.Sequential(
+            nn.Linear(input_dim, 512),
+            # nn.ReLU(),
+            # nn.Linear(512, 512),
+            # nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ELU(),
+            nn.Linear(512, latent_dims)
+        )
+
+    def forward(self, x):
+        z = self.linear(x)
+        return z 

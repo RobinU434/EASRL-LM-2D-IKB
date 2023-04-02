@@ -1,6 +1,6 @@
 import yaml
 import numpy as np
-
+import matplotlib.pyplot as plt
 from typing import List
 from argparse import ArgumentParser
 
@@ -12,6 +12,7 @@ from envs.task.imitation_learning import ImitationTask
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
     parser.add_argument("model_path", type=str, help="path to model checkpoint")
+    parser.add_argument("--arm", type=bool, default=False, help="plot arm positions")
 
     return parser
 
@@ -57,8 +58,24 @@ def main(sac_config: dict, model_path: str):
             )
     
     sac.load_checkpoint(model_path)
-    target_positions = np.array([[1, 0]])
-    sac.inference(target_positions)
+    target_positions = np.array([[0, 1]])
+    trajectories = sac.inference(target_positions)
+    distance = np.linalg.norm(trajectories[0, :, -1, :] - target_positions, axis=1)
+    
+    fig, axs = plt.subplots(2, 1)
+    axs[0].set_xlim([-sac_config["n_joints"], sac_config["n_joints"]])
+    axs[0].set_ylim([-sac_config["n_joints"], sac_config["n_joints"]])
+    for trajectory in trajectories[0]:
+        axs[0].plot(trajectory[:, 0], trajectory[:, 1], color="k", marker=".")
+    
+    axs[0].plot(trajectories[0, :, -1, 0], trajectories[0, :, -1, 1])
+    axs[0].scatter(target_positions[0, 0], target_positions[0, 1], color="r")
+    
+    axs[1].set_ylim([-0.5, max(distance) + 0.5])
+    axs[1].grid()
+    axs[1].plot(distance)
+    plt.show()
+
 
 
 

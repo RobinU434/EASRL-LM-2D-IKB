@@ -261,8 +261,11 @@ class SAC:
         self._q2_target.load_state_dict(checkpoint["q2_target_model_state_dict"])
 
     def inference(self, target_positions: np.array):
+        trajectories = list()
         for target_position in target_positions:
             s = self._env.reset(target_position)
+            # .copy because of copy by value
+            trajectory = np.expand_dims(self._env._robot_arm.positions.copy(), axis=0)
             done = False
             while not done:
                 # introduce batch size 1
@@ -272,10 +275,12 @@ class SAC:
                 # detach grad from action to apply it to the environment where it is converted into a numpy.ndarray
                 a = a.detach()
                 s_prime, r, done, info = self._env.step(a)
+                trajectory = np.concatenate([trajectory, np.expand_dims(self._env._robot_arm.positions.copy(), axis=0)], axis=0)
                 s = s_prime
 
-            print(self._env._step_counter)
-            print(self._env._robot_arm.positions)
+            trajectories.append(trajectory)
+        
+        return np.array(trajectories)
 
 
 if __name__ == '__main__':

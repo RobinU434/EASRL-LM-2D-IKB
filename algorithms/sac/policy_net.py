@@ -58,8 +58,6 @@ class PolicyNet(nn.Module):
         dist = Normal(mu, std + 1e-28, validate_args={"scale": constraints.greater_than_eq})
         # dist = self.action_sampling_func(mu, std, self.action_sampling_mode, self.covariance_decay)
         action = dist.rsample()
-        # shape action for buffer layout
-        action = action.squeeze()
         log_prob = dist.log_prob(action)
         # sum log prob TODO: Does this still hold with dependent log probabilities?
         log_prob = log_prob.sum(dim=1) # independence assumption between individual probabilities
@@ -72,8 +70,12 @@ class PolicyNet(nn.Module):
                 target_pos = x[:, :2].squeeze()
                 latent_input = torch.cat([action, target_pos], dim=len(target_pos.size()) - 1)
                 action = self.actor.auto_encoder.decoder.forward(latent_input)
+            elif self.actor.auto_encoder.conditional_info_dim > 2:
+                latent_input = torch.cat([action, x], dim=1)
+                action = self.actor.auto_encoder.decoder.forward(latent_input)
 
-        # TODO: implement function to maps from sampled vector into direct action -> latent decoder
+        # shape action for buffer layout
+        action = action.squeeze()
          
         # real_action = (torch.tanh(action) + 1.0) * torch.pi  # multiply by pi in order to match the action space
         real_action = torch.tanh(action) * self.action_magnitude

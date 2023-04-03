@@ -58,6 +58,7 @@ def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "consta
     # assumption: every segment has length one
     targets[:, 0:2] = sample_target(radius=n_joints, n_points=n)
     start_angles = sample_start(n_joints, n, start_mode)
+    state = np.zeros((n, 4 + n_joints))
     
     bar = Bar('CCD on targets', max=n)
     for idx in range(n):
@@ -65,11 +66,14 @@ def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "consta
         target = targets[idx]
         
         arm.set(start_angles[idx])
+        start_end_position = arm.end_position.copy()
         arm.IK(target)
 
         actions[idx] = arm.angles
         targets[idx, 0:2] = arm.end_position
         
+        state[idx, :] = np.concatenate([arm.end_position, start_end_position, start_angles[idx]])
+
         arm.reset()
         
         if idx % 10 == 0:
@@ -80,10 +84,12 @@ def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "consta
     print("Write actions and corresponding positions into csv file")
     df_actions = DataFrame(actions)
     df_targets = DataFrame(targets)
+    df_state = DataFrame(state)
 
     df_actions.to_csv(f"datasets/{n_joints}/actions_{time_stamp}.csv")
     df_targets.to_csv(f"datasets/{n_joints}/targets_{time_stamp}.csv")
-
+    df_state.to_csv(f"datasets/{n_joints}/state_{time_stamp}.csv")
+    
 
 def create_relative_dataset(n_joints: int, n: int = 10_000, mode: str = "relative_uniform"):
     time_stamp = int(time.time()) 
@@ -91,10 +97,10 @@ def create_relative_dataset(n_joints: int, n: int = 10_000, mode: str = "relativ
     
     size = (n, n_joints)
 
-    if mode == "relative_uniform":
+    if mode == "noise_uniform":
         data = np.random.uniform(-1, 1, size)
 
-    elif mode == "relative_tanh":
+    elif mode == "noise_tanh":
         data = np.tanh(np.random.normal(0, 1, size))
     
     df = DataFrame(data)
@@ -104,7 +110,7 @@ def create_relative_dataset(n_joints: int, n: int = 10_000, mode: str = "relativ
 def create_dataset(n_joints: int, n: int, mode: str):
     if "IK" in mode:
         return create_IK_dataset(n_joints, n, mode)
-    elif "relative" in mode:
+    elif "noise" in mode:
         return create_relative_dataset(n_joints, n, mode)
 
 

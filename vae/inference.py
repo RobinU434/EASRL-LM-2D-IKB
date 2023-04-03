@@ -63,7 +63,7 @@ def load_model(path: str, config: dict) -> VariationalAutoencoder:
         output_dim=output_dim,
         learning_rate=config["learning_rate"],
         logger=None,
-        enhanced_latent_dim=enhance_dim
+        conditional_info_dim=enhance_dim
     )
 
     checkpoint = torch.load(path)
@@ -124,7 +124,7 @@ def forward_kinematics(angles: torch.tensor):
 def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, sample_size: int):
     latent_sample = sample_latent(sample_size, torch.zeros(model.latent_dim), torch.ones(model.latent_dim))
     
-    if model.enhanced_latent_dim == 2:
+    if model.conditional_info_dim == 2:
         if fixed_position:
             target = sample_target(1)
             target = target.repeat((sample_size, 1))

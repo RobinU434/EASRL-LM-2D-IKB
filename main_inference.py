@@ -12,7 +12,7 @@ from envs.task.imitation_learning import ImitationTask
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
     parser.add_argument("model_path", type=str, help="path to model checkpoint")
-    parser.add_argument("--arm", type=bool, default=False, help="plot arm positions")
+    # parser.add_argument("--arm", type=bool, default=False, help="plot arm positions")
 
     return parser
 
@@ -65,11 +65,12 @@ def main(sac_config: dict, model_path: str):
     fig, axs = plt.subplots(2, 1)
     axs[0].set_xlim([-sac_config["n_joints"], sac_config["n_joints"]])
     axs[0].set_ylim([-sac_config["n_joints"], sac_config["n_joints"]])
+    axs[0].axis("equal")
     for trajectory in trajectories[0]:
         axs[0].plot(trajectory[:, 0], trajectory[:, 1], color="k", marker=".")
     
     axs[0].plot(trajectories[0, :, -1, 0], trajectories[0, :, -1, 1])
-    axs[0].scatter(target_positions[0, 0], target_positions[0, 1], color="r")
+    axs[0].plot(target_positions[0, 0], target_positions[0, 1], color="r", marker=".")
     
     axs[1].set_ylim([-0.5, max(distance) + 0.5])
     axs[1].grid()

@@ -186,23 +186,23 @@ if __name__ == "__main__":
     
     input_dim = config["num_joints"]
     if config["dataset"] == "action":
-        enhance_dim = 0
+        conditional_info_dim = 0
         input_dim = config["num_joints"]
         
         train_dataloader, val_dataloader, test_dataloader = load_action_dataset(config)
         
     elif config["dataset"] == "action_target_v1":
-        enhance_dim = 2
+        conditional_info_dim = 2
         input_dim = config["num_joints"]
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
         
     elif config["dataset"] == "action_target_v2":
-        enhance_dim = 0
+        conditional_info_dim = 0
         input_dim = config["num_joints"] + 2
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
         
     elif config["dataset"] == "conditional_action_target":
-        enhance_dim = 2  # for the additional target position
+        conditional_info_dim = 2  # for the additional target position
         input_dim = config["num_joints"] + 2
         
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     store_config(config, path)
     
     print("architecture")
-    print(f"{input_dim} -> [Encoder] -> {config['latent_dim']} + {enhance_dim} -> [Decoder] -> {config['num_joints']}")
+    print(f"{input_dim} -> [Encoder] -> {config['latent_dim']} + {conditional_info_dim} -> [Decoder] -> {config['num_joints']}")
     
     autoencoder = VariationalAutoencoder(
         input_dim=input_dim,
@@ -222,7 +222,7 @@ if __name__ == "__main__":
         output_dim=config["num_joints"],
         learning_rate=config["learning_rate"],
         logger=logger,
-        conditional_info_dim=enhance_dim,
+        conditional_info_dim=conditional_info_dim,
         store_history=True)
     
     if config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:

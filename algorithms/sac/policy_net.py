@@ -26,12 +26,12 @@ class PolicyNet(nn.Module):
         action_magnitude: float = 1,
         ):
         super(PolicyNet, self).__init__()
-        # self.actor = Actor(input_size, output_size, learning_rate)
+        self.actor = Actor(input_size, output_size, learning_rate)
         # self.actor = InformedMultiAgent(input_size, output_size, learning_rate, 2)
         # self.actor = MultiAgent(input_size, output_size, learning_rate, 2)
         # self.actor = LatentActor(input_size, 5, output_size, learning_rate, kl_weight=0.01, vae_learning=True)
         # self.actor = LatentActor(input_size, 5, output_size, learning_rate, enhanced_latent_dim=2, vae_learning=True)
-        self.actor = LatentActor("cpu", input_size, 2, output_size, learning_rate, enhanced_latent_dim=6, vae_learning=True)
+        # self.actor = LatentActor("cpu", input_size, 2, output_size, learning_rate, enhanced_latent_dim=6, vae_learning=True)
 
         self.log_alpha = torch.tensor(np.log(init_alpha))
         self.log_alpha.requires_grad = True

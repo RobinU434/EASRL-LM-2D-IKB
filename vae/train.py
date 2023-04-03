@@ -29,7 +29,7 @@ def store_config(config, path: str):
 def run_model(
     autoencoder: VariationalAutoencoder,
     data: DataLoader,
-    loss_func: CyclicVAELoss,
+    loss_func: VAELoss,
     device: str
     ):
     
@@ -222,7 +222,8 @@ if __name__ == "__main__":
         output_dim=config["num_joints"],
         learning_rate=config["learning_rate"],
         logger=logger,
-        enhanced_latent_dim=enhance_dim)
+        conditional_info_dim=enhance_dim,
+        store_history=True)
     
     if config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:
         loss_func = VAELoss(

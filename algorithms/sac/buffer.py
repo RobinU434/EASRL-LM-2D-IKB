@@ -8,6 +8,8 @@ import torch
 import random
 import collections
 
+from torch.utils.data import Dataset
+
 
 class ReplayBuffer():
     def __init__(self, buffer_limit):
@@ -44,3 +46,17 @@ class ReplayBuffer():
 
     def __len__(self):
         return self.size
+    
+
+class BufferDataset(Dataset):
+    def __init__(self, replay_buffer: ReplayBuffer) -> None:
+        super().__init__()
+
+        self.buffer_content = replay_buffer.buffer.copy()
+
+    def __len__(self):
+        return len(self.buffer_content)
+    
+    def __getitem__(self, index):
+        s, a, _, _, _ = self.buffer_content[index]
+        return torch.atanh(a), torch.tensor(s, dtype=torch.float32)

@@ -11,15 +11,22 @@ from vae.model.encoder import VariationalEncoder
 
 
 class VariationalAutoencoder(nn.Module):
-    def __init__(self, input_dim, latent_dim, output_dim, learning_rate: float, logger: SummaryWriter, enhanced_latent_dim: int = 0):
+    def __init__(self, 
+                 input_dim: int, 
+                 latent_dim: int,
+                 output_dim: int,
+                 learning_rate: float,
+                 logger: SummaryWriter, 
+                 conditional_info_dim: int = 0,
+                 store_history: bool = False):
         super(VariationalAutoencoder, self).__init__()
-        self.enhanced_latent_dim = enhanced_latent_dim
+        self.conditional_info_dim = conditional_info_dim
         self.input_dim = input_dim
         self.latent_dim = latent_dim
         self.output_dim = output_dim
 
         self.encoder = VariationalEncoder(input_dim, latent_dim)
-        self.decoder = Decoder(latent_dim + self.enhanced_latent_dim, output_dim)
+        self.decoder = Decoder(latent_dim + self.conditional_info_dim, output_dim)
 
         self.N = torch.distributions.Normal(0, 1)
         # self.N.loc = self.N.loc # .cuda() hack to get sampling on the GPU
@@ -27,12 +34,13 @@ class VariationalAutoencoder(nn.Module):
 
         self.logger: SummaryWriter = logger
 
+        self.store_history = store_history
         self.decoder_history = torch.tensor([])
         self.z_grad_history = torch.tensor([])
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
 
-    def forward(self, x, latent_enhancer: torch.tensor = torch.tensor([])):
+    def forward(self, x, conditional_information: torch.tensor = torch.tensor([])):
         mu, log_std = self.encoder(x)  # output dim (batch_size, latent_space)
         
         # sample the latent space
@@ -40,13 +48,14 @@ class VariationalAutoencoder(nn.Module):
         z = mu + sigma * self.N.sample(mu.shape)
 
         # enhance latent space
-        z = torch.cat([z, latent_enhancer], dim=1)
+        z = torch.cat([z, conditional_information], dim=1)
         z = Variable(z, requires_grad=True)
         # store for logging the gradient
         self.z = z
 
         decoder_out = self.decoder.forward(z) 
-        self.decoder_history = torch.cat([self.decoder_history, decoder_out.flatten()])
+        if self.store_history:
+            self.decoder_history = torch.cat([self.decoder_history, decoder_out.flatten()])
 
         return decoder_out, mu, log_std
 
@@ -55,8 +64,9 @@ class VariationalAutoencoder(nn.Module):
         loss.backward()
 
         # log gradient from latent space
-        z_grad = self.z.grad
-        self.z_grad_history = torch.cat([self.z_grad_history, z_grad], dim=0)
+        if self.store_history:
+            z_grad = self.z.grad
+            self.z_grad_history = torch.cat([self.z_grad_history, z_grad], dim=0)
 
         self.optimizer.step()
 

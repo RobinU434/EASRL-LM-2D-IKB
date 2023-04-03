@@ -26,11 +26,12 @@ class PolicyNet(nn.Module):
         action_magnitude: float = 1,
         ):
         super(PolicyNet, self).__init__()
-        self.actor = Actor(input_size, output_size, learning_rate)
+        # self.actor = Actor(input_size, output_size, learning_rate)
         # self.actor = InformedMultiAgent(input_size, output_size, learning_rate, 2)
         # self.actor = MultiAgent(input_size, output_size, learning_rate, 2)
-        # self.actor = LatentActor(input_size, 5, output_size, learning_rate, kl_weight=0.01)
-        # self.actor = LatentActor(input_size, 5, output_size, learning_rate, enhanced_latent_dim=2)
+        # self.actor = LatentActor(input_size, 5, output_size, learning_rate, kl_weight=0.01, vae_learning=True)
+        # self.actor = LatentActor(input_size, 5, output_size, learning_rate, enhanced_latent_dim=2, vae_learning=True)
+        self.actor = LatentActor("cpu", input_size, 2, output_size, learning_rate, enhanced_latent_dim=6, vae_learning=True)
 
         self.log_alpha = torch.tensor(np.log(init_alpha))
         self.log_alpha.requires_grad = True
@@ -57,22 +58,24 @@ class PolicyNet(nn.Module):
         dist = Normal(mu, std + 1e-28, validate_args={"scale": constraints.greater_than_eq})
         # dist = self.action_sampling_func(mu, std, self.action_sampling_mode, self.covariance_decay)
         action = dist.rsample()
-        # shape action for buffer layout
-        action = action.squeeze()
         log_prob = dist.log_prob(action)
         # sum log prob TODO: Does this still hold with dependent log probabilities?
         log_prob = log_prob.sum(dim=1) # independence assumption between individual probabilities
         # log(p(a1, a2)) = log(p(a1) * p(a2)) = log(p(a1)) + log(p(a2))
 
         if type(self.actor) == LatentActor:
-            if self.actor.auto_encoder.enhanced_latent_dim == 0:
+            if self.actor.auto_encoder.conditional_info_dim == 0:
                 action = self.actor.auto_encoder.decoder.forward(action)
-            elif self.actor.auto_encoder.enhanced_latent_dim == 2:
+            elif self.actor.auto_encoder.conditional_info_dim == 2:
                 target_pos = x[:, :2].squeeze()
                 latent_input = torch.cat([action, target_pos], dim=len(target_pos.size()) - 1)
                 action = self.actor.auto_encoder.decoder.forward(latent_input)
+            elif self.actor.auto_encoder.conditional_info_dim > 2:
+                latent_input = torch.cat([action, x], dim=1)
+                action = self.actor.auto_encoder.decoder.forward(latent_input)
 
-        # TODO: implement function to maps from sampled vector into direct action -> latent decoder
+        # shape action for buffer layout
+        action = action.squeeze()
          
         # real_action = (torch.tanh(action) + 1.0) * torch.pi  # multiply by pi in order to match the action space
         real_action = torch.tanh(action) * self.action_magnitude

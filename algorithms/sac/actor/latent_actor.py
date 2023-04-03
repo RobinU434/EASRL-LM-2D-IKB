@@ -36,7 +36,7 @@ class LatentActor(nn.Module):
         
         print("use variational autoencoder with architecture:")
         print(f"{output_dim} -> [Encoder] -> {latent_dim} + {enhanced_latent_dim} -> [Decoder] -> {output_dim}")
-    
+        self.vae_learning = vae_learning
         self.auto_encoder = VariationalAutoencoder(
             input_dim=output_dim + enhanced_latent_dim,
             latent_dim=latent_dim,

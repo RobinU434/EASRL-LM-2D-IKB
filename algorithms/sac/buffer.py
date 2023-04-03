@@ -59,4 +59,4 @@ class BufferDataset(Dataset):
     
     def __getitem__(self, index):
         s, a, _, _, _ = self.buffer_content[index]
-        return a, torch.tensor(s, dtype=torch.float32)
+        return torch.atanh(a), torch.tensor(s, dtype=torch.float32)

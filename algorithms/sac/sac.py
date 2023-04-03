@@ -5,21 +5,21 @@
 # =====================================================================================================================
 
 import gym
-from matplotlib import pyplot as plt
-import numpy as np
 import torch
+import numpy as np
 
+from matplotlib import pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
-from algorithms.helper.plot import kde_end_points, scatter_end_points
-
-from algorithms.sac.buffer import ReplayBuffer
-from algorithms.helper.helper import get_space_size
-from algorithms.sac.q_net import QNet
-from algorithms.sac.policy_net import PolicyNet
-
-from logger.fs_logger import FileSystemLogger
+from torch.utils.data import DataLoader
 
 from envs.plane_robot_env import PlaneRobotEnv
+from logger.fs_logger import FileSystemLogger
+from algorithms.sac.q_net import QNet
+from algorithms.sac.actor.latent_actor import LatentActor
+from algorithms.sac.buffer import BufferDataset, ReplayBuffer
+from algorithms.sac.policy_net import PolicyNet
+from algorithms.helper.helper import get_space_size
+from algorithms.helper.plot import kde_end_points, scatter_end_points
 
 
 class SAC:
@@ -186,6 +186,10 @@ class SAC:
                     self._q1.soft_update(self._q1_target, self._tau)
                     self._q2.soft_update(self._q2_target, self._tau)
 
+                if type(self._pi.actor) == LatentActor and self._pi.actor.vae_learning:
+                    data = BufferDataset(self._memory)
+                    data = DataLoader(data, batch_size=128, shuffle=True)
+                    r_loss_mean, kl_loss_mean = self._pi.actor.train_vae(data, self._train_iterations) 
             
             # log metrics
             if epoch_idx % print_interval == 0 and epoch_idx != 0:
@@ -211,6 +215,9 @@ class SAC:
                     fig.savefig(self._fs_logger._path + f"/polar_exploration_{epoch_idx}.png")
                     self._logger.add_figure("sac/polar_exploration", fig, epoch_idx)
                     plt.close()
+                    # log vae stats
+                    self._logger.add_scalar("vae/r_loss", r_loss_mean, epoch_idx)
+                    self._logger.add_scalar("vae/kl_loss", kl_loss_mean, epoch_idx)
 
                 # in file system
                 if self._fs_logger is not None:
@@ -222,6 +229,9 @@ class SAC:
                     self._fs_logger.add_scalar("sac/critic_loss", torch.tensor(critic_losses).mean(), epoch_idx)
                     self._fs_logger.add_scalar("sac/alpha_loss", torch.tensor(alpha_losses).mean(), epoch_idx)
                     self._fs_logger.add_scalar("sac/log_prob", np.array(log_probs).mean(), epoch_idx)
+                    # log vae stats
+                    self._fs_logger.add_scalar("vae/r_loss", r_loss_mean, epoch_idx)
+                    self._fs_logger.add_scalar("vae/kl_loss", kl_loss_mean, epoch_idx)
 
                 # save model
                 torch.save({

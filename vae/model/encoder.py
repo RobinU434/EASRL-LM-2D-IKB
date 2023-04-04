@@ -3,7 +3,7 @@ import torch.nn as nn
 class VariationalEncoder(nn.Module):
     def __init__(self, input_dim, latent_dims):
         super(VariationalEncoder, self).__init__()
-
+        
         self.linear = nn.Sequential(
             nn.Linear(input_dim, 512),
             # nn.ReLU(),

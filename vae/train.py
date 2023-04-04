@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 import time
 import yaml
 import numpy as np
@@ -9,9 +10,15 @@ from torch.utils.tensorboard import SummaryWriter
 
 from vae.data.data_set import ActionTargetDatasetV2, ConditionalActionTargetDataset
 from vae.data.load_data_set import load_action_dataset, load_action_target_dataset
-from vae.helper.extract_angles_and_position import extract_angles_and_position
+from vae.helper.extract_angles_and_position import split_conditional_info
 from vae.helper.loss import CyclicVAELoss, VAELoss
 from vae.model.vae import VariationalAutoencoder
+
+
+def setup_parser(parser: ArgumentParser) -> ArgumentParser:
+    parser.add_argument("device", type=str, help=f"GPU or CPU, current GPU count: {torch.cuda.device_count()}")
+
+    return parser
 
 
 def load_config():
@@ -30,38 +37,40 @@ def run_model(
     autoencoder: VariationalAutoencoder,
     data: DataLoader,
     loss_func: VAELoss,
-    device: str
+    device: str,
+    train: bool = False,
     ):
-    
     # prepare logging
-    reconstruction_loss_array = []
-    kl_loss_array = []
-    total_loss_array = []
-
+    reconstruction_loss_array = np.array([])
+    kl_loss_array = np.array([])
+    total_loss_array = np.array([])
+    std_array = np.array([])
     for x, y in data:
+        # in case of dataset == ActionTargetDataset: x is the action and y is the corresponding target position 
+        # in case of dataset == ActionDataset: x is the action and y is an empty tensor
+            
         x = x.to(device)
+        y = y.to(device)
         
         x_hat, mu, log_std = autoencoder(x, y)  # out shape: (batch_size, number of joints) 
-        
+        std_array = np.concatenate([std_array, log_std.cpu().detach().numpy().flatten()])
+            
         if type(data.dataset) ==  ConditionalActionTargetDataset or type(data.dataset) == ActionTargetDatasetV2:
             # extract angles and position
-            x_angles, _ = extract_angles_and_position(x)
+            x_angles, _ = split_conditional_info(x)
         else:
             x_angles = x
-
-
+        
         loss = loss_func(x_angles, x_hat, mu, log_std)
         
-        reconstruction_loss_array.append(loss_func.r_loss.item())
-        kl_loss_array.append(loss_func.kl_div.item())
-        total_loss_array.append(loss.item())
+        if train:
+            autoencoder.train(loss)
 
-    # convert to numpy array
-    reconstruction_loss_array = np.array(reconstruction_loss_array)
-    kl_loss_array = np.array(kl_loss_array)
-    total_loss_array = np.array(total_loss_array)
+        reconstruction_loss_array = np.concatenate([reconstruction_loss_array, np.array([loss_func.r_loss.cpu().item()])])
+        kl_loss_array = np.concatenate([kl_loss_array, np.array([loss_func.kl_div.cpu().item()])])
+        total_loss_array = np.concatenate([total_loss_array, np.array([loss.cpu().item()])])
 
-    return reconstruction_loss_array, kl_loss_array, total_loss_array
+    return reconstruction_loss_array, kl_loss_array, total_loss_array, std_array
 
 
 def train(
@@ -86,36 +95,23 @@ def train(
         # reset logging history per epoch
         autoencoder.reset_history()
 
-        for x, y in train_data:  
-            # in case of dataset == ActionTargetDataset: x is the action and y is the corresponding target position 
-            # in case of dataset == ActionDataset: x is the action and y is an empty tensor
-            x = x.to(device) # GPU or CPU
-           
-            x_hat, mu, log_std = autoencoder(x, y)  # out shape: (batch_size, number of joints) 
-            std_array = np.concatenate([std_array, log_std.detach().numpy().flatten()])
-            # mu_array = np.concatenate([mu_array, mu.detach().numpy().flatten()])
-            
-            if type(train_data.dataset) ==  ConditionalActionTargetDataset or type(train_data.dataset) == ActionTargetDatasetV2:
-                # extract angles and position
-                x_angles, _ = extract_angles_and_position(x)
-            else:
-                x_angles = x
-
-            # print(x_angles.size(), x_hat.size())
-            loss = loss_func(x_angles, x_hat, mu, log_std)
+        # train loop
+        train_reconstruction_loss_array, train_kl_loss_array, train_total_loss_array, std_array = run_model(
+                autoencoder,
+                train_data,
+                loss_func,
+                device,
+                train=True
+            )
         
-            train_reconstruction_loss_array.append(loss_func.r_loss.item())
-            train_kl_loss_array.append(loss_func.kl_div.item())
-        
-            autoencoder.train(loss)
-
         # val loop
         if epoch_idx % val_interval == 0:
-            val_reconstruction_loss_array, val_kl_loss_array, val_total_loss_array = run_model(
+            val_reconstruction_loss_array, val_kl_loss_array, val_total_loss_array, _ = run_model(
                 autoencoder,
                 val_data,
                 loss_func,
-                device
+                device,
+                train=False
             )
 
             # store model checkpoint
@@ -140,9 +136,9 @@ def train(
             logger.add_scalar("vae/train_std", std_array.mean(), epoch_idx)
             # logger.add_histogram("vae/train_latent_mu", mu_array, epoch_idx)
             
-            autoencoder.log_parameters(epoch_idx)
-            autoencoder.log_gradients(epoch_idx)
-            autoencoder.log_decoder_distr(epoch_idx)
+            # autoencoder.log_parameters(epoch_idx)
+            # autoencoder.log_gradients(epoch_idx)
+            # autoencoder.log_decoder_distr(epoch_idx)
             autoencoder.log_z_grad(epoch_idx)
             
             logger.add_scalar("vae/val_r_loss", val_reconstruction_loss_array.mean(), epoch_idx)
@@ -150,11 +146,12 @@ def train(
             logger.add_scalar("vae/val_loss", val_total_loss_array.mean(), epoch_idx)
 
     # test loop
-    test_reconstruction_loss_array, test_kl_loss_array, test_total_loss_array = run_model(
+    test_reconstruction_loss_array, test_kl_loss_array, test_total_loss_array, _ = run_model(
         autoencoder,
         test_data,
         loss_func,
-        device
+        device,
+        train=False
     )
 
     logger.add_scalar("vae/test_r_loss", test_reconstruction_loss_array.mean(), epoch_idx)
@@ -182,7 +179,11 @@ def train(
 
 
 if __name__ == "__main__":
+    parser = setup_parser(ArgumentParser())
+    args  = parser.parse_args()
+    
     config = load_config()
+    config["device"] = args.device
     
     input_dim = config["num_joints"]
     if config["dataset"] == "action":
@@ -192,18 +193,18 @@ if __name__ == "__main__":
         train_dataloader, val_dataloader, test_dataloader = load_action_dataset(config)
         
     elif config["dataset"] == "action_target_v1":
-        conditional_info_dim = 2
+        conditional_info_dim = 4 + config["num_joints"]
         input_dim = config["num_joints"]
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
         
     elif config["dataset"] == "action_target_v2":
         conditional_info_dim = 0
-        input_dim = config["num_joints"] + 2
+        input_dim = config["num_joints"] + (config["num_joints"] + 4)   # in brakets is conditional information
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
         
     elif config["dataset"] == "conditional_action_target":
-        conditional_info_dim = 2  # for the additional target position
-        input_dim = config["num_joints"] + 2
+        conditional_info_dim =  config["num_joints"] + 4  # for the additional state information
+        input_dim = config["num_joints"] + (config["num_joints"] + 4)  # in brakets is conditional information
         
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
         
@@ -223,7 +224,8 @@ if __name__ == "__main__":
         learning_rate=config["learning_rate"],
         logger=logger,
         conditional_info_dim=conditional_info_dim,
-        store_history=True)
+        store_history=True, 
+        device=args.device).to(args.device)
     
     if config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:
         loss_func = VAELoss(
@@ -245,7 +247,7 @@ if __name__ == "__main__":
         loss_func=loss_func,
         logger=logger,
         epochs=config["epochs"],
-        device=config["device"],
+        device=args.device,
         learning_rate=config["learning_rate"],
         val_interval=5,
         path=path)

@@ -1,5 +1,6 @@
 # https://avandekleut.github.io/vae/
 
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -18,7 +19,8 @@ class VariationalAutoencoder(nn.Module):
                  learning_rate: float,
                  logger: SummaryWriter, 
                  conditional_info_dim: int = 0,
-                 store_history: bool = False):
+                 store_history: bool = False,
+                 device: str = "cpu"):
         super(VariationalAutoencoder, self).__init__()
         self.conditional_info_dim = conditional_info_dim
         self.input_dim = input_dim
@@ -29,8 +31,11 @@ class VariationalAutoencoder(nn.Module):
         self.decoder = Decoder(latent_dim + self.conditional_info_dim, output_dim)
 
         self.N = torch.distributions.Normal(0, 1)
-        # self.N.loc = self.N.loc # .cuda() hack to get sampling on the GPU
-        # self.N.scale = self.N.scale # .cuda()
+        # self.N = torch.distributions.Normal(torch.tensor(0).to(device), torch.tensor(1).to(device))
+
+        if "cuda" in device:
+            self.N.loc = self.N.loc.to(device)  # hack to get sampling on the GPU
+            self.N.scale = self.N.scale.to(device)
 
         self.logger: SummaryWriter = logger
 
@@ -55,7 +60,7 @@ class VariationalAutoencoder(nn.Module):
 
         decoder_out = self.decoder.forward(z) 
         if self.store_history:
-            self.decoder_history = torch.cat([self.decoder_history, decoder_out.flatten()])
+            self.decoder_history = torch.cat([self.decoder_history, decoder_out.flatten().cpu()])
 
         return decoder_out, mu, log_std
 
@@ -65,7 +70,7 @@ class VariationalAutoencoder(nn.Module):
 
         # log gradient from latent space
         if self.store_history:
-            z_grad = self.z.grad
+            z_grad = self.z.grad.cpu()
             self.z_grad_history = torch.cat([self.z_grad_history, z_grad], dim=0)
 
         self.optimizer.step()
@@ -74,13 +79,13 @@ class VariationalAutoencoder(nn.Module):
         # parameter histogram
         param_tensor = torch.tensor([])
         for param in self.parameters():
-            param_tensor = torch.cat([param_tensor, param.flatten()])
+            param_tensor = torch.cat([param_tensor, param.cpu().detach().flatten()])
         self.logger.add_histogram("vae/param", param_tensor, epoch_idx)
 
     def log_gradients(self, epoch_idx):
         grad_tensor = torch.tensor([])
         for param in self.parameters():
-            grad_tensor = torch.cat([grad_tensor, param.grad.flatten()])
+            grad_tensor = torch.cat([grad_tensor, param.grad.cpu().flatten()])
         self.logger.add_histogram("vae/grad", grad_tensor, epoch_idx)
 
     def log_decoder_distr(self, epoch_idx):

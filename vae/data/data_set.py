@@ -100,15 +100,15 @@ class ConditionalActionTargetDataset(Dataset):
 
     def __getitem__(self, idx):
         action = torch.tensor(self.action_csv.iloc[idx, 1:]).float()
-        target = torch.tensor(self.target_csv.iloc[idx, 1:3]).float()  # we work in a two dimensional space
+        state = torch.tensor(self.target_csv.iloc[idx, 1:]).float()  # we work in a two dimensional space
         
         if self.normalize:
             action = (action / torch.pi) - 1
         
-        features = torch.cat([action, target])
+        features = torch.cat([action, state])
         features = Variable(features, requires_grad=True)
         
-        label = target
+        label = state
         label = Variable(label, requires_grad=True)
         return features, label
 

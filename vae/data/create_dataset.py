@@ -1,3 +1,4 @@
+import logging
 import time
 import argparse
 import numpy as np
@@ -10,6 +11,7 @@ from argparse import ArgumentParser
 from envs.robots.robot_arm import RobotArm
 from envs.common.sample_target import sample_target
 
+MODE_LIST = ["IK_constant_start", "IK_random_start", "noise_uniform", "noise_tanh"]
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
     parser.add_argument(
@@ -23,9 +25,17 @@ def setup_parser(parser: ArgumentParser) -> ArgumentParser:
     parser.add_argument(
         "mode",
         type=str,
-        choices=["IK_constant_start", "IK_random_start", "relative_uniform", "relative_tanh"]
+        choices=MODE_LIST,
+        help="mode for what kind of data in the dataset"
     )
-    
+    parser.add_argument(
+        "entity",
+        type=str,
+        choices=["train", "val", "test"],
+        help="What kind of data set you want to create -> train data, ...."
+    )
+
+
     return parser
 
 
@@ -37,13 +47,14 @@ def check_positive(value):
 
 
 def sample_start(n_joints: int, n: int, start_mode: str = "constant_start"):
-    if start_mode == "constant_start":
+    if start_mode == "IK_constant_start":
         return np.zeros((n, n_joints))
-    elif start_mode == "random_start":
+    elif start_mode == "IK_random_start":
         return np.random.uniform(0, 2 * np.pi, (n, n_joints))
+    else:
+        logging.error(f"you have to chose from {MODE_LIST} instead you chose: {start_mode}")
 
-
-def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "constant start"):
+def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "constant start", entity: str = "train"):
     arm = RobotArm(n_joints)
 
     # array to write in the calculated method
@@ -69,7 +80,7 @@ def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "consta
         start_end_position = arm.end_position.copy()
         arm.IK(target)
 
-        actions[idx] = arm.angles
+        actions[idx] = arm.angles - start_angles[idx]
         targets[idx, 0:2] = arm.end_position
         
         state[idx, :] = np.concatenate([arm.end_position, start_end_position, start_angles[idx]])
@@ -86,12 +97,12 @@ def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "consta
     df_targets = DataFrame(targets)
     df_state = DataFrame(state)
 
-    df_actions.to_csv(f"datasets/{n_joints}/actions_{time_stamp}.csv")
-    df_targets.to_csv(f"datasets/{n_joints}/targets_{time_stamp}.csv")
-    df_state.to_csv(f"datasets/{n_joints}/state_{time_stamp}.csv")
+    df_actions.to_csv(f"datasets/{n_joints}/{entity}/actions_{start_mode}.csv")
+    df_targets.to_csv(f"datasets/{n_joints}/{entity}/targets_{start_mode}.csv")
+    df_state.to_csv(f"datasets/{n_joints}/{entity}/state_{start_mode}.csv")
     
 
-def create_relative_dataset(n_joints: int, n: int = 10_000, mode: str = "relative_uniform"):
+def create_relative_dataset(n_joints: int, n: int = 10_000, mode: str = "relative_uniform", entity: str = "train"):
     time_stamp = int(time.time()) 
     np.random.seed(time_stamp)
     
@@ -104,14 +115,14 @@ def create_relative_dataset(n_joints: int, n: int = 10_000, mode: str = "relativ
         data = np.tanh(np.random.normal(0, 1, size))
     
     df = DataFrame(data)
-    df.to_csv(f"datasets/{n_joints}/actions_{mode}_{time_stamp}.csv")
+    df.to_csv(f"datasets/{n_joints}/{entity}/actions_{mode}.csv")
 
 
-def create_dataset(n_joints: int, n: int, mode: str):
+def create_dataset(n_joints: int, n: int, mode: str, entity: str):
     if "IK" in mode:
-        return create_IK_dataset(n_joints, n, mode)
+        return create_IK_dataset(n_joints, n, mode, entity)
     elif "noise" in mode:
-        return create_relative_dataset(n_joints, n, mode)
+        return create_relative_dataset(n_joints, n, mode, entity)
 
 
 if __name__ == "__main__":

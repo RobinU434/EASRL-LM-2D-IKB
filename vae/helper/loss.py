@@ -47,7 +47,7 @@ class VAELoss:
 
 class CyclicVAELoss(VAELoss):
     def __init__(self, kl_loss_weight: float = 1, reconstruction_loss_weight: float = 1, normalization: bool = False) -> None:
-        super().__init__(kl_loss_weight, reconstruction_loss_weight, normalization)
+        super().__init__(kl_loss_weight, reconstruction_loss_weight)
 
         self.normalization = normalization
         if self.normalization:

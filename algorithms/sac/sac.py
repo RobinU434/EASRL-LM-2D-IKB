@@ -219,8 +219,9 @@ class SAC:
                     self._logger.add_figure("sac/polar_exploration", fig, epoch_idx)
                     plt.close()
                     # log vae stats
-                    self._logger.add_scalar("vae/r_loss", r_loss_mean, epoch_idx)
-                    self._logger.add_scalar("vae/kl_loss", kl_loss_mean, epoch_idx)
+                    if type(self._pi.actor) == LatentActor and self._pi.actor.vae_learning:
+                        self._logger.add_scalar("vae/r_loss", r_loss_mean, epoch_idx)
+                        self._logger.add_scalar("vae/kl_loss", kl_loss_mean, epoch_idx)
 
                 # in file system
                 if self._fs_logger is not None:
@@ -233,8 +234,9 @@ class SAC:
                     self._fs_logger.add_scalar("sac/alpha_loss", torch.tensor(alpha_losses).mean(), epoch_idx)
                     self._fs_logger.add_scalar("sac/log_prob", np.array(log_probs).mean(), epoch_idx)
                     # log vae stats
-                    self._fs_logger.add_scalar("vae/r_loss", r_loss_mean, epoch_idx)
-                    self._fs_logger.add_scalar("vae/kl_loss", kl_loss_mean, epoch_idx)
+                    if type(self._pi.actor) == LatentActor and self._pi.actor.vae_learning:
+                        self._fs_logger.add_scalar("vae/r_loss", r_loss_mean, epoch_idx)
+                        self._fs_logger.add_scalar("vae/kl_loss", kl_loss_mean, epoch_idx)
 
                 # save model
                 torch.save({

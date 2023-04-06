@@ -1,4 +1,7 @@
+import glob
+import yaml
 import torch
+import logging
 import torch.nn as nn
 
 from typing import List
@@ -8,6 +11,35 @@ from algorithms.sac.actor.base_actor import Actor
 from vae.helper.loss import VAELoss
 from vae.model.vae import VariationalAutoencoder
 
+
+def load_checkpoint(checkpoint_path: str):
+    checkpoint = torch.load(checkpoint_path)
+    return checkpoint
+
+
+def load_cofig(path: str) -> dict:
+    with open(path) as f:
+        config = yaml.safe_load(f)
+
+    return config
+
+
+def extract_loss(path: str):
+    checkpoint_name = path.split("/")[-1]
+    loss = float(checkpoint_name.split("_")[-1][: -3])
+    return loss
+
+
+def load_best_checkpoint(vae_results_dir: str, output_dim: int, latent_dim: int):
+    paths = glob.glob(vae_results_dir + f"/{output_dim}_{latent_dim}*/*.pt")
+    if len(paths) == 0:
+        logging.error(f"there is not VAE trained input dim: {output_dim} and latent dim: {latent_dim}")
+    losses = map(extract_loss, paths)
+    d = dict(zip(losses, paths))
+    path = d[min(d)]
+    print(f"use checkpoint for VAE at {path}")
+    config = load_cofig("/".join(path.split("/")[: -1] + ["config.yaml"]))
+    return load_checkpoint(path), config
 
 class LatentActor(nn.Module):
     def __init__(
@@ -22,6 +54,7 @@ class LatentActor(nn.Module):
         kl_loss_weight: float = 1,
         reconstruction_loss_weight: float = 1,
         vae_learning: bool = False,
+        checkpoint_dir: str = "resutls/vae",
         ) -> None:
         super().__init__()
 
@@ -48,58 +81,18 @@ class LatentActor(nn.Module):
             device=device
         ).to(device)
 
+        
         self.auto_encoder_loss_func = VAELoss(
             kl_loss_weight=kl_loss_weight,
             reconstruction_loss_weight=reconstruction_loss_weight
         )
 
         # checkpoint chosen because of the overall performance reconstruction loss + kl loss
+        self.vae_config = None
         if not vae_learning:
-            if conditional_info_dim == 0:
-                if latent_dim == 5:
-                    if kl_loss_weight == 0.1:
-                        checkpoint = torch.load("results/vae/unenhanced/5_10/1675462838/model_135_val_r_loss_8.8094.pt")
-                    elif kl_loss_weight == 0.01:
-                        checkpoint = torch.load("results/vae/unenhanced/5_10/1675462847/model_190_val_r_loss_1.1852.pt")
-                    elif kl_loss_weight == 0.0001:
-                        checkpoint = torch.load("results/vae/unenhanced/5_10/1675464735/model_165_val_r_loss_0.0715.pt")
-                    elif kl_loss_weight == 1.0e-05:
-                        checkpoint = torch.load("results/vae/unenhanced/5_10/1675504441/model_40_val_r_loss_0.0740.pt")
-                    elif kl_loss_weight == 1.0e-06:
-                        checkpoint = torch.load("results/vae/unenhanced/5_10/1675504449/model_185_val_r_loss_0.0749.pt")
-                elif latent_dim == 3:
-                    if kl_loss_weight == 0.01:
-                        checkpoint = torch.load("results/vae/unenhanced/3_10/1675861960/model_155_val_r_loss_1.1588.pt")
-                    elif kl_loss_weight == 0.001:
-                        checkpoint = torch.load("results/vae/unenhanced/3_10/1675862007/model_110_val_r_loss_0.2422.pt")
-                    elif kl_loss_weight == 0.0001:
-                        checkpoint = torch.load("results/vae/unenhanced/3_10/1675863182/model_150_val_r_loss_0.0951.pt")
-                    elif kl_loss_weight == 1e-5:
-                        checkpoint = torch.load("results/vae/unenhanced/3_10/1675863248/model_105_val_r_loss_0.0849.pt")
-                elif latent_dim == 2:
-                    if kl_loss_weight == 0.01:
-                        checkpoint = torch.load("results/vae/unenhanced/2_10/1675866791/model_175_val_r_loss_1.2797.pt")
-                    elif kl_loss_weight == 0.001:
-                        checkpoint = torch.load("results/vae/unenhanced/2_10/1675866798/model_200_val_r_loss_0.4617.pt")
-                    elif kl_loss_weight == 0.0001:
-                        checkpoint = torch.load("results/vae/unenhanced/2_10/1675867964/model_150_val_r_loss_0.3011.pt")
-                    elif kl_loss_weight == 1e-5:
-                        checkpoint = torch.load("results/vae/unenhanced/2_10/1675867972/model_200_val_r_loss_3.8610.pt")
-                elif latent_dim == 1:
-                    if kl_loss_weight == 0.01:
-                        checkpoint = torch.load("results/vae/unenhanced/1_10/1675864359/model_190_val_r_loss_2.7298.pt")
-                    elif kl_loss_weight == 0.001:
-                        checkpoint = torch.load("results/vae/unenhanced/1_10/1675864383/model_115_val_r_loss_1.7364.pt")
-                    elif kl_loss_weight == 0.0001:
-                        checkpoint = torch.load("results/vae/unenhanced/1_10/1675865585/model_195_val_r_loss_1.9992.pt")
-                    elif kl_loss_weight == 1e-5:
-                        checkpoint = torch.load("results/vae/unenhanced/1_10/1675865592/model_175_val_r_loss_1.5570.pt")
-            else:
-                if latent_dim == 8:
-                    checkpoint = torch.load("results/vae/enhanced/8_10")
-                elif latent_dim == 5:
-                    checkpoint = torch.load("results/vae/enhanced/5_10/1676323228/model_355_val_r_loss_1.4800.pt")
+            checkpoint, vae_config = load_best_checkpoint(checkpoint_dir, output_dim, latent_dim)
             self.auto_encoder.load_state_dict(checkpoint["model_state_dict"])
+            self.vae_config = vae_config
 
 
     def forward(self, x):

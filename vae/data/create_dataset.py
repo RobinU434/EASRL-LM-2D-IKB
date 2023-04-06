@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from envs.robots.robot_arm import RobotArm
 from envs.common.sample_target import sample_target
 
-MODE_LIST = ["IK_constant_start", "IK_random_start", "noise_uniform", "noise_tanh"]
+MODE_LIST = ["IK_constant_start", "IK_random_start", "noise_uniform", "noise_tanh", "inference"]
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
     parser.add_argument(
@@ -34,7 +34,6 @@ def setup_parser(parser: ArgumentParser) -> ArgumentParser:
         choices=["train", "val", "test"],
         help="What kind of data set you want to create -> train data, ...."
     )
-
 
     return parser
 
@@ -112,10 +111,22 @@ def create_relative_dataset(n_joints: int, n: int = 10_000, mode: str = "relativ
         data = np.random.uniform(-1, 1, size)
 
     elif mode == "noise_tanh":
-        data = np.tanh(np.random.normal(0, 1, size))
+        data = np.tanh(np.random.normal(0, 1, size))`
     
     df = DataFrame(data)
     df.to_csv(f"datasets/{n_joints}/{entity}/actions_{mode}.csv")
+
+
+def create_inference_dataset(n_joints: int, n: int = 10_000, mode: str = "inference", entity: str = "train") -> None:
+    """function loads SAC model and performs and inference model 
+
+    Args:
+        n_joints (int): _description_
+        n (int, optional): _description_. Defaults to 10_000.
+        mode (str, optional): _description_. Defaults to "inference".
+        entity (str, optional): _description_. Defaults to "train".
+    """
+    pass
 
 
 def create_dataset(n_joints: int, n: int, mode: str, entity: str):
@@ -123,7 +134,10 @@ def create_dataset(n_joints: int, n: int, mode: str, entity: str):
         return create_IK_dataset(n_joints, n, mode, entity)
     elif "noise" in mode:
         return create_relative_dataset(n_joints, n, mode, entity)
-
+    elif mode == "inference":
+        return create_inference_dataset()
+    else:
+        logging.error(f"chose a mode from {MODE_LIST}, instead you chose: {mode}")
 
 if __name__ == "__main__":
     parser = setup_parser(ArgumentParser())

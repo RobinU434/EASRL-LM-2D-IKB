@@ -35,12 +35,12 @@ class PolicyNet(nn.Module):
         elif actor_config["type"] == LatentActor:
             self.actor = LatentActor(device=actor_config["device"],
                                      input_dim=input_dim, 
-                                     laten_dim=actor_config["latent_dim"],
+                                     latent_dim=actor_config["latent_dim"],
                                      output_dim=output_dim,
                                      learning_rate=learning_rate,
                                      conditional_info_dim=observation_space_dim,
-                                     vae_learning=True,
-                                     checkpoint=actor_config["checkpoint"])
+                                     vae_learning=actor_config["vae_learning"],
+                                     checkpoint_dir=actor_config["checkpoint_dir"])
     
         # self.actor = InformedMultiAgent(input_size, output_size, learning_rate, 2)
         # self.actor = MultiAgent(input_size, output_size, learning_rate, 2)
@@ -87,9 +87,11 @@ class PolicyNet(nn.Module):
             elif self.actor.auto_encoder.conditional_info_dim > 2:
                 latent_input = torch.cat([action, x], dim=1).to(self.actor.device)
                 action = self.actor.auto_encoder.decoder.forward(latent_input)
-
+            
+            
         # move action to cpu
         action = action.cpu()
+        action = action + 1 * int(self.actor.vae_config["normalize"])
 
         # shape action for buffer layout
         action = action.squeeze()

@@ -56,7 +56,7 @@ def extract_actor_config(config: dict) -> dict:
         actor_config["type"] = Actor
         return actor_config
     elif config["latent_actor"].pop("enabled"):
-        actor_config = config["Latent_actor"]
+        actor_config = config["latent_actor"]
         actor_config["type"] = LatentActor
         return actor_config
     else:
@@ -64,6 +64,8 @@ def extract_actor_config(config: dict) -> dict:
             
 
 def main(config):
+    actor_config = extract_actor_config(config)
+
     # reseed the environment
     time_stamp = int(time.time())
     torch.manual_seed(time_stamp)
@@ -87,16 +89,15 @@ def main(config):
     print("action magnitude: ", config["action_magnitude"])
 
     # pth for file system logging
-    logging_path = f"results/{config['algorithm'].lower()}/{config['subdir']}/{config['action_mode']}/{config['n_joints']}_{time_stamp}"
+    logging_path = f"results/{config['algorithm'].lower()}/{config['subdir']}/{actor_config['type'].__name__}/{config['n_joints']}_{time_stamp}"
     logger = SummaryWriter(logging_path)
+    logging.info("initialized tensorboard summary writer")
 
     # store config 
     with open(logging_path + "/config.yaml", "w") as config_file:
         yaml.dump(config, config_file)
     # log config
-    logger.add_hparams(config, {})
-
-    actor_config = extract_actor_config(config)
+    # logger.add_hparams(config, {})
 
     print("")
     print("SAC:")
@@ -143,7 +144,7 @@ def main(config):
             )
     else:
         raise NotImplementedError
-
+    
     algorithm.train(config["n_epochs"])
 
 
@@ -162,6 +163,7 @@ if __name__ == "__main__":
             main(config)
         except ValueError:
             # Because some wierd nan values during sampling
+            logging.warning("run was aborted because of a ValueError")
             continue
         print(f"completed {i}th experiment")
 

@@ -16,22 +16,36 @@ from algorithms.sac.actor.multi_actor import Actor, InformedMultiAgent, MultiAge
 class PolicyNet(nn.Module):
     def __init__(
         self,
+        actor_config: dict,
         learning_rate,
-        input_size,
-        output_size,
+        input_dim,
+        output_dim,
         init_alpha,
         lr_alpha,
+        observation_space_dim: int,
         action_sampling_mode: str = "independent",
         covariance_decay: float = 0.5,
         action_magnitude: float = 1,
         ):
         super(PolicyNet, self).__init__()
-        self.actor = Actor(input_size, output_size, learning_rate)
+        if actor_config["type"] == Actor:
+            self.actor = Actor(input_dim=input_dim,
+                               output_dim=output_dim,
+                               learning_rate=learning_rate)
+        elif actor_config["type"] == LatentActor:
+            self.actor = LatentActor(device=actor_config["device"],
+                                     input_dim=input_dim, 
+                                     laten_dim=actor_config["latent_dim"],
+                                     output_dim=output_dim,
+                                     learning_rate=learning_rate,
+                                     conditional_info_dim=observation_space_dim,
+                                     vae_learning=True,
+                                     checkpoint=actor_config["checkpoint"])
+    
         # self.actor = InformedMultiAgent(input_size, output_size, learning_rate, 2)
         # self.actor = MultiAgent(input_size, output_size, learning_rate, 2)
         # self.actor = LatentActor(input_size, 5, output_size, learning_rate, kl_weight=0.01, vae_learning=True)
         # self.actor = LatentActor(input_size, 5, output_size, learning_rate, enhanced_latent_dim=2, vae_learning=True)
-        # self.actor = LatentActor("cpu", input_size, 2, output_size, learning_rate, enhanced_latent_dim=6, vae_learning=True)
 
         self.log_alpha = torch.tensor(np.log(init_alpha))
         self.log_alpha.requires_grad = True
@@ -71,8 +85,11 @@ class PolicyNet(nn.Module):
                 latent_input = torch.cat([action, target_pos], dim=len(target_pos.size()) - 1)
                 action = self.actor.auto_encoder.decoder.forward(latent_input)
             elif self.actor.auto_encoder.conditional_info_dim > 2:
-                latent_input = torch.cat([action, x], dim=1)
+                latent_input = torch.cat([action, x], dim=1).to(self.actor.device)
                 action = self.actor.auto_encoder.decoder.forward(latent_input)
+
+        # move action to cpu
+        action = action.cpu()
 
         # shape action for buffer layout
         action = action.squeeze()

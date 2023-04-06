@@ -1,9 +1,9 @@
 import time
 import yaml
 import torch
+import logging
 
 from argparse import ArgumentParser, Namespace
-
 from torch.utils.tensorboard import SummaryWriter
 
 from envs.plane_robot_env import PlaneRobotEnv
@@ -11,6 +11,8 @@ from envs.task.imitation_learning import ImitationTask
 from envs.task.reach_goal import ReachGoalTask
 from algorithms.ppo.ppo import PPO
 from algorithms.sac.sac import SAC
+from algorithms.sac.actor.base_actor import Actor
+from algorithms.sac.actor.latent_actor import LatentActor
 from logger.fs_logger import FileSystemLogger
 
 
@@ -46,6 +48,19 @@ def load_config(args: Namespace) -> dict:
     config = {**config, **vars(args)}
     
     return config
+
+def extract_actor_config(config: dict) -> dict:
+    # there is the normal fead forward actor and the latent actor
+    if config["normal_actor"].pop("enabled"):
+        actor_config = config["normal_actor"]
+        actor_config["type"] = Actor
+        return actor_config
+    elif config["latent_actor"].pop("enabled"):
+        actor_config = config["Latent_actor"]
+        actor_config["type"] = LatentActor
+        return actor_config
+    else:
+        logging.error("There must be at least one actor enabled")
             
 
 def main(config):
@@ -80,12 +95,14 @@ def main(config):
         yaml.dump(config, config_file)
     # log config
     logger.add_hparams(config, {})
-    
+
+    actor_config = extract_actor_config(config)
 
     print("")
     print("SAC:")
     print("target entropy", config["target_entropy"])
     print("gamma: ", config["gamma"])
+    print("actor: ", actor_config["type"].__name__)
     
     if config["algorithm"].lower() == "sac":
         algorithm = SAC(
@@ -106,6 +123,7 @@ def main(config):
             action_covariance_decay = config["action_covariance_decay"],
             action_covariance_mode = config["action_covariance_mode"],
             action_magnitude=config["action_magnitude"],
+            actor_config=actor_config,
             )
     elif config["algorithm"].lower() == "ppo":
         algorithm = PPO(

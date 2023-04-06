@@ -7,12 +7,12 @@ from typing import List
 
 
 class Actor(nn.Module):
-    def __init__(self, input_size, output_size, learning_rate, architecture: List[int] = [128, 128]) -> None:
+    def __init__(self, input_dim, output_dim, learning_rate, architecture: List[int] = [128, 128]) -> None:
         super().__init__()
         
         # add input layers
         layers = [
-            nn.Linear(input_size, architecture[0]),
+            nn.Linear(input_dim, architecture[0]),
             nn.ReLU(),
         ]
         
@@ -25,8 +25,8 @@ class Actor(nn.Module):
             )
         self.linear = nn.Sequential(*layers)
 
-        self.linear_mu = nn.Linear(architecture[-1], output_size)
-        self.linear_std = nn.Linear(architecture[-1], output_size)
+        self.linear_mu = nn.Linear(architecture[-1], output_dim)
+        self.linear_std = nn.Linear(architecture[-1], output_dim)
 
         self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
 

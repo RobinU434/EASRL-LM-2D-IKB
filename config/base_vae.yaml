@@ -1,5 +1,5 @@
 num_joints: 5
-latent_dim: 5
+latent_dim: 2
 dataset: "conditional_action_target"  # "action" "action_target" "conditional_action_target"
 dataset_mode: "IK_random_start" # "IK_const_start" "IK_random_start" "noise_uniform" "noise_tanh" # const is a dataset created with a constant start position -> one action for one target position, with random -> multiple actions for one target positions are possible 
 conditional_info: "state"  # "state" "target_position"
@@ -8,6 +8,6 @@ shuffle_data: False
 epochs: 801
 val_interval: 5
 learning_rate: 0.0012
-kl_loss_weight: 0.001
+kl_loss_weight: 1
 reconstruction_loss_weight: 1
 normalize: True

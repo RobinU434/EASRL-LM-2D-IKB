@@ -42,6 +42,7 @@ class SAC:
         action_covariance_decay: float = 0.5,
         action_covariance_mode: str = "independent",
         action_magnitude: float = 1,
+        actor_config: dict = None,
         ) -> None:
         
         self._env: PlaneRobotEnv = env 
@@ -86,11 +87,13 @@ class SAC:
         self._q2_target = QNet(lr_q, input_size_state=input_size, input_size_action=output_size)
 
         self._pi = PolicyNet(
+            actor_config,
             lr_pi,
             input_size,
             output_size,
             self._init_alpha,
             self._lr_alpha,
+            self._env.observation_space._shape[0],
             self._action_covariance_mode,
             self._action_covariance_decay,
             self._action_magnitude,
@@ -207,7 +210,7 @@ class SAC:
                     self._logger.add_scalar("sac/critic_loss", torch.tensor(critic_losses).mean(), epoch_idx)
                     self._logger.add_scalar("sac/alpha_loss", torch.tensor(alpha_losses).mean(), epoch_idx)
                     self._logger.add_scalar("sac/log_prob", np.array(log_probs).mean(), epoch_idx)
-                    self._logger.add_histogram("sac/action_distr", actions, epoch_idx)
+                    #  self._logger.add_histogram("sac/action_distr", actions, epoch_idx)
                     # plot exploration
                     end_pos = np.array(end_pos)
                     target_pos = np.array(target_pos) 

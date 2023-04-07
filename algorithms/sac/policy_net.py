@@ -66,8 +66,9 @@ class PolicyNet(nn.Module):
         Returns:
             Tuple(torch.tensor): 
         """
+        # print(x)
         mu, std = self.actor.forward(x)
-        # print(mu, std)
+        # print("mu: ", mu, " std: ", std)
 
         dist = Normal(mu, std + 1e-28, validate_args={"scale": constraints.greater_than_eq})
         # dist = self.action_sampling_func(mu, std, self.action_sampling_mode, self.covariance_decay)
@@ -87,24 +88,21 @@ class PolicyNet(nn.Module):
             elif self.actor.auto_encoder.conditional_info_dim > 2:
                 latent_input = torch.cat([action, x], dim=1).to(self.actor.device)
                 action = self.actor.auto_encoder.decoder.forward(latent_input)
+            # move action to cpu
+            action = action.cpu()
+            action = action + 1 * int(self.actor.vae_config["normalize"])
             
-            
-        # move action to cpu
-        action = action.cpu()
-        action = action + 1 * int(self.actor.vae_config["normalize"])
-
         # shape action for buffer layout
         action = action.squeeze()
-         
+       
         # real_action = (torch.tanh(action) + 1.0) * torch.pi  # multiply by pi in order to match the action space
         real_action = torch.tanh(action) * self.action_magnitude
 
         # Squash correction (from original SAC implementation)
         # this comes from the fact that tanh is a bijection and differentiable
         # this equation can be found in the original paper as equation (21)
-        real_log_prob = log_prob - torch.sum(torch.log(1 - torch.tanh(action).pow(2) + 1e-7))
-
-        # print(real_log_prob)
+        real_log_prob = log_prob - torch.sum(torch.log(1 - torch.tanh(action).pow(2) + 1e-7), dim=-1)  # sum over action dimension
+ 
         return real_action, real_log_prob
 
     def train_net(self, q1, q2, mini_batch, target_entropy):
@@ -128,6 +126,7 @@ class PolicyNet(nn.Module):
         # if log_prob + (-target_entropy) is positive -> make log_alpha as big as positive
         # if log_prob + (-target_entropy) is negative -> make log_alpha as small as positive
         alpha_loss = -(self.log_alpha.exp() * (log_prob + target_entropy).detach()).mean()
+        print((log_prob - target_entropy).mean())
         alpha_loss.backward()
         self.log_alpha_optimizer.step()
 

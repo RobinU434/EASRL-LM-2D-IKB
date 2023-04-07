@@ -51,11 +51,11 @@ def load_config(args: Namespace) -> dict:
 
 def extract_actor_config(config: dict) -> dict:
     # there is the normal fead forward actor and the latent actor
-    if config["normal_actor"].pop("enabled"):
+    if config["normal_actor"]["enabled"]:
         actor_config = config["normal_actor"]
         actor_config["type"] = Actor
         return actor_config
-    elif config["latent_actor"].pop("enabled"):
+    elif config["latent_actor"]["enabled"]:
         actor_config = config["latent_actor"]
         actor_config["type"] = LatentActor
         return actor_config
@@ -159,12 +159,13 @@ if __name__ == "__main__":
     print(f"Start to do {args.num_runs} experiment")
     for i in range(args.num_runs):
         print(f"Started {i}th experiment")
-        try:
-            main(config)
-        except ValueError:
-            # Because some wierd nan values during sampling
-            logging.warning("run was aborted because of a ValueError")
-            continue
+        main(config)
+        # try:
+        #     main(config)
+        # except ValueError:
+        #     # Because some wierd nan values during sampling
+        #     logging.warning("run was aborted because of a ValueError")
+        #     continue
         print(f"completed {i}th experiment")
 
    

@@ -111,7 +111,7 @@ def create_relative_dataset(n_joints: int, n: int = 10_000, mode: str = "relativ
         data = np.random.uniform(-1, 1, size)
 
     elif mode == "noise_tanh":
-        data = np.tanh(np.random.normal(0, 1, size))`
+        data = np.tanh(np.random.normal(0, 1, size))
     
     df = DataFrame(data)
     df.to_csv(f"datasets/{n_joints}/{entity}/actions_{mode}.csv")

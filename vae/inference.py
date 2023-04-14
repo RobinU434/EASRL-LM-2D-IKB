@@ -28,7 +28,7 @@ def setup_parser(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "-greedy", "--g",
+        "-g", "--greedy",
         action="store_true",
         help="if you set this argument the inference will try to reach a target position choosing greedily from VAE latent space"
     )
@@ -106,14 +106,14 @@ def sample_latent(n: int, mu: torch.tensor, std: torch.tensor):
     return sampled
 
 
-def forward_kinematics(angles: torch.tensor):
+def forward_kinematics(angles: torch.tensor) -> torch.tensor:
     """_summary_
 
     Args:
         angles (np.array): shape (num_arms, num_joints)
 
     Returns:
-        _type_: out shape: (num_arms, num_joints + 1, 2)
+        torch.tensor: out shape: (num_arms, num_joints + 1, 2)
     """
     num_arms, num_joints = angles.shape
     positions = torch.zeros((num_arms, num_joints + 1, 2))
@@ -134,29 +134,78 @@ def forward_kinematics(angles: torch.tensor):
     return positions
 
 
-def greedy_inference(model: VariationalAutoencoder, sample_size: int):
-    target = sample_target(1).repeat((sample_size, 1))
+def greedy_inference(model: VariationalAutoencoder, sample_size: int, plot: bool = False):
+    n_epochs = 200
+    target = sample_target(1) * model.output_dim
+    print(target[0])
     best_angles = torch.zeros((sample_size, model.output_dim))
-    end_positions = forward_kinematics(best_angles)[: -1, :]
-    state = torch.cat([target, end_positions, best_angles])
+    end_positions = forward_kinematics(best_angles)[:, -1, :]
+    state = torch.cat([target.repeat((sample_size, 1)), end_positions, best_angles], dim=1)
     
-    for _ in range(200):
+    pos_tensor = torch.empty((n_epochs + 1, 2))
+    pos_tensor[0] = end_positions[0, :]
+    dist_tensor = torch.tensor([])
+
+    runtime = 199
+    for epoch_idx in range(n_epochs):
         latent_sample = sample_latent(sample_size, torch.zeros(model.latent_dim), torch.ones(model.latent_dim))
-        latent_input = torch.cat([latent_sample, state])
+        latent_input = torch.cat([latent_sample, state], dim=1)
         actions = model.decoder(latent_input).detach()
 
         # find minium action
         end_positions = forward_kinematics(actions)[:, -1, :]
         dist = torch.sqrt(torch.sum(torch.float_power(target - end_positions, 2), dim=1))
         min_dist = torch.min(dist)
-        print(min_dist)
+        dist_tensor = torch.cat([dist_tensor, torch.tensor([min_dist])])
         if min_dist <= 0.1:
+            runtime = epoch_idx
             break
 
         # build new state
         best_end_position = end_positions[torch.argmin(dist)]
+        pos_tensor[epoch_idx + 1] = best_end_position
+        best_end_position = torch.unsqueeze(best_end_position, dim=0)
         best_angles = actions[torch.argmin(dist)]
-        state = torch.cat([target, best_end_position, best_angles]).repeat((sample_size, 1))
+        best_angles = torch.unsqueeze(best_angles, dim=0)
+        state = torch.cat([target, best_end_position, best_angles], dim=1).repeat((sample_size, 1))
+    
+    # plot
+    if plot:
+        fig, axs = plt.subplots(2, 1)
+        axs[0].set_xlim([-model.output_dim, model.output_dim])
+        axs[0].set_ylim([-model.output_dim, model.output_dim])
+        axs[0].plot(pos_tensor[:, 0], pos_tensor[:, 1])
+        axs[0].plot(target[:, 0], target[:, 1], marker=".", color="g")
+
+        axs[1].plot(dist_tensor)
+
+        fig.savefig("results/vae_greedy_inference.png")
+        plt.close(fig)
+
+    return target[0], runtime
+
+
+def multiple_greedy_runs(model: VariationalAutoencoder, sample_size: int, num_runs: int = 100):
+    runtimes = torch.tensor([])
+    targets = torch.empty((num_runs, 2))
+    for k in range(num_runs):
+        print(k)
+        target, runtime = greedy_inference(model, sample_size, plot=False)
+        runtimes = torch.cat([runtimes, torch.tensor([runtime])])
+        targets[k] = target
+
+    print(runtimes.mean(), runtimes.std())
+    fig = plt.figure()
+    axs = fig.add_subplot()
+    axs.hist(runtimes)
+    fig.savefig("results/vae_greedy_time.png")
+    plt.close(fig)
+
+    fig = plt.figure()
+    axs = fig.add_subplot()
+    distance = torch.sqrt(torch.sum(torch.float_power(targets, 2), dim=1))
+    axs.scatter(runtimes, distance)
+    fig.savefig("results/distance_vs_runtime.png")
 
 
 def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, sample_size: int):
@@ -249,7 +298,8 @@ def relative_inference(model: VariationalAutoencoder, sample_size: int):
 
 def inference(model: VariationalAutoencoder, fixed_position: bool, sample_size: int, config: dict, greedy: bool = False):
     if greedy:
-        greedy_inference(model, sample_size)
+        # multiple_greedy_runs(model, sample_size, num_runs=100)
+        greedy_inference(model, sample_size, plot=True)
     elif config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:
         relative_inference(model, sample_size)
     elif config["dataset_mode"] in ["IK_const_start", "IK_random_start"] :

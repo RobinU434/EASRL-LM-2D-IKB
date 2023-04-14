@@ -143,7 +143,7 @@ class SAC:
 
                 # detach grad from action to apply it to the environment where it is converted into a numpy.ndarray
                 a = a.detach()
-                s_prime, r, done, info = self._env.step(a)
+                s_prime, r, done, info = self._env.step(a.numpy())
                 self._memory.put((s, a, r, s_prime, done))  # why is the reward divided by 10?????
                 score += r
                 s = s_prime

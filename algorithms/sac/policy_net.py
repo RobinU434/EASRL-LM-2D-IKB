@@ -93,7 +93,7 @@ class PolicyNet(nn.Module):
             # action = action + 1 * int(self.actor.vae_config["normalize"])
             
         # shape action for buffer layout
-        action = action.squeeze()
+        # action = action.squeeze()
        
         # real_action = (torch.tanh(action) + 1.0) * torch.pi  # multiply by pi in order to match the action space
         real_action = torch.tanh(action) * self.action_magnitude

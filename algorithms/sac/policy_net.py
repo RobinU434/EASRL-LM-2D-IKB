@@ -57,7 +57,7 @@ class PolicyNet(nn.Module):
         self.action_sampling_mode = action_sampling_mode
         self.action_sampling_func = get_distribution
 
-    def forward(self, x):
+    def forward(self, x) -> torch.tensor:
         """_summary_
 
         Args:
@@ -112,7 +112,6 @@ class PolicyNet(nn.Module):
         entropy = -self.log_alpha.exp() * log_prob
         # TODO: make env easier: at this point make sure there is no exploration only exploitation
         # entropy = - 0.0 # *  log_prob
-      
 
         q1_val, q2_val = q1(s, a), q2(s, a)
         q1_q2 = torch.cat([q1_val, q2_val], dim=1)
@@ -126,7 +125,6 @@ class PolicyNet(nn.Module):
         # if log_prob + (-target_entropy) is positive -> make log_alpha as big as positive
         # if log_prob + (-target_entropy) is negative -> make log_alpha as small as positive
         alpha_loss = -(self.log_alpha.exp() * (log_prob + target_entropy).detach()).mean()
-        print((log_prob - target_entropy).mean())
         alpha_loss.backward()
         self.log_alpha_optimizer.step()
 

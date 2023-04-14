@@ -60,9 +60,9 @@ class PlaneRobotEnv(gym.Env):
         Therefor is one action a tensor with the length equal to the number of joints. 
         """
         if self._discrete_mode:
-            self.action_space = spaces.Box(-1, 1, (self._robot_arm.n_joints, 1))
+            self.action_space = spaces.Box(-1, 1, (1, self._robot_arm.n_joints))
         else:
-            self.action_space = spaces.Box(0, 2 * np.pi, (self._robot_arm.n_joints, 1))
+            self.action_space = spaces.Box(0, 2 * np.pi, (1, self._robot_arm.n_joints))
 
     def set_observation_space(self) -> None:
         """

@@ -188,11 +188,7 @@ if __name__ == "__main__":
         try:
             main(config)
         except ValueError:
-<<<<<<< Updated upstream
             # Because some weird nan values during sampling caused by exploding gradients 
-=======
-            # Because some wierd nan values during sampling
->>>>>>> Stashed changes
             logging.warning("run was aborted because of a ValueError")
             continue
         print(f"completed {i}th experiment")

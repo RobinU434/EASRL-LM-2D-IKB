@@ -1,5 +1,6 @@
 import logging
 import math
+import numpy as np
 import yaml
 import torch
 import argparse
@@ -24,6 +25,12 @@ def setup_parser(parser: argparse.ArgumentParser):
         "-fp", "--fixed_position",
         action="store_true",
         help="if true -> sample from a fixed position, if false -> sample from different target positions"
+    )
+
+    parser.add_argument(
+        "-greedy", "--g",
+        action="store_true",
+        help="if you set this argument the inference will try to reach a target position choosing greedily from VAE latent space"
     )
     
     return parser
@@ -106,7 +113,7 @@ def forward_kinematics(angles: torch.tensor):
         angles (np.array): shape (num_arms, num_joints)
 
     Returns:
-        _type_: _description_
+        _type_: out shape: (num_arms, num_joints + 1, 2)
     """
     num_arms, num_joints = angles.shape
     positions = torch.zeros((num_arms, num_joints + 1, 2))
@@ -125,6 +132,31 @@ def forward_kinematics(angles: torch.tensor):
         positions[:, idx + 1] = new_pos
 
     return positions
+
+
+def greedy_inference(model: VariationalAutoencoder, sample_size: int):
+    target = sample_target(1).repeat((sample_size, 1))
+    best_angles = torch.zeros((sample_size, model.output_dim))
+    end_positions = forward_kinematics(best_angles)[: -1, :]
+    state = torch.cat([target, end_positions, best_angles])
+    
+    for _ in range(200):
+        latent_sample = sample_latent(sample_size, torch.zeros(model.latent_dim), torch.ones(model.latent_dim))
+        latent_input = torch.cat([latent_sample, state])
+        actions = model.decoder(latent_input).detach()
+
+        # find minium action
+        end_positions = forward_kinematics(actions)[:, -1, :]
+        dist = torch.sqrt(torch.sum(torch.float_power(target - end_positions, 2), dim=1))
+        min_dist = torch.min(dist)
+        print(min_dist)
+        if min_dist <= 0.1:
+            break
+
+        # build new state
+        best_end_position = end_positions[torch.argmin(dist)]
+        best_angles = actions[torch.argmin(dist)]
+        state = torch.cat([target, best_end_position, best_angles]).repeat((sample_size, 1))
 
 
 def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, sample_size: int):
@@ -215,8 +247,10 @@ def relative_inference(model: VariationalAutoencoder, sample_size: int):
     plt.show()
 
 
-def inference(model: VariationalAutoencoder, fixed_position: bool, sample_size: int, config: dict):
-    if config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:
+def inference(model: VariationalAutoencoder, fixed_position: bool, sample_size: int, config: dict, greedy: bool = False):
+    if greedy:
+        greedy_inference(model, sample_size)
+    elif config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:
         relative_inference(model, sample_size)
     elif config["dataset_mode"] in ["IK_const_start", "IK_random_start"] :
         absolute_inference(model, fixed_position, sample_size)

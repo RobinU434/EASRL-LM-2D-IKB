@@ -90,7 +90,7 @@ class PolicyNet(nn.Module):
                 action = self.actor.auto_encoder.decoder.forward(latent_input)
             # move action to cpu
             action = action.cpu()
-            action = action + 1 * int(self.actor.vae_config["normalize"])
+            # action = action + 1 * int(self.actor.vae_config["normalize"])
             
         # shape action for buffer layout
         action = action.squeeze()

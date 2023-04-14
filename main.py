@@ -1,3 +1,4 @@
+import copy
 import time
 import yaml
 import torch
@@ -18,11 +19,22 @@ from logger.fs_logger import FileSystemLogger
 
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
-    parser.add_argument("algorithm", type=str, help="specify which algorithm to use")
-    parser.add_argument("subdir", type=str, default="test", help="specifies in which subdirectory to store the results")
-    parser.add_argument("num_runs", type=int, default=1, help="number of runs you want to do with the experiment")
-
+    parser.add_argument(
+        "algorithm",
+        type=str,
+        help="specify which algorithm to use")
+    parser.add_argument(
+        "subdir",
+        type=str,
+        default="test",
+        help="specifies in which subdirectory to store the results")
+    parser.add_argument(
+        "num_runs", 
+        type=int,
+        default=1,
+        help="number of runs you want to do with the experiment")
     return parser
+
 
 def load_config(args: Namespace) -> dict:
     # First the env config file
@@ -49,6 +61,7 @@ def load_config(args: Namespace) -> dict:
     config = {**config, **vars(args)}
     
     return config
+
 
 def extract_actor_config(config: dict) -> dict:
     # there is the normal fead forward actor and the latent actor
@@ -175,7 +188,11 @@ if __name__ == "__main__":
         try:
             main(config)
         except ValueError:
+<<<<<<< Updated upstream
             # Because some weird nan values during sampling caused by exploding gradients 
+=======
+            # Because some wierd nan values during sampling
+>>>>>>> Stashed changes
             logging.warning("run was aborted because of a ValueError")
             continue
         print(f"completed {i}th experiment")

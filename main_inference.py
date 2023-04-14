@@ -1,9 +1,12 @@
+import copy
+import logging
 import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List
 from argparse import ArgumentParser
 
+from main import extract_actor_config
 from algorithms.sac.sac import SAC
 from envs.plane_robot_env import PlaneRobotEnv
 from envs.task.reach_goal import ReachGoalTask
@@ -18,12 +21,15 @@ def setup_parser(parser: ArgumentParser) -> ArgumentParser:
 
 
 def load_config(config_path: str) -> dict:
+    logging.info(f"load config at {config_path}")
     with open(config_path) as f:
         config = yaml.safe_load(f)
     return config
 
 
 def main(sac_config: dict, model_path: str):
+    actor_config = extract_actor_config(copy.deepcopy(sac_config))
+
     if sac_config["task"] == ReachGoalTask.__name__:
         task = ReachGoalTask(config = sac_config)
     elif sac_config["task"] == ImitationTask.__name__:
@@ -55,6 +61,7 @@ def main(sac_config: dict, model_path: str):
             action_covariance_decay = sac_config["action_covariance_decay"],
             action_covariance_mode = sac_config["action_covariance_mode"],
             action_magnitude=sac_config["action_magnitude"],
+            actor_config=actor_config
             )
     
     sac.load_checkpoint(model_path)
@@ -66,8 +73,8 @@ def main(sac_config: dict, model_path: str):
     axs[0].set_xlim([-sac_config["n_joints"], sac_config["n_joints"]])
     axs[0].set_ylim([-sac_config["n_joints"], sac_config["n_joints"]])
     axs[0].axis("equal")
-    for trajectory in trajectories[0]:
-        axs[0].plot(trajectory[:, 0], trajectory[:, 1], color="k", marker=".")
+    # for trajectory in trajectories[0]:
+    #     axs[0].plot(trajectory[:, 0], trajectory[:, 1], color="k", marker=".")
     
     axs[0].plot(trajectories[0, :, -1, 0], trajectories[0, :, -1, 1])
     axs[0].plot(target_positions[0, 0], target_positions[0, 1], color="r", marker=".")
@@ -75,7 +82,8 @@ def main(sac_config: dict, model_path: str):
     axs[1].set_ylim([-0.5, max(distance) + 0.5])
     axs[1].grid()
     axs[1].plot(distance)
-    plt.show()
+    
+    fig.savefig("results/sac_inference.png")
 
 
 

@@ -1,3 +1,4 @@
+import logging
 import math
 import yaml
 import torch
@@ -52,10 +53,15 @@ def load_model(path: str, config: dict) -> VariationalAutoencoder:
         output_dim  = config["num_joints"]
         enhance_dim = 0
     if config["dataset"] == "conditional_action_target":
-        input_dim = config["num_joints"] + 2
+        if config["conditional_info"] == "state":
+            conditional_info_dim = config["num_joints"]  + 4
+        elif config["conditional_info"] == "targets":
+            conditional_info_dim = 2
+
+        input_dim = config["num_joints"] + conditional_info_dim
         latent_dim = config["latent_dim"]
         output_dim  = config["num_joints"]
-        enhance_dim = 2
+        enhance_dim = conditional_info_dim
     
     model = VariationalAutoencoder(
         input_dim=input_dim,
@@ -130,10 +136,23 @@ def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, samp
             target = target.repeat((sample_size, 1))
         else:
             target = sample_target(sample_size)
-        
+    
         target *= model.output_dim
-        print("target position: ", target[0].tolist())
         concat_sample = torch.cat([latent_sample, target], dim=1)
+
+    if model.conditional_info_dim > 2:
+        if fixed_position:
+            target = sample_target(1)
+            target = target.repeat((sample_size, 1))
+            state = torch.zeros((sample_size, model.output_dim))
+            current_position = torch.tensor([1, 0]).repeat((sample_size, 1))
+            current_position = current_position
+        else:
+            raise NotImplementedError
+        target *= model.output_dim
+        concat_sample = torch.cat([latent_sample, target, current_position, state], dim=1)
+    
+        print("target position: ", target[0].tolist())
 
     print("forward pass")
     actions = model.decoder(concat_sample).detach()
@@ -160,7 +179,7 @@ def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, samp
 
     # plot target position
     print("plot target postion")
-    ax.scatter(target[0, 0], target[0, 1], color="g", s=1)
+    ax.scatter(target[0, 0], target[0, 1], color="g", s=1, zorder=1)
     print("done")
 
     fig.savefig("results/inference.png")
@@ -199,8 +218,10 @@ def relative_inference(model: VariationalAutoencoder, sample_size: int):
 def inference(model: VariationalAutoencoder, fixed_position: bool, sample_size: int, config: dict):
     if config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:
         relative_inference(model, sample_size)
-    elif config["dataset_mode"] in ["cons", "random"]:
+    elif config["dataset_mode"] in ["IK_const_start", "IK_random_start"] :
         absolute_inference(model, fixed_position, sample_size)
+    else:
+        logging.error("please chose a valid dataset mode")
 
 
 if __name__ == "__main__":

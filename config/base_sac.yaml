@@ -15,9 +15,9 @@ action_covariance_mode: independent
 action_covariance_decay: 0.5
 action_magnitude: 0.8  # a value inside the interval (0, pi]
 normal_actor:
-  enabled: False
-latent_actor: 
   enabled: True
+latent_actor: 
+  enabled: False
   device: "cuda:2"
   latent_dim: 5
   vae_learning: False

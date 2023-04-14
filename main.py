@@ -4,6 +4,7 @@ import torch
 import logging
 
 from argparse import ArgumentParser, Namespace
+from gym.wrappers import RescaleAction
 from torch.utils.tensorboard import SummaryWriter
 
 from envs.plane_robot_env import PlaneRobotEnv
@@ -61,15 +62,12 @@ def extract_actor_config(config: dict) -> dict:
         return actor_config
     else:
         logging.error("There must be at least one actor enabled")
-            
 
-def main(config):
-    actor_config = extract_actor_config(config)
 
-    # reseed the environment
-    time_stamp = int(time.time())
-    torch.manual_seed(time_stamp)
-
+def build_env(config: dict):
+    print("action mode: ", config["action_mode"])
+    print("action magnitude: ", config["action_magnitude"])
+    
     # select task
     print(config["task"])
     if config["task"] == ReachGoalTask.__name__:
@@ -85,9 +83,24 @@ def main(config):
         action_mode=config["action_mode"]
         )
     
-    print("action mode: ", config["action_mode"])
-    print("action magnitude: ", config["action_magnitude"])
+    if config["rescale_actions"]["enabled"]:
+        env = RescaleAction(env, config["rescale_actions"]["min"], config["rescale_actions"]["max"])
+        logging.info("action_space: ", env.action_space)
+    else:
+        logging.info("action_space: ", env.action_space)
+    
+    return env
+            
 
+def main(config):
+    actor_config = extract_actor_config(config)
+
+    # reseed the environment
+    time_stamp = int(time.time())
+    torch.manual_seed(time_stamp)
+
+    env = build_env(config)
+    
     # pth for file system logging
     logging_path = f"results/{config['algorithm'].lower()}/{config['subdir']}/{actor_config['type'].__name__}/{config['n_joints']}_{time_stamp}"
     logger = SummaryWriter(logging_path)
@@ -159,13 +172,12 @@ if __name__ == "__main__":
     print(f"Start to do {args.num_runs} experiment")
     for i in range(args.num_runs):
         print(f"Started {i}th experiment")
-        main(config)
-        # try:
-        #     main(config)
-        # except ValueError:
-        #     # Because some wierd nan values during sampling
-        #     logging.warning("run was aborted because of a ValueError")
-        #     continue
+        try:
+            main(config)
+        except ValueError:
+            # Because some weird nan values during sampling caused by exploding gradients 
+            logging.warning("run was aborted because of a ValueError")
+            continue
         print(f"completed {i}th experiment")
 
    

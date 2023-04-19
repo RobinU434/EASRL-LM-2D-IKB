@@ -1,0 +1,12 @@
+task         : "ReachGoalTask"
+lr_mu        : 0.0005
+lr_q         : 0.001
+gamma        : 0.99
+batch_size   : 32
+buffer_limit : 50000
+tau          : 0.005 # for target network soft update
+start_buffer_size: 2000
+train_iterations: 10
+n_epochs     : 5000
+normal_actor:
+  enabled: True

@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class OrnsteinUhlenbeckNoise:
     def __init__(self, mu):
         self.theta, self.dt, self.sigma = 0.1, 0.01, 0.1

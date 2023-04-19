@@ -1,5 +1,11 @@
+import collections
+import random
+
+import torch
+
+
 class ReplayBuffer():
-    def __init__(self):
+    def __init__(self, buffer_limit):
         self.buffer = collections.deque(maxlen=buffer_limit)
 
     def put(self, transition):
@@ -7,20 +13,28 @@ class ReplayBuffer():
     
     def sample(self, n):
         mini_batch = random.sample(self.buffer, n)
-        s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst = [], [], [], [], []
+        s, a, r, s_prime, done_mask = mini_batch[0]
 
-        for transition in mini_batch:
-            s, a, r, s_prime, done = transition
-            s_lst.append(s)
-            a_lst.append([a])
-            r_lst.append([r])
-            s_prime_lst.append(s_prime)
-            done_mask = 0.0 if done else 1.0 
-            done_mask_lst.append([done_mask])
+        s_lst = torch.empty((n, *s.shape))
+        a_lst = torch.empty((n, *a.size()))
+        r_lst = torch.empty((n, 1))
+        s_prime_lst = torch.empty((n, *s_prime.shape))
+        done_mask_lst = torch.empty((n, 1))
         
-        return torch.tensor(s_lst, dtype=torch.float), torch.tensor(a_lst, dtype=torch.float), \
-                torch.tensor(r_lst, dtype=torch.float), torch.tensor(s_prime_lst, dtype=torch.float), \
-                torch.tensor(done_mask_lst, dtype=torch.float)
-    
+        for idx, transition in enumerate(mini_batch):
+            s, a, r, s_prime, done = transition
+            s_lst[idx] = torch.tensor(s)
+            a_lst[idx] = a
+            r_lst[idx] = torch.tensor([r])
+            s_prime_lst[idx] = torch.tensor(s_prime)
+            done_mask = float(done)
+            done_mask_lst[idx] = torch.tensor([done_mask])
+ 
+        return s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst
+
+    @property     
     def size(self):
         return len(self.buffer)
+    
+    def __len__(self):
+        return self.size

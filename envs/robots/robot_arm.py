@@ -27,7 +27,6 @@ class RobotArm:
         Args:
             angles (np.array): array with same length as number of joints
         """
-        # TODO: make env easier
         self._angles = angles % (2 * np.pi)
 
         for idx in range(self._n_joints):

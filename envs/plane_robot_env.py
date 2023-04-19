@@ -205,7 +205,7 @@ class PlaneRobotEnv(gym.Env):
             position *= scale_factor
             
             # move the segment
-            position += origin
+            position = position + origin
 
             self._draw_joint(draw, position)
 

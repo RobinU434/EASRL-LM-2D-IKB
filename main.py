@@ -7,6 +7,7 @@ import logging
 from argparse import ArgumentParser, Namespace
 from gym.wrappers import RescaleAction
 from torch.utils.tensorboard import SummaryWriter
+from algorithms.ddpg.ddpg import DDPG
 
 from envs.plane_robot_env import PlaneRobotEnv
 from envs.task.imitation_learning import ImitationTask
@@ -52,8 +53,12 @@ def load_config(args: Namespace) -> dict:
             # load ppo config
             with open("config/base_ppo.yaml") as f:
                 config = {**config, **yaml.safe_load(f)}
+        elif algo.lower() == "ddpg":
+            # load ppo config
+            with open("config/base_ddpg.yaml") as f:
+                config = {**config, **yaml.safe_load(f)}
         else:
-            raise NotImplementedError(f"Use an algorithm form this list: [sac, ppo], you used{algo}")
+            raise NotImplementedError(f"Use an algorithm form this list: [sac, ppo, ddpg], you used {algo}")
     except AttributeError:
         raise ValueError("You have to specify the algorithm manually. It is either SAC or PPO possible.")
 
@@ -78,9 +83,6 @@ def extract_actor_config(config: dict) -> dict:
 
 
 def build_env(config: dict):
-    print("action mode: ", config["action_mode"])
-    print("action magnitude: ", config["action_magnitude"])
-    
     # select task
     print(config["task"])
     if config["task"] == ReachGoalTask.__name__:
@@ -124,14 +126,16 @@ def main(config):
         yaml.dump(config, config_file)
     # log config
     # logger.add_hparams(config, {})
-
-    print("")
-    print("SAC:")
-    print("target entropy", config["target_entropy"])
-    print("gamma: ", config["gamma"])
-    print("actor: ", actor_config["type"].__name__)
     
     if config["algorithm"].lower() == "sac":
+        print("action mode: ", config["action_mode"])
+        print("action magnitude: ", config["action_magnitude"])
+        print("")
+        print("SAC:")
+        print("target entropy", config["target_entropy"])
+        print("gamma: ", config["gamma"])
+        print("actor: ", actor_config["type"].__name__)
+    
         algorithm = SAC(
             env,
             logging_writer=logger,
@@ -153,6 +157,7 @@ def main(config):
             actor_config=actor_config,
             )
     elif config["algorithm"].lower() == "ppo":
+        print("PPO:")
         algorithm = PPO(
             env,
             logging_writer=logger,
@@ -168,6 +173,20 @@ def main(config):
             action_covariance_decay = config["action_covariance_decay"],
             action_covariance_mode = config["action_covariance_mode"]
             )
+    elif config["algorithm"].lower() == "ddpg":
+        print("DDPG:")
+        algorithm = DDPG(
+            env,
+            logging_writer=logger,
+            fs_logger=FileSystemLogger(logging_path),
+            lr_mu=config["lr_mu"],
+            lr_q=config["lr_q"],
+            gamma=config["gamma"],
+            batch_size=config["batch_size"],
+            buffer_limit=config["buffer_limit"],
+            tau=config["tau"],
+            start_buffer_size=config["start_buffer_size"],
+            train_iterations=config["train_iterations"])
     else:
         raise NotImplementedError
     
@@ -185,6 +204,7 @@ if __name__ == "__main__":
     print(f"Start to do {args.num_runs} experiment")
     for i in range(args.num_runs):
         print(f"Started {i}th experiment")
+        main(config)
         try:
             main(config)
         except ValueError:

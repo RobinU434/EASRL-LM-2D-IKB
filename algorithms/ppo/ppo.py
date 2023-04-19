@@ -131,7 +131,7 @@ class PPO:
                     log_prob = dist.log_prob(a)
                     log_prob = torch.sum(log_prob)  # independence assumption between individual propabbilities
                     # log(p(a1, a2)) = log(p(a1) * p(a2)) = log(p(a1)) + log(p(a2))
-                    s_prime, r, done, info = self._env.step(a)
+                    s_prime, r, done, info = self._env.step(a.numpy())
 
                     rollout.append((s, a, r, s_prime, log_prob, done))
                     if len(rollout) == self._rollout_len:

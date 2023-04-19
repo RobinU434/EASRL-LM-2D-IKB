@@ -10,3 +10,5 @@ minibatch_size: 32
 n_epochs: 10000
 action_covariance_mode: independent
 action_covariance_decay: 0.5
+normal_actor:
+  enabled: True

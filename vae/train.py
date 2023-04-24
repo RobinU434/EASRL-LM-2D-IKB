@@ -11,13 +11,20 @@ from torch.utils.tensorboard import SummaryWriter
 from vae.data.data_set import ActionTargetDatasetV2, ConditionalActionTargetDataset
 from vae.data.load_data_set import load_action_dataset, load_action_target_dataset
 from vae.helper.extract_angles_and_position import split_conditional_info
-from vae.helper.loss import CyclicVAELoss, VAELoss
+from vae.helper.loss import VAELoss, get_loss_func, DistVAELoss
 from vae.model.vae import VariationalAutoencoder
 
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
-    parser.add_argument("device", type=str, help=f"GPU or CPU, current GPU count: {torch.cuda.device_count()}")
-
+    parser.add_argument(
+        "subdir",
+        type=str,
+        default="test",
+        help="specifies in which subdirectory to store the results")
+    parser.add_argument(
+        "device",
+        type=str,
+        help=f"GPU or CPU, current avialable GPU index: {torch.cuda.device_count() - 1}")
     return parser
 
 
@@ -55,14 +62,22 @@ def run_model(
         x_hat, mu, log_std = autoencoder(x, y)  # out shape: (batch_size, number of joints) 
         std_array = np.concatenate([std_array, log_std.cpu().detach().numpy().flatten()])
             
+        # extract angles and position
         if type(data.dataset) ==  ConditionalActionTargetDataset or type(data.dataset) == ActionTargetDatasetV2:
-            # extract angles and position
-            x_angles, _ = split_conditional_info(x)
+            x_angles, target_pos, _, state_angles = split_conditional_info(x)
         else:
             x_angles = x
+
+        # setup loss functions
+        if type(loss_func) == DistVAELoss:
+            x_hat_angles = state_angles + (x_hat + loss_func.normalization) * loss_func.normalization * torch.pi
+            loss = loss_func(target_pos, x_hat_angles, mu, log_std)
+        else:
+            # x_angles = torch.ones_like(x_angles)
+            x_angles = torch.ones_like(x_angles) * (2 - x_angles.sum(1) > 0)
+            loss = loss_func(x_angles, x_hat, mu, log_std)
         
-        loss = loss_func(x_angles, x_hat, mu, log_std)
-        
+        print(x_angles[0], x_hat[0])
         if train:
             autoencoder.train(loss)
 
@@ -78,7 +93,7 @@ def train(
     train_data: DataLoader,
     val_data: DataLoader,
     test_data: DataLoader,
-    loss_func: CyclicVAELoss,
+    loss_func: VAELoss,
     logger: SummaryWriter = None,
     epochs: int = 20,
     device: str = "cpu",
@@ -208,11 +223,15 @@ if __name__ == "__main__":
         
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
         
-    path = f"results/vae/{config['num_joints']}_{config['latent_dim']}_{int(time.time())}"
+    path = f"results/vae/{args.subdir}/{config['num_joints']}_{config['latent_dim']}_{int(time.time())}"
     logger = SummaryWriter(path)
 
     # store config
     store_config(config, path)
+
+    print("kl loss weight: ", config["kl_loss_weight"])
+    print("reconstruction loss weight: ", config["reconstruction_loss_weight"])
+    print("")
     
     print("architecture")
     print(f"{input_dim} -> [Encoder] -> {config['latent_dim']} + {conditional_info_dim} -> [Decoder] -> {config['num_joints']}")
@@ -227,17 +246,8 @@ if __name__ == "__main__":
         store_history=True, 
         device=args.device).to(args.device)
     
-    if config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:
-        loss_func = VAELoss(
-            kl_loss_weight=config["kl_loss_weight"],
-            reconstruction_loss_weight=config["kl_loss_weight"]
-        )
-    else:
-        loss_func = CyclicVAELoss(
-            kl_loss_weight=config["kl_loss_weight"],
-            reconstruction_loss_weight=config["reconstruction_loss_weight"],
-            normalization=config["normalize"]
-        )
+    loss_func = get_loss_func(config)
+    # print("use: ", loss_func.__name__)
         
     train(
         autoencoder,

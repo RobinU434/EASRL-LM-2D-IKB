@@ -96,7 +96,7 @@ class PolicyNet(nn.Module):
         # action = action.squeeze()
        
         # real_action = (torch.tanh(action) + 1.0) * torch.pi  # multiply by pi in order to match the action space
-        real_action = torch.tanh(action) * self.action_magnitude
+        real_action = torch.tanh(action) * self.action_magnitude - (1 - self.action_magnitude)
 
         # Squash correction (from original SAC implementation)
         # this comes from the fact that tanh is a bijection and differentiable

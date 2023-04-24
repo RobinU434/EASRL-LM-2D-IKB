@@ -21,6 +21,9 @@ def train(
 
     for epoch_idx in range(n_epochs):
         losses = torch.tensor([])
+        grads = []
+        c = 0
+
         for x, y in train_data:
             x_hat = model.forward(x)
 
@@ -37,9 +40,15 @@ def train(
                 x_hat = model.forward(x)
 
                 # loss = imitation_loss(y, x_hat)
-                loss = distance_loss(y, x_hat)
+                loss = distance_loss(y, x_hat) + torch.square(x_hat).mean()
                 imitation_losses = torch.cat([imitation_losses, torch.tensor([imitation_loss(y, x_hat)])])
                 val_losses = torch.cat([val_losses, torch.tensor([loss])])
+
+                target_pos = forward_kinematics(y[0][None, :])[:, 2]
+                real_pos = forward_kinematics(x_hat[0][None, :])[:, 2]
+                print(target_pos, real_pos)
+
+                # print((y[0] - torch.pi) / torch.pi, x_hat[0])
 
             print(f"epoch: {epoch_idx}  train_loss: {losses.mean()} val_loss: {val_losses.mean()}, imi_loss: {imitation_losses.mean()}")   
             logger.add_scalar("supervised/train_loss", losses.mean(), epoch_idx)
@@ -100,20 +109,20 @@ def forward_kinematics(angles: torch.tensor):
 
 
 if __name__ == "__main__":
-    num_joints = 20
+    num_joints = 2
     n_epochs = 201
     batch_size = 64
     val_interval = 5
     
     model = Regressor(2, num_joints)
     train_data = ActionTargetDataset(
-        f"./datasets/{num_joints}/train/actions.csv",
-        f"./datasets/{num_joints}/train/targets.csv"
+        f"./datasets/{num_joints}/train/actions_IK_random_start.csv",
+        f"./datasets/{num_joints}/train/state_IK_random_start.csv"
         )
     train_dataloader = DataLoader(train_data, batch_size=batch_size)
     val_data = ActionTargetDataset(
-        f"./datasets/{num_joints}/val/actions.csv",
-        f"./datasets/{num_joints}/val/targets.csv"
+        f"./datasets/{num_joints}/val/actions_IK_random_start.csv",
+        f"./datasets/{num_joints}/val/state_IK_random_start.csv"
         )
     val_dataloader = DataLoader(val_data, batch_size=batch_size)
 

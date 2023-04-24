@@ -21,7 +21,7 @@ class Regressor(nn.Module):
             nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, output_dim),
-            nn.Tanh(),
+            # nn.ReLU(),
         )
 
         self.optimizer = optim.Adam(self.parameters()) 

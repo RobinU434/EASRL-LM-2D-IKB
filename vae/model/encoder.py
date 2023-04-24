@@ -10,7 +10,7 @@ class VariationalEncoder(nn.Module):
             # nn.Linear(512, 512),
             # nn.ReLU(),
             nn.Linear(512, 512),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(512, 512),
             nn.ELU()
         )

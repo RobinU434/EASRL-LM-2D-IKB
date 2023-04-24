@@ -5,6 +5,7 @@ import yaml
 import torch
 import argparse
 import matplotlib.pyplot as plt
+from envs.robots.robot_arm import RobotArm
 
 from vae.model.vae import VariationalAutoencoder
 
@@ -209,7 +210,7 @@ def multiple_greedy_runs(model: VariationalAutoencoder, sample_size: int, num_ru
 
 
 def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, sample_size: int):
-    latent_sample = sample_latent(sample_size, torch.zeros(model.latent_dim), torch.ones(model.latent_dim))
+    latent_sample = sample_latent(sample_size * 10, torch.zeros(model.latent_dim), torch.ones(model.latent_dim))
     
     if model.conditional_info_dim == 2:
         if fixed_position:
@@ -224,19 +225,34 @@ def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, samp
     if model.conditional_info_dim > 2:
         if fixed_position:
             target = sample_target(1)
-            target = target.repeat((sample_size, 1))
-            state = torch.zeros((sample_size, model.output_dim))
-            current_position = torch.tensor([1, 0]).repeat((sample_size, 1))
-            current_position = current_position
+            target = target.repeat((sample_size * 10, 1))
+            # state_angles = torch.zeros((sample_size, model.output_dim))
+            state_angles = torch.rand((sample_size, model.output_dim)) * 2 * torch.pi
+            state_angles = state_angles.repeat((10, 1))
+            # current_position = torch.tensor([1, 0]).repeat((sample_size, 1))
+            current_position = forward_kinematics(state_angles)[:, -1, :]
         else:
             raise NotImplementedError
         target *= model.output_dim
-        concat_sample = torch.cat([latent_sample, target, current_position, state], dim=1)
+        concat_sample = torch.cat([latent_sample, target, current_position, state_angles], dim=1)
     
         print("target position: ", target[0].tolist())
 
+    robot_arm = RobotArm(model.output_dim)
+    perfect_angles = []
+    temp_target = np.zeros(3)
+    temp_target[0:2] = target[0, :].numpy()
+    for start in state_angles[::sample_size]:
+        robot_arm.set(start.numpy())
+        print(temp_target)
+        robot_arm.IK(temp_target)
+        perfect_angles.append(robot_arm.angles)
+    perfect_angles = np.stack(perfect_angles)
+
+
     print("forward pass")
     actions = model.decoder(concat_sample).detach()
+    actions = actions + state_angles
     positions = forward_kinematics((actions + 1)  * torch.pi)
     print("done")
 
@@ -247,10 +263,19 @@ def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, samp
     ax.set_xlim([-model.output_dim, model.output_dim])
     ax.set_ylim([-model.output_dim, model.output_dim])
 
+    print("plot ik")
+    positions_ik = forward_kinematics(torch.tensor(perfect_angles))
+    ax.scatter(positions_ik[:, -1, 0], positions_ik[:, -1, 1], color="orange", s=1) 
+    print("done")
+
     # plot arms
     print("plot arms")
-    for position_sequence in positions:
-        ax.plot(position_sequence[:, 0], position_sequence[:, 1], color="k", marker=".", alpha=1/math.sqrt(len(positions)))
+    # for position_sequence in positions:
+    #     ax.plot(position_sequence[:, 0], position_sequence[:, 1], color="k", marker=".", alpha=1/math.sqrt(len(positions)))
+    print("done")
+
+    print("plot initial positions")
+    ax.scatter(current_position[:, 0], current_position[:, 1], color="b", s=1)
     print("done")
     
     # plot end positions

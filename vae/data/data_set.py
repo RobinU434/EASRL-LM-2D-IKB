@@ -91,7 +91,7 @@ class ConditionalActionTargetDataset(Dataset):
     """
     def __init__(self, action_file, target_file, normalize: bool = False):   
         self.action_csv = pd.read_csv(action_file)
-        self.target_csv = pd.read_csv(target_file)
+        self.state_csv = pd.read_csv(target_file)
 
         self.normalize = normalize
 
@@ -100,11 +100,12 @@ class ConditionalActionTargetDataset(Dataset):
 
     def __getitem__(self, idx):
         action = torch.tensor(self.action_csv.iloc[idx, 1:]).float()
-        state = torch.tensor(self.target_csv.iloc[idx, 1:]).float()  # we work in a two dimensional space
+        state = torch.tensor(self.state_csv.iloc[idx, 1:]).float()  # we work in a two dimensional space
         
         if self.normalize:
             action = (action / torch.pi) - 1
         
+        # has to be concatenated because the will be feed directly into the encoder
         features = torch.cat([action, state])
         features = Variable(features, requires_grad=True)
         
@@ -114,5 +115,8 @@ class ConditionalActionTargetDataset(Dataset):
 
 
 if __name__ == "__main__":
-    dataset = ActionDataset("./datasets/10/actions_1674557585.csv")
-    dataset[0]
+    # dataset = ActionDataset("./datasets/10/actions_1674557585.csv")
+    # dataset[0]
+
+    dataset = ConditionalActionTargetDataset("./datasets/2/test/actions_IK_random_start.csv", "./datasets/2/test/state_IK_random_start.csv", normalize=True)
+    print(dataset[0])

@@ -149,7 +149,7 @@ class PPO:
             if epoch_idx % self._print_interval == 0:
                 avg_episode_len = num_steps / self._print_interval 
                 mean_reward = score / num_steps
-                print("# of episode :{}, mean reward / step : {:.1f}, opt step: {}".format(epoch_idx, mean_reward, self._model.optimization_step))
+                print("# of episode :{}, mean reward / step : {:.1f}".format(epoch_idx, mean_reward))
                 # log metrics
                 # in tensorboard
                 if self._logger is not None:

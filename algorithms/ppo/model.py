@@ -24,7 +24,7 @@ class Module(nn.Module):
     def pi(self, state, softmax_dim = 0):
         hidden = F.relu(self.fc1(state))
 
-        mu = torch.tanh(self.fc_mu(hidden))
+        mu = torch.tanh(self.fc_mu(hidden)) 
         std = F.softplus(self.fc_std(hidden))
 
         if torch.isnan(std).any():
@@ -46,13 +46,10 @@ class Module(nn.Module):
         returns all weights in a single 1 dimensional tensor.
         Function will be used to determine the distribution for kullback leiber divergence (KL-Divergnece)
         """
-
         result = []
         weights = self.state_dict().values()
-        
         for weight in weights:
             result.append(torch.flatten(weight))
-
         result = torch.cat(result)
 
         return result

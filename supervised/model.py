@@ -1,3 +1,4 @@
+import logging
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -11,7 +12,7 @@ class Regressor(nn.Module):
     corresponding angels to got to the requested target position
 
     """
-    def __init__(self, input_dim, output_dim) -> None:
+    def __init__(self, input_dim: int, output_dim: int, learning_rate: float) -> None:
         super().__init__()
         self.model = nn.Sequential(
             nn.Linear(input_dim, 128),
@@ -21,16 +22,12 @@ class Regressor(nn.Module):
             nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, output_dim),
-            # nn.ReLU(),
         )
 
-        self.optimizer = optim.Adam(self.parameters()) 
+        self.optimizer = optim.Adam(self.parameters(), lr=learning_rate) 
 
     def forward(self, x):
         out = self.model.forward(x)
-        # out = (out * 2 * torch.pi) # % (2 * torch.pi)
-        # print(out.mean())
-
         return out
 
     def train(self, loss):
@@ -38,6 +35,12 @@ class Regressor(nn.Module):
         loss.backward()
         self.optimizer.step()
 
-class Leverage(nn.Module):
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        return input * 2 * torch.pi
+
+def build_model(feature_source: str, num_joints: int, learning_rate: float) -> Regressor:
+    if feature_source == "state":
+        model = Regressor(4 + num_joints, num_joints, learning_rate)
+    elif feature_source == "targets":
+        model = Regressor(2, num_joints, learning_rate)
+    else:
+        logging.error(f"feature source has to be either 'targets' or 'state', you chose: {feature_source}")
+    return model 

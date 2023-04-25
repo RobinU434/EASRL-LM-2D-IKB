@@ -58,14 +58,9 @@ def train(
                 x_hat = model.forward(x)
 
                 # loss = imitation_loss(y, x_hat)
-                loss = distance_loss(y, x_hat)  # + torch.square(x_hat).mean()
-                # logging
+                loss = distance_loss(y, x_hat)
                 imitation_losses = torch.cat([imitation_losses, torch.tensor([imitation_loss(y, x_hat)])])
                 val_losses = torch.cat([val_losses, torch.tensor([loss])])
-
-                # target_pos = forward_kinematics(y[0][None, :])[:, 2]
-                # real_pos = forward_kinematics(x_hat[0][None, :])[:, 2]
-                # print(target_pos, real_pos)
 
             print(f"epoch: {epoch_idx}  train_loss: {losses.mean()} val_loss: {val_losses.mean()}, imi_loss: {imitation_losses.mean()}")   
             logger.add_scalar("supervised/train_loss", losses.mean(), epoch_idx)
@@ -102,6 +97,7 @@ def split_state_information(x: torch.tensor):
     current_pos = x[:, 2:4]
     angles = x[:, 4:]
     return target_pos, current_pos, angles
+
 
 
 def angle_diff(a : torch.tensor, b: torch.tensor):

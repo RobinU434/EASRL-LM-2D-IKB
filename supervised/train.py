@@ -92,14 +92,6 @@ def get_relative_angels(abs_angles: torch.tensor) -> torch.tensor:
     return rel_angles
 
 
-def split_state_information(x: torch.tensor):
-    target_pos = x[:, 0:2]
-    current_pos = x[:, 2:4]
-    angles = x[:, 4:]
-    return target_pos, current_pos, angles
-
-
-
 def angle_diff(a : torch.tensor, b: torch.tensor):
     # source: https://stackoverflow.com/questions/1878907/how-can-i-find-the-smallest-difference-between-two-angles-around-a-point
     dif = a - b
@@ -135,7 +127,7 @@ def forward_kinematics(angles: torch.tensor):
 
 
 if __name__ == "__main__":
-    num_joints = 20
+    num_joints = 2
     n_epochs = 201
     batch_size = 2048
     val_interval = 5
@@ -146,7 +138,7 @@ if __name__ == "__main__":
     # args = parser.parse_args()
 
     subdir = "test"  # args.subdir
-    device = "cuda:3"  # args.device
+    device = "cpu"  # args.device
     
     model = build_model(feature_source, num_joints, learning_rate).to(device)
 

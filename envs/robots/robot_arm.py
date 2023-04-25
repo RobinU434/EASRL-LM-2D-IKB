@@ -42,12 +42,14 @@ class RobotArm:
 
             self._positions[idx + 1] = new_pos
 
-    def IK(self, target, max_iter: int = 1000, error_min: float =0.1):
+    def IK(self, target, max_iter: int = 1000, error_min: float = 0.1):
         # for the angles you have to pass in the relative angles between the joints.
         # To get the absolute angels you can use the cum sum function 
         # To invert this you can use:
         # >>> z[1:] -= z[:-1].copy()
         rel_angles = self.angles.copy()
+        # transform into degrees
+        rel_angles = rel_angles / np.pi * 180
         rel_angles[1:] -= rel_angles[:-1].copy()
 
         # link is a sequence of individual segment lengths
@@ -79,8 +81,6 @@ class RobotArm:
     @property
     def end_position(self):
         return self._positions[-1]
-    
-
 
 
 if __name__ == "__main__":

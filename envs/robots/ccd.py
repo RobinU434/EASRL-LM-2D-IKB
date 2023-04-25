@@ -1,5 +1,10 @@
+# =========================================================================================================
+# code was copied and adapted from:
+# https://github.com/ekorudiawan/CCD-Inverse-Kinematics-2D/blob/master/sources/CCD-Inverse-Kinematics-2D.py
+# =========================================================================================================
 import math
 import numpy as np
+
 
 def rotateZ(theta):
     rz = np.array([[math.cos(theta), - math.sin(theta), 0, 0],
@@ -8,12 +13,14 @@ def rotateZ(theta):
                    [0, 0, 0, 1]])
     return rz
 
+
 def translate(dx, dy, dz):
     t = np.array([[1, 0, 0, dx],
                   [0, 1, 0, dy],
                   [0, 0, 1, dz],
                   [0, 0, 0, 1]])
     return t
+
 
 # Forward Kinematics
 # Input initial angles and length of links
@@ -27,6 +34,7 @@ def FK(angle, link):
         T = translate(link[i], 0, 0)
         P.append(P[-1].dot(R).dot(T))
     return P
+
 
 def IK(target, angle, link, max_iter = 10000, err_min = 0.1):
     solved = False

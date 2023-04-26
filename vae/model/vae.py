@@ -46,6 +46,7 @@ class VariationalAutoencoder(nn.Module):
         self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
 
     def forward(self, x, conditional_information: torch.tensor = torch.tensor([])):
+        x = torch.cat([x, conditional_information], dim=1)
         mu, log_std = self.encoder(x)  # output dim (batch_size, latent_space)
         
         # sample the latent space

@@ -11,6 +11,7 @@ from envs.robots.ccd import IK
 from vae.helper.extract_angles_and_position import split_conditional_info, split_state_information 
 from vae.helper.loss import forward_kinematics
 
+
 class ActionDataset(Dataset):
     """
     This class is the dataset class for the VAE to encode actions into a latent space.
@@ -167,6 +168,7 @@ class ConditionalActionTargetDataset(Dataset):
         label = state
         label = Variable(label, requires_grad=True)
         return features, label
+
 
 def check_action_constrain():
     constrain_radius = None 

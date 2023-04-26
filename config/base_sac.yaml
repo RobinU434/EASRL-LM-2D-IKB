@@ -13,7 +13,7 @@ lr_alpha: 0.001
 n_epochs: 5000
 action_covariance_mode: independent
 action_covariance_decay: 0.5
-action_magnitude: 1  # a value inside the interval (0, pi]
+action_magnitude: 1 # a value inside the interval (0, pi]
 normal_actor:
   enabled: True
 latent_actor: 

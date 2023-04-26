@@ -42,8 +42,8 @@ def train(
             
             x_hat = model.forward(x)
 
-            # loss = imitation_loss(y, x_hat)
-            loss = distance_loss(y, x_hat)  # + torch.square(x_hat).mean()
+            loss = imitation_loss(y, x_hat)
+            # loss = distance_loss(y, x_hat)  # + torch.square(x_hat).mean()
             losses = torch.cat([losses, torch.tensor([loss])])
 
             model.train(loss)
@@ -57,8 +57,8 @@ def train(
                 
                 x_hat = model.forward(x)
 
-                # loss = imitation_loss(y, x_hat)
-                loss = distance_loss(y, x_hat)
+                loss = imitation_loss(y, x_hat)
+                # loss = distance_loss(y, x_hat)
                 imitation_losses = torch.cat([imitation_losses, torch.tensor([imitation_loss(y, x_hat)])])
                 val_losses = torch.cat([val_losses, torch.tensor([loss])])
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     # args = parser.parse_args()
 
     subdir = "test"  # args.subdir
-    device = "cpu"  # args.device
+    device = "cuda:5"  # args.device
     
     model = build_model(feature_source, num_joints, learning_rate).to(device)
 

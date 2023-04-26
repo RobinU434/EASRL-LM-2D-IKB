@@ -53,6 +53,7 @@ def sample_start(n_joints: int, n: int, start_mode: str = "constant_start"):
     else:
         logging.error(f"you have to chose from {MODE_LIST} instead you chose: {start_mode}")
 
+
 def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "constant start", entity: str = "train"):
     arm = RobotArm(n_joints)
 
@@ -61,13 +62,14 @@ def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "consta
 
     # expand dimensions because the IK algorithm needs a this dimension
     targets = np.zeros((n, 3))
-    
+    start_target_position = np.zeros((n, 3))
+
     # set random seed to the current time
     time_stamp = int(time.time()) 
     np.random.seed(time_stamp)
     # assumption: every segment has length one
     targets[:, 0:2] = sample_target(radius=n_joints, n_points=n)
-    start_angles = sample_start(n_joints, n, start_mode)
+    start_target_position[:, 0:2] = sample_target(radius=n_joints, n_points=n)
     state = np.zeros((n, 4 + n_joints))
     
     bar = Bar('CCD on targets', max=n)
@@ -75,14 +77,18 @@ def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "consta
         # set start  position in arm
         target = targets[idx]
         
-        arm.set(start_angles[idx])
-        start_end_position = arm.end_position.copy()
+        # set arm to start position
+        arm.IK(start_target_position[idx])
+        state_angles = arm.angles.copy()
+        state_position = arm.end_position.copy()
+        
+        # move arm to target
         arm.IK(target)
 
-        actions[idx] = arm.angles - start_angles[idx]
+        actions[idx] = arm.angles - state_angles
         targets[idx, 0:2] = arm.end_position
         
-        state[idx, :] = np.concatenate([arm.end_position, start_end_position, start_angles[idx]])
+        state[idx, :] = np.concatenate([arm.end_position, state_position, state_angles])
 
         arm.reset()
         

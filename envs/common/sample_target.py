@@ -9,7 +9,7 @@ def sample_target(radius: float, n_points: int = 1) -> np.array:
         radius (float): maximum radius to sample fromm
 
     Returns:
-        _type_: _description_
+        np.array: shape (n_points, 2) if  n_point == 1 -> shape: (2)
     """
     # angle to sample from
     theta = np.random.uniform(0, 2 * np.pi, size=n_points)

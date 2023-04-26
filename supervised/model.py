@@ -14,6 +14,10 @@ class Regressor(nn.Module):
     """
     def __init__(self, input_dim: int, output_dim: int, learning_rate: float) -> None:
         super().__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.learning_rate = learning_rate
+        
         self.model = nn.Sequential(
             nn.Linear(input_dim, 128),
             nn.ReLU(),

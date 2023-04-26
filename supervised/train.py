@@ -171,6 +171,10 @@ if __name__ == "__main__":
     path = f"results/supervised/{args.subdir}/{config['num_joints']}_{int(time.time())}"
     logger = SummaryWriter(path)
 
+    # store config
+    with open(path + "/config.yaml", "w") as config_file:
+        yaml.dump(config, config_file)
+
     train(
         model=model,
         train_data=train_dataloader,

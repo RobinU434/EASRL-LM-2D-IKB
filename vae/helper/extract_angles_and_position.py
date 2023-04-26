@@ -1,5 +1,5 @@
-from typing import Tuple
 import torch
+from typing import Tuple
 
 
 def split_conditional_info(array: torch.tensor) -> Tuple[torch.tensor, torch.tensor, torch.tensor, torch.tensor]:
@@ -14,9 +14,14 @@ def split_conditional_info(array: torch.tensor) -> Tuple[torch.tensor, torch.ten
     out_dim = array.size()[1]
     split_idx = (out_dim - 4) // 2  # assume conditional information contains (target, current_pos, current_angles)
     target_angles = array[:, :split_idx]
-    state = array[:, split_idx:] 
-    target_position = state[:, :2]
-    state_position = state[:, 2:4]
-    state_angles = state[:, 4:]
-
+    state = array[:, split_idx:]
+    target_position, state_position, state_angles = split_state_information(state)
+    
     return target_angles, target_position, state_position, state_angles
+
+
+def split_state_information(x: torch.tensor):
+    target_pos = x[:, 0:2]
+    current_pos = x[:, 2:4]
+    angles = x[:, 4:]
+    return target_pos, current_pos, angles

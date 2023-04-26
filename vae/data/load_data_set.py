@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple
 from torch.utils.data import DataLoader
 
@@ -39,24 +40,33 @@ def load_action_target_dataset(config) -> Tuple[DataLoader, DataLoader, DataLoad
     return train_dataloader, val_dataloader, test_dataloader
 
 
-def load_specified_action_target_dataset(config, DatasetEntity, ) -> Tuple[DataLoader, DataLoader, DataLoader]:
+def load_specified_action_target_dataset(config: dict, DatasetEntity) -> Tuple[DataLoader, DataLoader, DataLoader]:
+    action_constrain_radius = config["action_constrain_radius"] if config["action_constrain_radius"] != 0 else None
+    logging.info("loading training dataset")
     train_data = DatasetEntity(
         f"./datasets/{config['num_joints']}/train/actions_{config['dataset_mode']}.csv",
         f"./datasets/{config['num_joints']}/train/{config['conditional_info']}_{config['dataset_mode']}.csv",
-        config["normalize"] 
+        config["normalize"],
+        action_constrain_radius
         )
     train_dataloader = DataLoader(train_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"]) 
+    logging.info("done")
+    logging.info("loading validation dataset")
     val_data = DatasetEntity(
         f"./datasets/{config['num_joints']}/val/actions_{config['dataset_mode']}.csv",
         f"./datasets/{config['num_joints']}/val/{config['conditional_info']}_{config['dataset_mode']}.csv",
-        config["normalize"] 
+        config["normalize"],
+        action_constrain_radius
         )
     val_dataloader = DataLoader(val_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"])
+    logging.info("done")
+    logging.info("loading test dataset")
     test_data = DatasetEntity(
         f"./datasets/{config['num_joints']}/test/actions_{config['dataset_mode']}.csv",
         f"./datasets/{config['num_joints']}/test/{config['conditional_info']}_{config['dataset_mode']}.csv",
-        config["normalize"]
+        config["normalize"],
+        action_constrain_radius
         )
     test_dataloader = DataLoader(test_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"])
-    
+    logging.info("done")
     return train_dataloader, val_dataloader, test_dataloader

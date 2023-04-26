@@ -11,5 +11,5 @@ epochs: 801
 val_interval: 5
 learning_rate: 0.0012
 kl_loss_weight: 1
-reconstruction_loss_weight: 0
+reconstruction_loss_weight: 1
 normalize: False

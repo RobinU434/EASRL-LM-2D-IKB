@@ -76,16 +76,17 @@ class ActionStateDataset(Dataset):
 
         return features, label_angles
 
-def get_datasets(feature_source: str, num_joints: int, batch_size: int) -> Tuple[DataLoader, DataLoader]:
+def get_datasets(feature_source: str, num_joints: int, batch_size: int, action_radius: float) -> Tuple[DataLoader, DataLoader]:
     if feature_source == "state":
         train_data = ActionStateDataset(
             action_file=f"./datasets/{num_joints}/train/actions_IK_random_start.csv",
-            state_file=f"./datasets/{num_joints}/train/state_IK_random_start.csv"
-            )
+            state_file=f"./datasets/{num_joints}/train/state_IK_random_start.csv",
+            action_radius=action_radius)
         train_dataloader = DataLoader(train_data, batch_size=batch_size)
         val_data = ActionStateDataset(
             action_file=f"./datasets/{num_joints}/val/actions_IK_random_start.csv",
-            state_file=f"./datasets/{num_joints}/val/state_IK_random_start.csv"
+            state_file=f"./datasets/{num_joints}/val/state_IK_random_start.csv",
+            action_radius=action_radius
         )
         val_dataloader = DataLoader(val_data, batch_size=batch_size)
         

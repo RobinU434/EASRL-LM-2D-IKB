@@ -38,8 +38,10 @@ class Regressor(nn.Module):
 
 def build_model(feature_source: str, num_joints: int, learning_rate: float) -> Regressor:
     if feature_source == "state":
+        logging.info("use 'state' as feature source")
         model = Regressor(4 + num_joints, num_joints, learning_rate)
     elif feature_source == "targets":
+        logging.info("use 'targets' as feature source")
         model = Regressor(2, num_joints, learning_rate)
     else:
         logging.error(f"feature source has to be either 'targets' or 'state', you chose: {feature_source}")

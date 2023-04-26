@@ -1,12 +1,15 @@
+import logging
+import yaml
 import time
-import numpy as np
 import torch
+import numpy as np
 
-from torch.utils.tensorboard import SummaryWriter
 from argparse import ArgumentParser
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from supervised.data import get_datasets
-from supervised.model import build_model
+from supervised.model import Regressor, build_model
 
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -20,18 +23,32 @@ def setup_parser(parser: ArgumentParser) -> ArgumentParser:
         type=str,
         default="cpu",
         help=f"GPU or CPU, current avialable GPU index: {torch.cuda.device_count() - 1}")
+    parser.add_argument(
+        "-d", "--debug",
+        action="store_true",
+        help="if set to true -> debug mode is activated"
+    )
+    
     return parser
 
 
+def load_config() -> dict:
+    with open("config/base_supervised.yaml") as f:
+        config = yaml.safe_load(f)
+
+    return config
+
+
 def train(
-        model, 
-        train_data,
-        val_data,
-        n_epochs,
-        logger,
-        val_interval,
-        device,
-        ):
+        model: Regressor,
+        train_data: DataLoader,
+        val_data: DataLoader,
+        n_epochs: int,
+        logger: SummaryWriter,
+        val_interval: int,
+        device: str,
+        path: str,
+        ) -> None:
 
     for epoch_idx in range(n_epochs):
         losses = torch.tensor([])
@@ -65,6 +82,14 @@ def train(
             print(f"epoch: {epoch_idx}  train_loss: {losses.mean()} val_loss: {val_losses.mean()}, imi_loss: {imitation_losses.mean()}")   
             logger.add_scalar("supervised/train_loss", losses.mean(), epoch_idx)
             logger.add_scalar("supervised/val_loss", val_losses.mean(), epoch_idx)
+
+            # save model
+            torch.save({
+                'epoch': epoch_idx,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': model.optimizer.state_dict(),
+                'loss': val_losses.mean(),
+            }, path + f"/model_{epoch_idx}_val_loss_{float(val_losses.mean()):.4f}.pt")     
 
 
 def imitation_loss(y, x_hat):
@@ -127,35 +152,32 @@ def forward_kinematics(angles: torch.tensor):
 
 
 if __name__ == "__main__":
-    num_joints = 2
-    n_epochs = 201
-    batch_size = 2048
-    val_interval = 5
-    feature_source = "state"  # choices: "state" "targets"
-    learning_rate = 0.0015
-    
-    # parser = setup_parser(ArgumentParser)
-    # args = parser.parse_args()
+    config = load_config()
 
-    subdir = "test"  # args.subdir
-    device = "cuda:5"  # args.device
-    
-    model = build_model(feature_source, num_joints, learning_rate).to(device)
+    parser = setup_parser(ArgumentParser())
+    args = parser.parse_args()
 
-    train_dataloader, val_dataloader = get_datasets(feature_source=feature_source,
-                                                    num_joints=num_joints,
-                                                    batch_size=batch_size)
+    # set logging level
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
 
-    path = f"results/supervised/{subdir}/{num_joints}_{int(time.time())}"
+    model = build_model(config["feature_source"], config["num_joints"], config["learning_rate"]).to(args.device)
+
+    train_dataloader, val_dataloader = get_datasets(feature_source=config["feature_source"],
+                                                    num_joints=config["num_joints"],
+                                                    batch_size=config["batch_size"],
+                                                    action_radius=config["action_radius"])
+
+    path = f"results/supervised/{args.subdir}/{config['num_joints']}_{int(time.time())}"
     logger = SummaryWriter(path)
 
     train(
         model=model,
         train_data=train_dataloader,
         val_data=val_dataloader,
-        n_epochs=n_epochs,
+        n_epochs=config["n_epochs"],
         logger=logger,
-        val_interval=val_interval,
-        device=device
+        val_interval=config["val_interval"],
+        device=args.device,
+        path=path
     )
-    

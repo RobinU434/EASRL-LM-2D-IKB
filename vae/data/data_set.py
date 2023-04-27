@@ -105,6 +105,7 @@ class ConditionalActionTargetDataset(Dataset):
         if action_constrain_radius is not None:
             logging.info("start action constraining")
             self.action_csv = self.constrain_actions(self.action_constrain_radius)
+            logging.info("done action constraining")
         logging.info("finished setting up conditional action target dataset")
 
     def constrain_actions(self, constrain_radius: float) -> pd.DataFrame:
@@ -150,7 +151,6 @@ class ConditionalActionTargetDataset(Dataset):
         action_df = pd.DataFrame(action_array)  # cut indices
         return action_df
     
-
     def __len__(self):
         return len(self.action_csv)
 

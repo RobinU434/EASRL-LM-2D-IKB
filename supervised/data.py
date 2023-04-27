@@ -38,7 +38,7 @@ class ActionStateDataset(Dataset):
         self.action_csv = pd.read_csv(action_file)
         self.state_csv = pd.read_csv(state_file)
 
-        self.action_radius = action_constrain_radius 
+        self.action_constrain_radius = action_constrain_radius 
         if action_constrain_radius is not None:
             logging.info("start action constraining")
             self.action_csv = self.constrain_actions(self.action_constrain_radius)
@@ -92,8 +92,8 @@ class ActionStateDataset(Dataset):
         return len(self.action_csv)
 
     def __getitem__(self, idx):
-        features = torch.tensor(self.state_csv.iloc[idx, 1:]).float()  # state information
-        label_angles = torch.tensor(self.action_csv.iloc[idx, 1:]).float()
+        features = torch.tensor(self.state_csv.iloc[idx, 1:].to_numpy()).float()  # state information
+        label_angles = torch.tensor(self.action_csv.iloc[idx, 1:].to_numpy()).float()
         
         return features, label_angles
 

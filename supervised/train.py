@@ -123,34 +123,6 @@ def angle_diff(a : torch.tensor, b: torch.tensor):
     return (dif + torch.pi) % (2 * torch.pi) - torch.pi 
 
 
-def forward_kinematics(angles: torch.tensor):
-    """_summary_
-
-    Args:
-        angles (np.array): shape (num_arms, num_joints)
-
-    Returns:
-        _type_: _description_
-    """
-    num_arms, num_joints = angles.size()
-    positions = torch.zeros((num_arms, num_joints + 1, 2))
-
-    for idx in range(num_joints):
-        origin = positions[:, idx]
-
-        # new position
-        new_pos = torch.zeros((num_arms, 2))
-        new_pos[:, 0] = torch.cos(angles[:, idx])
-        new_pos[:, 1] = torch.sin(angles[:, idx])
-        
-        # translate position
-        new_pos += origin
-
-        positions[:, idx + 1] = new_pos
-
-    return positions
-
-
 if __name__ == "__main__":
     config = load_config()
 

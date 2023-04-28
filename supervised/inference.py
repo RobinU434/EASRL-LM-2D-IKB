@@ -9,7 +9,7 @@ from progress.bar import Bar
 from envs.common.sample_target import sample_target
 from envs.robots.ccd import IK
 from supervised.model import Regressor, build_model
-from supervised.train import forward_kinematics
+from supervised.utils import forward_kinematics
 
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -83,7 +83,7 @@ def inference(model: Regressor, num_samples: int, device: str, config: dict):
     for batch in batches:
         batch = torch.tensor(batch).to(device).type(torch.float32)
         # model forward pass
-        action = model(torch.tensor(batch))
+        action = model(batch)
         actions.append(action)
         bar.next()
     bar.finish()
@@ -100,7 +100,7 @@ def inference(model: Regressor, num_samples: int, device: str, config: dict):
     if config["action_radius"] != 0:
         ax.add_patch(plt.Circle(start_position[0], config["action_radius"], fill=False))
     ax.scatter(start_positions[:, 0], start_positions[:, 1], c="g", s=1)
-    ax.scatter(arm_positions[:, -1, 0], arm_positions[:, -1, 1], c="orange", s=1)
+    ax.scatter(arm_positions[:, -1, 0], arm_positions[:, -1, 1], c="r", s=1)
     ax.scatter(targets[0, 0], targets[0, 1], c="b", s=1)
 
     plt.show()

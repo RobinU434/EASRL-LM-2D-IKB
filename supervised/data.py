@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 import torch
 import logging
 import numpy as np
@@ -8,7 +9,9 @@ from torch.utils.data import Dataset, DataLoader
 from progress.bar import Bar
 
 from envs.robots.ccd import IK
+from supervised.utils import forward_kinematics
 from supervised.utils import split_state_information
+from vae.helper.extract_angles_and_position import split_conditional_info
 
 
 class ActionTargetDataset(Dataset):
@@ -127,3 +130,35 @@ def get_datasets(feature_source: str, num_joints: int, batch_size: int, action_r
         logging.error(f"feature source has to be either 'targets' or 'state', you chose: {feature_source}")
 
     return train_dataloader, val_dataloader
+
+
+def check_dataset(num_joints: int, random: bool = False, action_radius: float = None, num_samples: int = 1):
+    dataset = ActionStateDataset(
+        action_file=f"./datasets/{num_joints}/test/actions_IK_random_start.csv",
+        state_file=f"./datasets/{num_joints}/test/state_IK_random_start.csv",
+        action_constrain_radius=action_radius)
+    dataloader = DataLoader(dataset, batch_size=num_samples, shuffle=random)
+    
+    features, labels = next(iter(dataloader))
+    target_position, state_position, state_angels = split_state_information(features)
+
+    target_angles = state_angels + labels
+
+    # plot
+    fig = plt.figure()
+    ax = fig.add_subplot()
+
+    ax.add_patch(plt.Circle((0, 0), num_joints, fill=False))
+    if action_radius is not None:
+        ax.add_patch(plt.Circle(state_position[0], action_radius, fill=False))
+    ax.scatter(target_position[:, 0], target_position[:, 1], c="b", s=1)
+    ax.scatter(state_position[:, 0], state_position[:, 1], c="g", s=1)
+    for position_sequence in forward_kinematics(state_angels):
+        ax.plot(position_sequence[:, 0], position_sequence[:, 1], color="k", marker=".", alpha=1/10)
+    for position_sequence in forward_kinematics(target_angles):
+        ax.plot(position_sequence[:, 0], position_sequence[:, 1], color="k", marker=".", alpha=1/10)
+    
+    plt.show()
+
+if __name__ == "__main__":
+    check_dataset(2, random=True, action_radius=0.5, num_samples=1)

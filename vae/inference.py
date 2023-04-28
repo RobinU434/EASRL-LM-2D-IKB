@@ -99,7 +99,10 @@ def sample_target(n: int) -> torch.tensor:
     return coords
 
 
-def sample_latent(n: int, mu: torch.tensor, std: torch.tensor):
+def sample_latent(
+        n: int,
+        mu: torch.tensor,
+        std: torch.tensor):
     normal_distr = torch.distributions.Normal(0, 1)
 
     sampled = mu + std * normal_distr.sample((n, len(mu)))
@@ -135,7 +138,10 @@ def forward_kinematics(angles: torch.tensor) -> torch.tensor:
     return positions
 
 
-def greedy_inference(model: VariationalAutoencoder, sample_size: int, plot: bool = False):
+def greedy_inference(
+        model: VariationalAutoencoder,
+        sample_size: int,
+        plot: bool = False):
     n_epochs = 200
     target = sample_target(1) * model.output_dim
     print(target[0])
@@ -186,7 +192,10 @@ def greedy_inference(model: VariationalAutoencoder, sample_size: int, plot: bool
     return target[0], runtime
 
 
-def multiple_greedy_runs(model: VariationalAutoencoder, sample_size: int, num_runs: int = 100):
+def multiple_greedy_runs(
+        model: VariationalAutoencoder,
+        sample_size: int,
+        num_runs: int = 100):
     runtimes = torch.tensor([])
     targets = torch.empty((num_runs, 2))
     for k in range(num_runs):
@@ -209,8 +218,13 @@ def multiple_greedy_runs(model: VariationalAutoencoder, sample_size: int, num_ru
     fig.savefig("results/distance_vs_runtime.png")
 
 
-def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, sample_size: int):
-    latent_sample = sample_latent(sample_size * 10, torch.zeros(model.latent_dim), torch.ones(model.latent_dim))
+def absolute_inference(
+        model: VariationalAutoencoder,
+        fixed_position: bool,
+        sample_size: int,
+        num_start_positions: int
+        ):
+    latent_sample = sample_latent(sample_size * num_start_positions, torch.zeros(model.latent_dim), torch.ones(model.latent_dim))
     
     if model.conditional_info_dim == 2:
         if fixed_position:
@@ -221,14 +235,13 @@ def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, samp
     
         target *= model.output_dim
         concat_sample = torch.cat([latent_sample, target], dim=1)
-
-    if model.conditional_info_dim > 2:
+    elif model.conditional_info_dim > 2:
         if fixed_position:
             target = sample_target(1)
-            target = target.repeat((sample_size * 10, 1))
+            target = target.repeat((sample_size * num_start_positions, 1))
             # state_angles = torch.zeros((sample_size, model.output_dim))
-            state_angles = torch.rand((sample_size, model.output_dim)) * 2 * torch.pi
-            state_angles = state_angles.repeat((10, 1))
+            state_angles = torch.rand((num_start_positions, model.output_dim)) * 2 * torch.pi
+            state_angles = state_angles.repeat((sample_size, 1))
             # current_position = torch.tensor([1, 0]).repeat((sample_size, 1))
             current_position = forward_kinematics(state_angles)[:, -1, :]
         else:
@@ -262,6 +275,8 @@ def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, samp
     ax = fig.add_subplot()
     ax.set_xlim([-model.output_dim, model.output_dim])
     ax.set_ylim([-model.output_dim, model.output_dim])
+    ax.axis("equal")
+    ax.add_patch(plt.Circle((0, 0), model.output_dim, fill=False))
 
     print("plot ik")
     positions_ik = forward_kinematics(torch.tensor(perfect_angles))
@@ -303,7 +318,9 @@ def absolute_inference(model: VariationalAutoencoder, fixed_position: bool, samp
         fig.savefig("results/invariance.png")
 
 
-def relative_inference(model: VariationalAutoencoder, sample_size: int):
+def relative_inference(
+        model: VariationalAutoencoder,
+        sample_size: int):
     latent_sample = sample_latent(sample_size, torch.zeros(model.latent_dim), 10 * torch.ones(model.latent_dim))
 
     actions = model.decoder(latent_sample).detach()
@@ -321,14 +338,20 @@ def relative_inference(model: VariationalAutoencoder, sample_size: int):
     plt.show()
 
 
-def inference(model: VariationalAutoencoder, fixed_position: bool, sample_size: int, config: dict, greedy: bool = False):
+def inference(
+        model: VariationalAutoencoder,
+        fixed_position: bool,
+        sample_size: int,
+        config: dict,
+        greedy: bool = False,
+        num_start_positions: int = 1):
     if greedy:
         # multiple_greedy_runs(model, sample_size, num_runs=100)
         greedy_inference(model, sample_size, plot=True)
     elif config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:
         relative_inference(model, sample_size)
     elif config["dataset_mode"] in ["IK_const_start", "IK_random_start"] :
-        absolute_inference(model, fixed_position, sample_size)
+        absolute_inference(model, fixed_position, sample_size, num_start_positions)
     else:
         logging.error("please chose a valid dataset mode")
 
@@ -344,5 +367,6 @@ if __name__ == "__main__":
 
     model = load_model(args_dict.pop("model_path"), config)
     args_dict["model"] = model
+    args_dict["num_start_positions"] = 3
     
     inference(**args_dict)

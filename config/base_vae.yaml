@@ -2,7 +2,7 @@ num_joints: 2
 latent_dim: 2
 dataset: "conditional_action_target"  # "action" "action_target" "conditional_action_target"
 dataset_mode: "IK_random_start" # "IK_const_start" "IK_random_start" "IK_random_start_constrained" "noise_uniform" "noise_tanh"  const is a dataset created with a constant start position -> one action for one target position, with random -> multiple actions for one target positions are possible 
-action_constrain_radius: 0.5  # only available if dataset == conditional_action_target
+action_constrain_radius: 0.1  # only available if dataset == conditional_action_target
 conditional_info: "state"  # "state" "targets"
 loss_func: "VAELoss"  # "VAELoss" "CyclicVAELoss" "DistVAELoss"
 batch_size: 1024

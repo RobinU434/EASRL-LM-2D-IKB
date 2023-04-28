@@ -45,7 +45,7 @@ def load_model(config: dict, checkpoint_path: str) -> Regressor:
 
     checkpoint = torch.load(checkpoint_path)
     # load state dict
-    # model.load_state_dict(checkpoint["model_state_dict"])
+    model.load_state_dict(checkpoint["model_state_dict"])
 
     return model
 
@@ -68,7 +68,7 @@ def inference(model: Regressor, num_samples: int, device: str, config: dict):
     bar = Bar("solve IK", max=num_samples)
     for idx in range(num_samples):
         state_action, _, _, _ = IK(start_positions[idx], state_angles[idx].copy(), link, err_min=0.001)
-        state_angles[idx] = state_action / 180 * np.pi  # convert to rad
+        state_angles [idx] = state_action / 180 * np.pi  # convert to rad
         bar.next()
     bar.finish()
 
@@ -79,14 +79,14 @@ def inference(model: Regressor, num_samples: int, device: str, config: dict):
     split_idx = np.arange(0, num_samples, config["batch_size"])[1:]
     batches = np.split(state, split_idx)
     actions = []
-    bar = Bar("network forward pass", max=len(split_idx))
+    # bar = Bar("network forward pass", max=len(split_idx))
     for batch in batches:
         batch = torch.tensor(batch).to(device).type(torch.float32)
         # model forward pass
         action = model(batch)
         actions.append(action)
-        bar.next()
-    bar.finish()
+        # bar.next()
+    # bar.finish()
     
     actions = torch.stack(actions).detach().squeeze().numpy()
     target_actions = state_angles + actions
@@ -103,7 +103,7 @@ def inference(model: Regressor, num_samples: int, device: str, config: dict):
     ax.scatter(arm_positions[:, -1, 0], arm_positions[:, -1, 1], c="r", s=1)
     ax.scatter(targets[0, 0], targets[0, 1], c="b", s=1)
 
-    plt.show()
+    fig.savefig("results/supervised_inference.png")
 
 
 if __name__ == "__main__":
@@ -116,5 +116,5 @@ if __name__ == "__main__":
     
     model = load_model(config, args.checkpoint).to(args.device)
 
-    inference(model, args.num_samples, "cpu", config)
+    inference(model, args.num_samples, args.device, config)
     

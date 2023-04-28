@@ -153,7 +153,7 @@ def train(
             
             # autoencoder.log_parameters(epoch_idx)
             # autoencoder.log_gradients(epoch_idx)
-            # autoencoder.log_decoder_distr(epoch_idx)
+            autoencoder.log_decoder_distr(epoch_idx)
             autoencoder.log_z_grad(epoch_idx)
             
             logger.add_scalar("vae/val_r_loss", val_reconstruction_loss_array.mean(), epoch_idx)

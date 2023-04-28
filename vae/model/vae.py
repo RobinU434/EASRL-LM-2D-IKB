@@ -61,7 +61,7 @@ class VariationalAutoencoder(nn.Module):
 
         decoder_out = self.decoder.forward(z) 
         if self.store_history:
-            self.decoder_history = torch.cat([self.decoder_history, decoder_out.flatten().cpu()])
+            self.decoder_history = torch.cat([self.decoder_history, decoder_out.detach().flatten().cpu()])
 
         return decoder_out, mu, log_std
 
@@ -90,6 +90,7 @@ class VariationalAutoencoder(nn.Module):
         self.logger.add_histogram("vae/grad", grad_tensor, epoch_idx)
 
     def log_decoder_distr(self, epoch_idx):
+        # print(self.decoder_history)
         self.logger.add_histogram("vae/decoder_distr", self.decoder_history, epoch_idx)
 
     def log_z_grad(self, epoch_idx):

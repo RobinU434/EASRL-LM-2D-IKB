@@ -102,6 +102,7 @@ class ActionStateDataset(Dataset):
 
 
 def get_datasets(feature_source: str, num_joints: int, batch_size: int, action_radius: float) -> Tuple[DataLoader, DataLoader]:
+    action_radius = action_radius if action_radius > 0 else None 
     if feature_source == "state":
         train_data = ActionStateDataset(
             action_file=f"./datasets/{num_joints}/train/actions_IK_random_start.csv",

@@ -9,7 +9,9 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from supervised.data import get_datasets
+from supervised.loss import DistanceLoss, ImitationLoss, get_loss_func
 from supervised.model import Regressor, build_model
+from supervised.utils import split_state_information
 
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -43,6 +45,7 @@ def train(
         model: Regressor,
         train_data: DataLoader,
         val_data: DataLoader,
+        loss_func, 
         n_epochs: int,
         logger: SummaryWriter,
         val_interval: int,
@@ -50,38 +53,61 @@ def train(
         path: str,
         ) -> None:
 
+    imitation_loss_func = ImitationLoss()
+    distance_loss_func = DistanceLoss()
+
     for epoch_idx in range(n_epochs):
         losses = torch.tensor([])
         
+        train_distance_losses = []
+        train_imitation_losses = []
         for x, y in train_data:
             x = x.to(device)
             y = y.to(device)
             
+            _, _, state_angles = split_state_information(x)
+
             x_hat = model.forward(x)
 
-            loss = imitation_loss(y, x_hat)
-            # loss = distance_loss(y, x_hat)  # + torch.square(x_hat).mean()
+            predicted_target_action = state_angles + x_hat
+            target_action = state_angles + y
+            loss = loss_func(target_action, predicted_target_action)
             losses = torch.cat([losses, torch.tensor([loss])])
+
+            train_distance_losses.append(distance_loss_func(y, x_hat))
+            train_imitation_losses.append(imitation_loss_func(y, x_hat))
 
             model.train(loss)
 
         if epoch_idx % val_interval == 0: 
             val_losses = torch.tensor([])
-            imitation_losses = torch.tensor([])
+
+            val_distance_losses = []
+            val_imitation_losses = []
             for x, y in val_data:
                 x = x.to(device)
                 y = y.to(device)
                 
-                x_hat = model.forward(x)
+                _, _, state_angles = split_state_information(x)
 
-                loss = imitation_loss(y, x_hat)
-                # loss = distance_loss(y, x_hat)
-                imitation_losses = torch.cat([imitation_losses, torch.tensor([imitation_loss(y, x_hat)])])
+                x_hat = model.forward(x)
+                
+                predicted_target_action = state_angles + x_hat
+                target_action = state_angles + y
+                loss = loss_func(target_action, predicted_target_action)
                 val_losses = torch.cat([val_losses, torch.tensor([loss])])
 
-            print(f"epoch: {epoch_idx}  train_loss: {losses.mean()} val_loss: {val_losses.mean()}, imi_loss: {imitation_losses.mean()}")   
+                val_distance_losses.append(distance_loss_func(y, x_hat).item())
+                val_imitation_losses.append(imitation_loss_func(y, x_hat).item())
+
+            print(f"epoch: {epoch_idx}  train_loss: {losses.mean()} val_loss: {val_losses.mean()}")   
             logger.add_scalar("supervised/train_loss", losses.mean(), epoch_idx)
             logger.add_scalar("supervised/val_loss", val_losses.mean(), epoch_idx)
+            logger.add_scalar("supervised/train_imiation_loss", torch.tensor(train_imitation_losses).mean(), epoch_idx)
+            logger.add_scalar("supervised/train_distance_loss", torch.tensor(train_distance_losses).mean(), epoch_idx)
+            logger.add_scalar("supervised/val_imiation_loss", torch.tensor(val_imitation_losses).mean(), epoch_idx)
+            logger.add_scalar("supervised/val_distance_loss", torch.tensor(val_distance_losses).mean(), epoch_idx)
+            
 
             # save model
             torch.save({
@@ -90,37 +116,6 @@ def train(
                 'optimizer_state_dict': model.optimizer.state_dict(),
                 'loss': val_losses.mean(),
             }, path + f"/model_{epoch_idx}_val_loss_{float(val_losses.mean()):.4f}.pt")     
-
-
-def imitation_loss(y, x_hat):
-    # squash y
-    y = (y / torch.pi) - 1
-    # MSE
-    loss = torch.square(angle_diff(y, x_hat)).mean()
-
-    return loss
-
-
-def distance_loss(y, x_hat):
-    # expand x_hat to the original space
-    x_hat = (x_hat + 1) * torch.pi
-    target_pos = forward_kinematics(y)[:, 2]
-    real_pos = forward_kinematics(x_hat)[:, 2]
-
-    dist_loss = torch.square(target_pos - real_pos).mean()
-    return dist_loss
-
-
-def get_relative_angels(abs_angles: torch.tensor) -> torch.tensor:
-    rel_angles = abs_angles.copy()
-    rel_angles[1:] -= rel_angles[:-1].copy()
-    return rel_angles
-
-
-def angle_diff(a : torch.tensor, b: torch.tensor):
-    # source: https://stackoverflow.com/questions/1878907/how-can-i-find-the-smallest-difference-between-two-angles-around-a-point
-    dif = a - b
-    return (dif + torch.pi) % (2 * torch.pi) - torch.pi 
 
 
 if __name__ == "__main__":
@@ -134,13 +129,14 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.DEBUG)
 
     model = build_model(config["feature_source"], config["num_joints"], config["learning_rate"]).to(args.device)
+    loss_func = get_loss_func(config["loss_func"])
 
     train_dataloader, val_dataloader = get_datasets(feature_source=config["feature_source"],
                                                     num_joints=config["num_joints"],
                                                     batch_size=config["batch_size"],
                                                     action_radius=config["action_radius"])
 
-    path = f"results/supervised/{args.subdir}/{config['num_joints']}_{int(time.time())}"
+    path = f"results/supervised/{args.subdir}/{config['loss_func']}/{config['num_joints']}_{int(time.time())}"
     logger = SummaryWriter(path)
 
     # store config
@@ -151,6 +147,7 @@ if __name__ == "__main__":
         model=model,
         train_data=train_dataloader,
         val_data=val_dataloader,
+        loss_func=loss_func,
         n_epochs=config["n_epochs"],
         logger=logger,
         val_interval=config["val_interval"],

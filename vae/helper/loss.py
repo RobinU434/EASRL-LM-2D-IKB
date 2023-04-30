@@ -102,12 +102,22 @@ class DistVAELoss(VAELoss):
         self.normalization = normalization
 
     def reconstruction_loss(self, x: torch.tensor, x_hat: torch.tensor):
+        """
+        x: is the target action + state_angles which leads to the desired target position
+        x_hat: is the predicted target action + state_angels which should lead to the desired target position
+
+        Args:
+            x (torch.tensor): ground truth
+            x_hat (torch.tensor): prediction
+
+        Returns:
+            _type_: _description_
+        """
         # treat normalization -> state angles are in [0, 2pi] space and x_hat is in [-1, 1]
+        end_effector = forward_kinematics(x)[:, -1, :]
         pred_end_effector = forward_kinematics(x_hat)[:, -1, :]
-        # move c to cpu ... very convinient way TODO: make this prettier
-        x = x.to("cpu")
         # true end effector pose is in x, shape: (batch_size, 2)
-        dist_mean = torch.sqrt(torch.sum(torch.float_power(pred_end_effector - x, 2), dim=1)).mean()
+        dist_mean = torch.sqrt(torch.sum(torch.float_power(pred_end_effector - end_effector, 2), dim=1)).mean()
         self.r_loss = dist_mean
         return dist_mean
 

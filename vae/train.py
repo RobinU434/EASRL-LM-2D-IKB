@@ -55,29 +55,18 @@ def run_model(
     for target_action, conditional_info in data:
         # in case of dataset == ActionTargetDataset: x is the action and y is the corresponding target position 
         # in case of dataset == ActionDataset: x is the action and y is an empty tensor
-            
         target_action = target_action.to(device)
         conditional_info = conditional_info.to(device)
         
         x_hat, mu, log_std = autoencoder(target_action, conditional_info)  # out shape: (batch_size, number of joints) 
         std_array = np.concatenate([std_array, log_std.cpu().detach().numpy().flatten()])
-            
-        # extract angles and position
-        # if type(data.dataset) ==  ConditionalActionTargetDataset or type(data.dataset) == ActionTargetDatasetV2:
-        #     x_angles, target_pos, _, state_angles = split_conditional_info(target_action)
-        # else:
-        #     x_angles = target_action
 
         # setup loss functions
-        if type(loss_func) == DistVAELoss:
-            target_pos, _, state_angles = split_state_information(conditional_info)
-            x_hat_angles = state_angles + (x_hat + loss_func.normalization) * loss_func.normalization * torch.pi
-            loss = loss_func(target_pos, x_hat_angles, mu, log_std)
-        else:
-            # x_angles = torch.ones_like(x_angles)
-            # x_angles = torch.ones_like(x_angles) * (2 - x_angles.sum(1) > 0)
-            loss = loss_func(target_action, x_hat, mu, log_std)
-        
+        _, _, state_angles = split_state_information(conditional_info)
+        target_action = target_action + state_angles
+        predicted_target_action = x_hat + state_angles
+        loss = loss_func(target_action, predicted_target_action, mu, log_std)
+
         if train:
             autoencoder.train(loss)
 

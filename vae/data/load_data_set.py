@@ -9,17 +9,17 @@ def load_action_dataset(config: dict) -> Tuple[DataLoader, DataLoader, DataLoade
     print(f"use: {ActionDataset.__name__}")
     train_data = ActionDataset(
         f"./datasets/{config['num_joints']}/train/actions_{config['dataset_mode']}.csv",
-        config["normalize"]
+        # config["normalize"]
         )
     train_dataloader = DataLoader(train_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"]) 
     val_data = ActionDataset(
         f"./datasets/{config['num_joints']}/val/actions_{config['dataset_mode']}.csv",
-        config["normalize"]
+        # config["normalize"]
         )
     val_dataloader = DataLoader(val_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"])
     test_data = ActionDataset(
         f"./datasets/{config['num_joints']}/test/actions_{config['dataset_mode']}.csv",
-        config["normalize"]
+        # config["normalize"]
         )
     test_dataloader = DataLoader(test_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"])
 
@@ -46,7 +46,7 @@ def load_specified_action_target_dataset(config: dict, DatasetEntity) -> Tuple[D
     train_data = DatasetEntity(
         f"./datasets/{config['num_joints']}/train/actions_{config['dataset_mode']}.csv",
         f"./datasets/{config['num_joints']}/train/{config['conditional_info']}_{config['dataset_mode']}.csv",
-        config["normalize"],
+        # config["normalize"],
         action_constrain_radius
         )
     train_dataloader = DataLoader(train_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"]) 
@@ -55,7 +55,7 @@ def load_specified_action_target_dataset(config: dict, DatasetEntity) -> Tuple[D
     val_data = DatasetEntity(
         f"./datasets/{config['num_joints']}/val/actions_{config['dataset_mode']}.csv",
         f"./datasets/{config['num_joints']}/val/{config['conditional_info']}_{config['dataset_mode']}.csv",
-        config["normalize"],
+        # config["normalize"],
         action_constrain_radius
         )
     val_dataloader = DataLoader(val_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"])
@@ -64,7 +64,7 @@ def load_specified_action_target_dataset(config: dict, DatasetEntity) -> Tuple[D
     test_data = DatasetEntity(
         f"./datasets/{config['num_joints']}/test/actions_{config['dataset_mode']}.csv",
         f"./datasets/{config['num_joints']}/test/{config['conditional_info']}_{config['dataset_mode']}.csv",
-        config["normalize"],
+        # config["normalize"],
         action_constrain_radius
         )
     test_dataloader = DataLoader(test_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"])

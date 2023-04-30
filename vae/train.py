@@ -119,13 +119,11 @@ def train(
             )
 
             # store model checkpoint
-            torch.save({
-                'epoch': epoch_idx,
-                'model_state_dict': autoencoder.state_dict(),
-                'optimizer_state_dict': autoencoder.optimizer.state_dict(),
-                'loss': val_total_loss_array.mean(),
-            }, path + f"/model_{epoch_idx}_val_r_loss_{float(val_reconstruction_loss_array.mean()):.4f}.pt")     
-
+            autoencoder.store(
+                path=path + f"/model_{epoch_idx}_val_r_loss_{float(val_reconstruction_loss_array.mean()):.4f}.pt",
+                epoch_idx=epoch_idx
+                )
+            
         # LOGGING
         if logger is not None and epoch_idx % val_interval == 0:    
             train_reconstruction_loss_array = np.array(train_reconstruction_loss_array)
@@ -157,7 +155,6 @@ def train(
         device,
         train=False
     )
-
     logger.add_scalar("vae/test_r_loss", test_reconstruction_loss_array.mean(), epoch_idx)
     logger.add_scalar("vae/test_kl", test_kl_loss_array.mean(), epoch_idx)
     logger.add_scalar("vae/test_loss", test_total_loss_array.mean(), epoch_idx)

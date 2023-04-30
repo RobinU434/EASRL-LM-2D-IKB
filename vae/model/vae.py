@@ -104,6 +104,14 @@ class VariationalAutoencoder(nn.Module):
 
         self.logger.add_image("vae/z_grad", z_grad_abs, epoch_idx)
 
+    def store(self, path: str, epoch_idx: int, val_total_loss: float):
+        torch.save({
+                'epoch': epoch_idx,
+                'model_state_dict': self.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+            }, path)     
+
+
     def reset_history(self):
         """
         call this function before an epoch to ensure that there is only data from one epoch inside 

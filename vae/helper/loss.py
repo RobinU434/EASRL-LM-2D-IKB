@@ -77,14 +77,10 @@ class VAELoss:
 
 
 class CyclicVAELoss(VAELoss):
-    def __init__(self, kl_loss_weight: float = 1, reconstruction_loss_weight: float = 1, normalization: bool = False) -> None:
+    def __init__(self, kl_loss_weight: float = 1, reconstruction_loss_weight: float = 1) -> None:
         super().__init__(kl_loss_weight, reconstruction_loss_weight)
 
-        self.normalization = normalization
-        if self.normalization:
-            self.kappa = 1
-        else:
-             self.kappa = torch.pi
+        self.kappa = torch.pi
 
     def angle_diff(self, a: torch.tensor, b: torch.tensor):
         return angle_diff(a, b, self.kappa)
@@ -96,10 +92,8 @@ class CyclicVAELoss(VAELoss):
 
 
 class DistVAELoss(VAELoss):
-    def __init__(self, kl_loss_weight: float = 1, reconstruction_loss_weight: float = 1, normalization: bool = False) -> None:
+    def __init__(self, kl_loss_weight: float = 1, reconstruction_loss_weight: float = 1) -> None:
         super().__init__(kl_loss_weight, reconstruction_loss_weight)
-
-        self.normalization = normalization
 
     def reconstruction_loss(self, x: torch.tensor, x_hat: torch.tensor):
         """
@@ -124,22 +118,25 @@ class DistVAELoss(VAELoss):
 
 def get_loss_func(config: dict) -> VAELoss:
     loss_func_name = config["loss_func"]
+    loss_func = None
     if loss_func_name == VAELoss.__name__:
-        return VAELoss(
+        loss_func = VAELoss(
             kl_loss_weight=config["kl_loss_weight"],
             reconstruction_loss_weight=config["kl_loss_weight"]
         )
     elif loss_func_name == CyclicVAELoss.__name__:
-        return CyclicVAELoss(
+        loss_func = CyclicVAELoss(
             kl_loss_weight=config["kl_loss_weight"],
             reconstruction_loss_weight=config["reconstruction_loss_weight"],
-            normalization=config["normalize"]
+            # normalization=config["normalize"]
         )
     elif loss_func_name == DistVAELoss.__name__:
-        return DistVAELoss(
+        loss_func = DistVAELoss(
             kl_loss_weight=config["kl_loss_weight"],
             reconstruction_loss_weight=config["reconstruction_loss_weight"],
-            normalization=config["normalize"]
+            # normalization=config["normalize"]
         )
     else:
         logging.error(f"available loss functions: {VAELoss.__name__}, {CyclicVAELoss.__name__}, {DistVAELoss.__name__}, but you chose {loss_func_name}")
+    print("Use: ", type(loss_func))
+    return loss_func

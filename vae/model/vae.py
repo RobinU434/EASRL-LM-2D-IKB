@@ -104,7 +104,7 @@ class VariationalAutoencoder(nn.Module):
 
         self.logger.add_image("vae/z_grad", z_grad_abs, epoch_idx)
 
-    def store(self, path: str, epoch_idx: int, val_total_loss: float):
+    def store(self, path: str, epoch_idx: int):
         torch.save({
                 'epoch': epoch_idx,
                 'model_state_dict': self.state_dict(),

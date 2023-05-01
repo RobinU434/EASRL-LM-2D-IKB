@@ -30,6 +30,11 @@ def setup_parser(parser: argparse.ArgumentParser):
         action="store_true",
         help="if you set this argument the inference will try to reach a target position choosing greedily from VAE latent space"
     )
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="shows the finished plot immediately"
+    )
     return parser
 
 
@@ -137,7 +142,8 @@ def forward_kinematics(angles: torch.tensor) -> torch.tensor:
 def greedy_inference(
         model: VariationalAutoencoder,
         sample_size: int,
-        plot: bool = False):
+        plot: bool = False,
+        show: bool = False):
     n_epochs = 200
     target = sample_target(1) * model.output_dim
     print(target[0])
@@ -185,6 +191,9 @@ def greedy_inference(
         fig.savefig("results/vae_greedy_inference.png")
         plt.close(fig)
 
+    if show:
+        plt.show()
+
     return target[0], runtime
 
 
@@ -218,7 +227,8 @@ def absolute_inference(
         model: VariationalAutoencoder,
         fixed_position: bool,
         sample_size: int,
-        num_start_positions: int
+        num_start_positions: int,
+        show: bool = False
         ):
     latent_sample = sample_latent(sample_size * num_start_positions, torch.zeros(model.latent_dim), torch.ones(model.latent_dim))
     
@@ -243,7 +253,8 @@ def absolute_inference(
             raise NotImplementedError
         target *= model.output_dim
         concat_sample = torch.cat([latent_sample, target, current_position, state_angles], dim=1)
-    
+
+        print(target.shape)
         print("target position: ", target[0].tolist())
 
     robot_arm = RobotArm(model.output_dim)
@@ -252,7 +263,6 @@ def absolute_inference(
     temp_target[0:2] = target[0, :].numpy()
     for start in state_angles[::sample_size]:
         robot_arm.set(start.numpy())
-        print(temp_target)
         robot_arm.IK(temp_target)
         perfect_angles.append(robot_arm.angles)
     perfect_angles = np.stack(perfect_angles)
@@ -261,10 +271,10 @@ def absolute_inference(
     print("forward pass")
     actions = model.decoder(concat_sample).detach()
     actions = actions + state_angles
-    positions = forward_kinematics(actions)
+    pred_positions = forward_kinematics(actions)
     print("done")
 
-    print("mean distance to target: ", torch.sqrt(torch.float_power(target - positions[:, -1], 2).sum(dim=1)).mean().item())
+    print("mean distance to target: ", torch.sqrt(torch.float_power(target - pred_positions[:, -1], 2).sum(dim=1)).mean().item())
 
     fig = plt.figure()
     ax = fig.add_subplot()
@@ -273,49 +283,54 @@ def absolute_inference(
     ax.axis("equal")
     ax.add_patch(plt.Circle((0, 0), model.output_dim, fill=False))
 
-    print("plot ik")
-    positions_ik = forward_kinematics(torch.tensor(perfect_angles))
-    ax.scatter(positions_ik[:, -1, 0], positions_ik[:, -1, 1], color="orange", s=1) 
-    print("done")
+    # print("plot ik")
+    # positions_ik = forward_kinematics(torch.tensor(perfect_angles))
+    # ax.scatter(positions_ik[:, -1, 0], positions_ik[:, -1, 1], color="orange", s=1, label="IK solution") 
+    # print("done")
 
     # plot arms
     print("plot arms")
-    # for position_sequence in positions:
-    #     ax.plot(position_sequence[:, 0], position_sequence[:, 1], color="k", marker=".", alpha=1/math.sqrt(len(positions)))
+    for position_sequence in pred_positions:
+        ax.plot(position_sequence[:, 0], position_sequence[:, 1], color="k", marker=".", alpha=1/math.sqrt(len(pred_positions)))
     print("done")
 
     print("plot initial positions")
-    ax.scatter(current_position[:, 0], current_position[:, 1], color="b", s=1)
+    ax.scatter(current_position[:, 0], current_position[:, 1], color="b", s=1, label="state_position")
     print("done")
     
     # plot end positions
     print("scatter end positions")
-    ax.scatter(positions[:, -1, 0], positions[:, -1, 1], color="r", s=1) 
+    ax.scatter(pred_positions[:, -1, 0], pred_positions[:, -1, 1], color="r", s=1, label="action outcome") 
     print("done")
 
     # plot target position
-    print("plot target postion")
-    ax.scatter(target[0, 0], target[0, 1], color="g", s=1, zorder=1)
+    print("plot target position")
+    ax.scatter(target[0, 0], target[0, 1], color="g", s=1, zorder=1, label="target")
     print("done")
 
+    fig.legend()
     fig.savefig("results/inference.png")
 
     if model.latent_dim == 1:
         fig = plt.figure()
         axs = fig.subplots(2, 1)
-        axs[0].scatter(latent_sample, positions[:, -1, 0], s=1)
+        axs[0].scatter(latent_sample, pred_positions[:, -1, 0], s=1)
         x_target = torch.ones_like(latent_sample) * target[0, 0]
         axs[0].plot(latent_sample, x_target, color="orange")
-        axs[1].scatter(latent_sample, positions[:, -1, 1], s=1)
+        axs[1].scatter(latent_sample, pred_positions[:, -1, 1], s=1)
         y_target = torch.ones_like(latent_sample) * target[0, 1]
         axs[1].plot(latent_sample, y_target, color="orange")
         
         fig.savefig("results/invariance.png")
 
+    if show:
+        plt.show()
+
 
 def relative_inference(
         model: VariationalAutoencoder,
-        sample_size: int):
+        sample_size: int,
+        show: bool = False):
     latent_sample = sample_latent(sample_size, torch.zeros(model.latent_dim), 10 * torch.ones(model.latent_dim))
 
     actions = model.decoder(latent_sample).detach()
@@ -330,7 +345,8 @@ def relative_inference(
         for i in range(model.output_dim):
             axs[i].scatter(latent_sample, actions[:, i])
 
-    plt.show()
+    if show:
+        plt.show()
 
 
 def inference(
@@ -339,14 +355,15 @@ def inference(
         sample_size: int,
         config: dict,
         greedy: bool = False,
-        num_start_positions: int = 1):
+        num_start_positions: int = 1,
+        show: bool = False):
     if greedy:
-        # multiple_greedy_runs(model, sample_size, num_runs=100)
-        greedy_inference(model, sample_size, plot=True)
+        # multiple_greedy_runs(model, sample_size, num_runs=100, show=show)
+        greedy_inference(model, sample_size, plot=True, show=show)
     elif config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:
-        relative_inference(model, sample_size)
+        relative_inference(model, sample_size, show=show)
     elif config["dataset_mode"] in ["IK_const_start", "IK_random_start"] :
-        absolute_inference(model, fixed_position, sample_size, num_start_positions)
+        absolute_inference(model, fixed_position, sample_size, num_start_positions, show=show)
     else:
         logging.error("please chose a valid dataset mode")
 
@@ -362,6 +379,6 @@ if __name__ == "__main__":
 
     model = load_model(args_dict.pop("model_path"), config)
     args_dict["model"] = model
-    args_dict["num_start_positions"] = 3
+    args_dict["num_start_positions"] = 1
     
     inference(**args_dict)

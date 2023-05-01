@@ -140,10 +140,6 @@ def train(
             
         # LOGGING
         if logger is not None and epoch_idx % val_interval == 0:    
-            # train_reconstruction_loss_array = np.array(train_reconstruction_loss_array)
-            # train_kl_loss_array = np.array(train_kl_loss_array)
-            
-            print(train_metrics_array["reconstruction_loss"])
             print(f"epoch {epoch_idx}: \n\
                 train: loss: {train_metrics_array['reconstruction_loss'].mean()} kl_div: {train_metrics_array['kl_loss'].mean()} \n\
                 val: loss: {val_metrics_array['reconstruction_loss'].mean()} kl_div: {val_metrics_array['kl_loss'].mean()}")
@@ -189,7 +185,8 @@ def train(
                 "kl_loss_weight": config["kl_loss_weight"],
                 "reconstruction_loss_weight": config["reconstruction_loss_weight"],
                 "dataset": config["dataset"],
-                "normalize": config["normalize"]},
+                # "normalize": config["normalize"]
+                },
             metric_dict={
                 "vae/test_loss": test_metrics_array["total_loss"].mean(), 
                 "vae/test_r_loss": test_metrics_array["reconstruction_loss"].mean(),

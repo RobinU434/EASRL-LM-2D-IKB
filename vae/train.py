@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from vae.data.data_set import ActionTargetDatasetV2, ConditionalActionTargetDataset
 from vae.data.load_data_set import load_action_dataset, load_action_target_dataset
 from vae.helper.extract_angles_and_position import split_conditional_info, split_state_information
-from vae.helper.loss import VAELoss, get_loss_func, DistVAELoss
+from vae.helper.loss import DistanceLoss, ImitationLoss, VAELoss, get_loss_func, DistVAELoss
 from vae.model.vae import VariationalAutoencoder
 
 
@@ -47,11 +47,19 @@ def run_model(
     device: str,
     train: bool = False,
     ):
+
+    imitation_loss_func = ImitationLoss()
+    distance_loss_func = DistanceLoss()
+
     # prepare logging
-    reconstruction_loss_array = np.array([])
-    kl_loss_array = np.array([])
-    total_loss_array = np.array([])
-    std_array = np.array([])
+    log_metrics_array = []
+    log_metrics_dt = [
+        ("reconstruction_loss", np.float32),
+        ("kl_loss", np.float32),
+        ("total_loss", np.float32),
+        ("std", np.float32),
+        ("imitation_loss", np.float32),
+        ("distance_loss", np.float32)]
     for target_action, conditional_info in data:
         # in case of dataset == ActionTargetDataset: x is the action and y is the corresponding target position 
         # in case of dataset == ActionDataset: x is the action and y is an empty tensor
@@ -59,22 +67,32 @@ def run_model(
         conditional_info = conditional_info.to(device)
         
         x_hat, mu, log_std = autoencoder(target_action, conditional_info)  # out shape: (batch_size, number of joints) 
-        std_array = np.concatenate([std_array, log_std.cpu().detach().numpy().flatten()])
-
+    
         # setup loss functions
         _, _, state_angles = split_state_information(conditional_info)
         target_action = target_action + state_angles
         predicted_target_action = x_hat + state_angles
         loss = loss_func(target_action, predicted_target_action, mu, log_std)
-
+        
         if train:
             autoencoder.train(loss)
 
-        reconstruction_loss_array = np.concatenate([reconstruction_loss_array, np.array([loss_func.r_loss.cpu().item()])])
-        kl_loss_array = np.concatenate([kl_loss_array, np.array([loss_func.kl_div.cpu().item()])])
-        total_loss_array = np.concatenate([total_loss_array, np.array([loss.cpu().item()])])
-
-    return reconstruction_loss_array, kl_loss_array, total_loss_array, std_array
+        # log metrics in the correct order
+        log_metrics_array.append(
+            np.array([
+                loss_func.r_loss.cpu().item(),  # reconstruction_loss
+                loss_func.kl_div.cpu().item(),  # kl loss
+                loss.cpu().item(),  # total loss
+                log_std.mean().cpu().item(),  # std
+                imitation_loss_func(target_action, predicted_target_action).item(),  # imitation_loss
+                distance_loss_func(target_action, predicted_target_action).item(),  # distance_loss
+            ])
+        )
+    # make structured array
+    log_metrics_array = np.stack(log_metrics_array)
+    log_metrics_array = np.rec.fromarrays(log_metrics_array.T, dtype=log_metrics_dt)
+    
+    return log_metrics_array
 
 
 def train(
@@ -92,15 +110,11 @@ def train(
     ):
     
     for epoch_idx in range(epochs):
-        train_reconstruction_loss_array = []
-        train_kl_loss_array = []
-        std_array = np.array([])
-        # mu_array = np.array([])
         # reset logging history per epoch
         autoencoder.reset_history()
 
         # train loop
-        train_reconstruction_loss_array, train_kl_loss_array, train_total_loss_array, std_array = run_model(
+        train_metrics_array = run_model(
                 autoencoder,
                 train_data,
                 loss_func,
@@ -110,7 +124,7 @@ def train(
         
         # val loop
         if epoch_idx % val_interval == 0:
-            val_reconstruction_loss_array, val_kl_loss_array, val_total_loss_array, _ = run_model(
+            val_metrics_array = run_model(
                 autoencoder,
                 val_data,
                 loss_func,
@@ -120,22 +134,25 @@ def train(
 
             # store model checkpoint
             autoencoder.store(
-                path=path + f"/model_{epoch_idx}_val_r_loss_{float(val_reconstruction_loss_array.mean()):.4f}.pt",
+                path=path + f"/model_{epoch_idx}_val_r_loss_{val_metrics_array['reconstruction_loss'].mean().item():.4f}.pt",
                 epoch_idx=epoch_idx
                 )
             
         # LOGGING
         if logger is not None and epoch_idx % val_interval == 0:    
-            train_reconstruction_loss_array = np.array(train_reconstruction_loss_array)
-            train_kl_loss_array = np.array(train_kl_loss_array)
+            # train_reconstruction_loss_array = np.array(train_reconstruction_loss_array)
+            # train_kl_loss_array = np.array(train_kl_loss_array)
             
+            print(train_metrics_array["reconstruction_loss"])
             print(f"epoch {epoch_idx}: \n\
-                train: loss: {train_reconstruction_loss_array.mean()} kl_div: {train_kl_loss_array.mean()} \n\
-                val: loss: {val_reconstruction_loss_array.mean()} kl_div: {val_kl_loss_array.mean()}")
-
-            logger.add_scalar("vae/train_r_loss", train_reconstruction_loss_array.mean(), epoch_idx)
-            logger.add_scalar("vae/train_kl", train_kl_loss_array.mean(), epoch_idx)
-            logger.add_scalar("vae/train_std", std_array.mean(), epoch_idx)
+                train: loss: {train_metrics_array['reconstruction_loss'].mean()} kl_div: {train_metrics_array['kl_loss'].mean()} \n\
+                val: loss: {val_metrics_array['reconstruction_loss'].mean()} kl_div: {val_metrics_array['kl_loss'].mean()}")
+            
+            logger.add_scalar("vae/train_r_loss", train_metrics_array["reconstruction_loss"].mean(), epoch_idx)
+            logger.add_scalar("vae/train_kl", train_metrics_array["kl_loss"].mean(), epoch_idx)
+            logger.add_scalar("vae/train_std", train_metrics_array["std"].mean(), epoch_idx)
+            logger.add_scalar("vae/train_imitation_loss", train_metrics_array["imitation_loss"].mean(), epoch_idx)
+            logger.add_scalar("vae/train_distance_loss", train_metrics_array["distance_loss"].mean(), epoch_idx)
             # logger.add_histogram("vae/train_latent_mu", mu_array, epoch_idx)
             
             # autoencoder.log_parameters(epoch_idx)
@@ -143,23 +160,26 @@ def train(
             autoencoder.log_decoder_distr(epoch_idx)
             autoencoder.log_z_grad(epoch_idx)
             
-            logger.add_scalar("vae/val_r_loss", val_reconstruction_loss_array.mean(), epoch_idx)
-            logger.add_scalar("vae/val_kl", val_kl_loss_array.mean(), epoch_idx)
-            logger.add_scalar("vae/val_loss", val_total_loss_array.mean(), epoch_idx)
-
+            logger.add_scalar("vae/val_r_loss", val_metrics_array["reconstruction_loss"].mean(), epoch_idx)
+            logger.add_scalar("vae/val_kl", val_metrics_array["kl_loss"].mean(), epoch_idx)
+            logger.add_scalar("vae/val_loss", val_metrics_array["total_loss"].mean(), epoch_idx)
+            logger.add_scalar("vae/val_imitation_loss", val_metrics_array["imitation_loss"].mean(), epoch_idx)
+            logger.add_scalar("vae/val_distance_loss", val_metrics_array["distance_loss"].mean(), epoch_idx)
     # test loop
-    test_reconstruction_loss_array, test_kl_loss_array, test_total_loss_array, _ = run_model(
+    test_metrics_array = run_model(
         autoencoder,
         test_data,
         loss_func,
         device,
         train=False
     )
-    logger.add_scalar("vae/test_r_loss", test_reconstruction_loss_array.mean(), epoch_idx)
-    logger.add_scalar("vae/test_kl", test_kl_loss_array.mean(), epoch_idx)
-    logger.add_scalar("vae/test_loss", test_total_loss_array.mean(), epoch_idx)
+    logger.add_scalar("vae/test_r_loss", test_metrics_array["reconstruction_loss"].mean(), epoch_idx)
+    logger.add_scalar("vae/test_kl", test_metrics_array["kl_loss"].mean(), epoch_idx)
+    logger.add_scalar("vae/test_loss", test_metrics_array["total_loss"].mean(), epoch_idx)
+    logger.add_scalar("vae/test_imitation_loss", test_metrics_array["imitation_loss"].mean(), epoch_idx)
+    logger.add_scalar("vae/test_distance_loss", test_metrics_array["distance_loss"].mean(), epoch_idx)  
 
-    print(f"test: loss: {test_reconstruction_loss_array.mean()} kl_div: {test_kl_loss_array.mean()}")
+    print(f"test: loss: {test_metrics_array['reconstruction_loss'].mean()} kl_div: {test_metrics_array['kl_loss'].mean()}")
 
     if logger is not None:
         logger.add_hparams(
@@ -171,9 +191,9 @@ def train(
                 "dataset": config["dataset"],
                 "normalize": config["normalize"]},
             metric_dict={
-                "vae/test_loss": test_total_loss_array.mean(), 
-                "vae/test_r_loss": test_reconstruction_loss_array.mean(),
-                "vae/test_kl": test_kl_loss_array.mean()}
+                "vae/test_loss": test_metrics_array["total_loss"].mean(), 
+                "vae/test_r_loss": test_metrics_array["reconstruction_loss"].mean(),
+                "vae/test_kl": test_metrics_array["kl_loss"].mean()}
                 )
 
     return autoencoder

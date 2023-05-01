@@ -55,6 +55,39 @@ def forward_kinematics(angles: torch.tensor):
     return positions
 
 
+class ImitationLoss:
+    def __init__(self,) -> None:
+        pass
+
+    def __call__(self, y, x_hat) -> torch.tensor:
+        # MSE
+        loss = torch.square(angle_diff(y, x_hat)).mean()
+        return loss
+
+
+class DistanceLoss:
+    def __init__(self) -> None:
+        pass
+
+    def __call__(self, y: torch.tensor, x_hat: torch.tensor) -> torch.tensor:
+        """
+        x: is the target action + state_angles which leads to the desired target position
+        x_hat: is the predicted target action + state_angels which should lead to the desired target position
+
+        Args:
+            x (torch.tensor): ground truth
+            x_hat (torch.tensor): prediction
+
+        Returns:
+            _type_: _description_
+        """
+        target_pos = forward_kinematics(y)[:, -1]
+        real_pos = forward_kinematics(x_hat)[:, -1]
+
+        dist_loss = torch.linalg.norm(target_pos - real_pos, axis=1).mean()
+        return dist_loss
+
+
 class VAELoss:
     def __init__(self, kl_loss_weight: float = 1, reconstruction_loss_weight: float = 1) -> None:
         self.kl_loss_weight = kl_loss_weight
@@ -95,23 +128,10 @@ class DistVAELoss(VAELoss):
     def __init__(self, kl_loss_weight: float = 1, reconstruction_loss_weight: float = 1) -> None:
         super().__init__(kl_loss_weight, reconstruction_loss_weight)
 
+        self.loss_func = DistanceLoss()
+
     def reconstruction_loss(self, x: torch.tensor, x_hat: torch.tensor):
-        """
-        x: is the target action + state_angles which leads to the desired target position
-        x_hat: is the predicted target action + state_angels which should lead to the desired target position
-
-        Args:
-            x (torch.tensor): ground truth
-            x_hat (torch.tensor): prediction
-
-        Returns:
-            _type_: _description_
-        """
-        # treat normalization -> state angles are in [0, 2pi] space and x_hat is in [-1, 1]
-        end_effector = forward_kinematics(x)[:, -1, :]
-        pred_end_effector = forward_kinematics(x_hat)[:, -1, :]
-        # true end effector pose is in x, shape: (batch_size, 2)
-        dist_mean = torch.sqrt(torch.sum(torch.float_power(pred_end_effector - end_effector, 2), dim=1)).mean()
+        dist_mean = self.loss_func(x, x_hat)
         self.r_loss = dist_mean
         return dist_mean
 

@@ -16,24 +16,20 @@ def setup_parser(parser: argparse.ArgumentParser):
         type=int,
         help="how many points should be sampled from the latent space"
     )
-    
     parser.add_argument(
         "model_path",
         help="path to model checkpoint"
         )
-    
     parser.add_argument(
         "-fp", "--fixed_position",
         action="store_true",
         help="if true -> sample from a fixed position, if false -> sample from different target positions"
     )
-
     parser.add_argument(
         "-g", "--greedy",
         action="store_true",
         help="if you set this argument the inference will try to reach a target position choosing greedily from VAE latent space"
     )
-    
     return parser
 
 
@@ -232,7 +228,6 @@ def absolute_inference(
             target = target.repeat((sample_size, 1))
         else:
             target = sample_target(sample_size)
-    
         target *= model.output_dim
         concat_sample = torch.cat([latent_sample, target], dim=1)
     elif model.conditional_info_dim > 2:
@@ -266,7 +261,7 @@ def absolute_inference(
     print("forward pass")
     actions = model.decoder(concat_sample).detach()
     actions = actions + state_angles
-    positions = forward_kinematics((actions + 1)  * torch.pi)
+    positions = forward_kinematics(actions)
     print("done")
 
     print("mean distance to target: ", torch.sqrt(torch.float_power(target - positions[:, -1], 2).sum(dim=1)).mean().item())

@@ -116,10 +116,15 @@ def main(config):
 
     env = build_env(config)
     
-    # pth for file system logging
+    # path for file system logging
     logging_path = f"results/{config['algorithm'].lower()}/{config['subdir']}/{actor_config['type'].__name__}/{config['n_joints']}_{time_stamp}"
     logger = SummaryWriter(logging_path)
+    # global LOGGING_PATH
+    # LOGGING_PATH = logging_path
     logging.info("initialized tensorboard summary writer")
+
+    # add logging info to store checkpoint from VAE in latent actor
+    actor_config["log_dir"] = logging_path
 
     # store config 
     with open(logging_path + "/config.yaml", "w") as config_file:
@@ -204,7 +209,6 @@ if __name__ == "__main__":
     print(f"Start to do {args.num_runs} experiment")
     for i in range(args.num_runs):
         print(f"Started {i}th experiment")
-        main(config)
         try:
             main(config)
         except ValueError:

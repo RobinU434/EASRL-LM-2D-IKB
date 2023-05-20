@@ -1,8 +1,12 @@
-num_joints: 2
+num_joints: 20
 n_epochs: 801
 batch_size: 2048
 val_interval: 5
 feature_source: "state"  # choices: "state" "targets"
 learning_rate: 0.0015
 action_radius: 0
-loss_func: "MergeLoss"  # ImiationLoss DistanceLoss MergeLoss
+loss_func: "DistanceLoss"  # ImiationLoss DistanceLoss MergeLoss
+post_processor:
+  enabled: True
+  min_action: -1 # -3.142  # little offset to make it easier for tanh function
+  max_action: 1 # 3.142  # little offset to make it easier for tanh function

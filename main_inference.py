@@ -24,11 +24,14 @@ def load_config(config_path: str) -> dict:
     logging.info(f"load config at {config_path}")
     with open(config_path) as f:
         config = yaml.safe_load(f)
+    config["config_path"] = config_path
     return config
 
 
 def main(sac_config: dict, model_path: str):
-    actor_config = extract_actor_config(copy.deepcopy(sac_config))
+    # path for loading potentially latent actor
+    log_dir = "/".join(sac_config["config_path"].split("/")[:-1])
+    actor_config = extract_actor_config(copy.deepcopy(sac_config), log_dir=log_dir)
 
     if sac_config["task"] == ReachGoalTask.__name__:
         task = ReachGoalTask(config = sac_config)
@@ -98,7 +101,6 @@ if __name__ == "__main__":
     sac_config = load_config(config_path)
 
     # load common target positions
-
     args_dict = vars(args)
     args_dict["sac_config"] = sac_config
 

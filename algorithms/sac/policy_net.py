@@ -40,7 +40,8 @@ class PolicyNet(nn.Module):
                                      learning_rate=learning_rate,
                                      conditional_info_dim=observation_space_dim,
                                      vae_learning=actor_config["vae_learning"],
-                                     checkpoint_dir=actor_config["checkpoint_dir"])
+                                     checkpoint_dir=actor_config["checkpoint_dir"], 
+                                     log_dir=actor_config["log_dir"])
     
         # self.actor = InformedMultiAgent(input_size, output_size, learning_rate, 2)
         # self.actor = MultiAgent(input_size, output_size, learning_rate, 2)
@@ -97,7 +98,7 @@ class PolicyNet(nn.Module):
        
         # real_action = (torch.tanh(action) + 1.0) * torch.pi  # multiply by pi in order to match the action space
         real_action = torch.tanh(action) * self.action_magnitude - (1 - self.action_magnitude)
-
+        
         # Squash correction (from original SAC implementation)
         # this comes from the fact that tanh is a bijection and differentiable
         # this equation can be found in the original paper as equation (21)

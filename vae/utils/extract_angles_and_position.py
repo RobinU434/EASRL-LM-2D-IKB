@@ -1,5 +1,6 @@
+import numpy as np
 import torch
-from typing import Tuple
+from typing import Tuple, Union
 
 
 def split_conditional_info(array: torch.tensor) -> Tuple[torch.tensor, torch.tensor, torch.tensor, torch.tensor]:
@@ -20,7 +21,15 @@ def split_conditional_info(array: torch.tensor) -> Tuple[torch.tensor, torch.ten
     return target_angles, target_position, state_position, state_angles
 
 
-def split_state_information(x: torch.tensor):
+def split_state_information(x: Union[torch.Tensor, np.ndarray]) -> Tuple[Union[torch.Tensor, np.ndarray], Union[torch.Tensor, np.ndarray], Union[torch.Tensor, np.ndarray]]:
+    """the incoming tensor or ndarray must have 2 dimension [batch_size, state]
+
+    Args:
+        x (Union[torch.Tensor, np.ndarray]): object to be split with 2 dimensions [batch_size, state]
+
+    Returns:
+        Tuple[Union[torch.Tensor, np.ndarray], Union[torch.Tensor, np.ndarray], Union[torch.Tensor, np.ndarray]]: target_position, current_position, state_angles
+    """
     target_pos = x[:, 0:2]
     current_pos = x[:, 2:4]
     angles = x[:, 4:]

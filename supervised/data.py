@@ -1,17 +1,16 @@
-from matplotlib import pyplot as plt
 import torch
 import logging
 import numpy as np
 import pandas as pd
 
-from typing import Tuple
-from torch.utils.data import Dataset, DataLoader
 from progress.bar import Bar
+from typing import Any, Tuple
+from matplotlib import pyplot as plt
+from torch.utils.data import Dataset, DataLoader
 
 from envs.robots.ccd import IK
 from supervised.utils import forward_kinematics
 from supervised.utils import split_state_information
-from vae.helper.extract_angles_and_position import split_conditional_info
 
 
 class ActionTargetDataset(Dataset):
@@ -102,7 +101,7 @@ class ActionStateDataset(Dataset):
 
 
 def get_datasets(feature_source: str, num_joints: int, batch_size: int, action_radius: float) -> Tuple[DataLoader, DataLoader]:
-    action_radius = action_radius if action_radius > 0 else None 
+    action_radius = get_action_radius(action_radius, num_joints) 
     if feature_source == "state":
         train_data = ActionStateDataset(
             action_file=f"./datasets/{num_joints}/train/actions_IK_random_start.csv",
@@ -160,6 +159,25 @@ def check_dataset(num_joints: int, random: bool = False, action_radius: float = 
         ax.plot(position_sequence[:, 0], position_sequence[:, 1], color="k", marker=".", alpha=1/10)
     
     plt.show()
+
+
+def get_action_radius(configuration: Any, num_joints: int):
+    rescale_factor = 4.0  # this value defines how much the action radius is smaller than the whole action space
+    # the value was chosen arbitrarily but be aware by decreasing the value that the actor may need more extreme 
+    # actions and you should consider adapting the min_action and max_action of your post_processor 
+    if isinstance(configuration, str):
+        if configuration == 'auto':
+            return num_joints / rescale_factor
+        else:
+            raise RuntimeError('only configuration string = auto is allowed')
+    elif isinstance(configuration, float) or isinstance(configuration, int):  # the value is numeric
+        if configuration == 0:
+            return None
+        else:
+            return configuration
+    else:
+        raise RuntimeError('you chose the wrong type for configuration') 
+
 
 if __name__ == "__main__":
     check_dataset(2, random=True, action_radius=0.5, num_samples=1)

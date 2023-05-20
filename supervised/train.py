@@ -1,3 +1,4 @@
+import json
 import logging
 import yaml
 import time
@@ -12,6 +13,7 @@ from supervised.data import get_datasets
 from supervised.loss import DistanceLoss, ImitationLoss, get_loss_func
 from supervised.model import Regressor, build_model
 from supervised.utils import split_state_information
+from vae.utils.post_processing import PostProcessor
 
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -30,6 +32,12 @@ def setup_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help="if set to true -> debug mode is activated"
     )
+    parser.add_argument(
+        "--print_config",
+        action='store_true',
+        help='command just prints config and returns'
+    )
+   
     
     return parser
 
@@ -124,11 +132,21 @@ if __name__ == "__main__":
     parser = setup_parser(ArgumentParser())
     args = parser.parse_args()
 
+    if args.print_config:
+        print(json.dumps(config, sort_keys=True, indent=4))
+        exit()
+    
+
     # set logging level
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
 
-    model = build_model(config["feature_source"], config["num_joints"], config["learning_rate"]).to(args.device)
+    post_processor_config = config['post_processor']
+    model = build_model(
+        feature_source=config["feature_source"],
+        num_joints=config["num_joints"],
+        learning_rate=config["learning_rate"],
+        post_processor_config=post_processor_config).to(args.device)
     loss_func = get_loss_func(config["loss_func"])
 
     train_dataloader, val_dataloader = get_datasets(feature_source=config["feature_source"],

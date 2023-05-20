@@ -1,4 +1,4 @@
-task: ReachGoalTask # ImitationTask
+task: "ReachGoalTask" # "ImitationTask""
 lr_pi: 0.0005
 lr_q: 0.001
 init_alpha: 0.01
@@ -15,10 +15,10 @@ action_covariance_mode: independent
 action_covariance_decay: 0.5
 action_magnitude: 1 # a value inside the interval (0, pi]
 normal_actor:
-  enabled: True
-latent_actor: 
   enabled: False
-  device: "cuda:2"
+latent_actor: 
+  enabled: True
+  device: "cuda:5"
   latent_dim: 5
   vae_learning: False
-  checkpoint_dir: "results/vae"  # specify 
+  checkpoint_dir: "results/vae/ac05"  # specify 

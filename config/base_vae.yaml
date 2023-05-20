@@ -1,15 +1,20 @@
 num_joints: 2
 latent_dim: 2
-dataset: "conditional_action_target"  # "action" "action_target" "conditional_action_target"
+dataset: "conditional_target"  # "action" "action_target" "conditional_action_target" "conditional_target"
 dataset_mode: "IK_random_start" # "IK_const_start" "IK_random_start" "IK_random_start_constrained" "noise_uniform" "noise_tanh"  const is a dataset created with a constant start position -> one action for one target position, with random -> multiple actions for one target positions are possible 
-action_constrain_radius: 0  # only available if dataset == conditional_action_target
+action_constrain_radius: 0.5  # only available if dataset == conditional_action_target and conditional_target(here it will be used as std around the current position)
 conditional_info: "state"  # "state" "targets"
-loss_func: "DistVAELoss"  # "VAELoss" "CyclicVAELoss" "DistVAELoss"
+loss_func:  # only IK Loss is available
+  kl_loss_weight: 1
+  reconstruction_loss_weight: 1
+  distance_loss_weight: 1
+  imitation_loss_weight: 1
 batch_size: 1024
 shuffle_data: False
 epochs: 801
 val_interval: 5
 learning_rate: 0.0012
-kl_loss_weight: 1
-reconstruction_loss_weight: 1
-# normalize: False
+post_processor:
+  enabled: True
+  min_action: -1
+  max_action: 1 

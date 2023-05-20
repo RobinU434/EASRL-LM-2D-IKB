@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import json
 import time
 import yaml
 import numpy as np
@@ -8,11 +9,13 @@ from progress.bar import Bar
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from vae.data.data_set import ActionTargetDatasetV2, ConditionalActionTargetDataset
-from vae.data.load_data_set import load_action_dataset, load_action_target_dataset
-from vae.helper.extract_angles_and_position import split_conditional_info, split_state_information
-from vae.helper.loss import DistanceLoss, ImitationLoss, VAELoss, get_loss_func, DistVAELoss
-from vae.model.vae import VariationalAutoencoder
+from vae.data.data_set import ActionTargetDatasetV2, ConditionalActionTargetDataset, ConditionalTargetDataset
+from vae.data.load_data_set import load_action_dataset, load_action_target_dataset, load_target_dataset
+from vae.utils.extract_angles_and_position import split_conditional_info, split_state_information
+from vae.utils.loss import DistanceLoss, ImitationLoss, VAELoss, get_loss_func, DistVAELoss, IKLoss
+from vae.utils.fk import forward_kinematics
+from vae.model.vae import VariationalAutoencoder, build_model
+from vae.utils.post_processing import PostProcessor
 
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -25,6 +28,16 @@ def setup_parser(parser: ArgumentParser) -> ArgumentParser:
         "device",
         type=str,
         help=f"GPU or CPU, current avialable GPU index: {torch.cuda.device_count() - 1}")
+    parser.add_argument(
+        "--print_config",
+        action='store_true',
+        help='command just prints config and returns'
+    )
+    parser.add_argument(
+        "--print_model",
+        action="store_true",
+        help="print the model architecture"
+    )
     return parser
 
 
@@ -40,16 +53,22 @@ def store_config(config, path: str):
         yaml.dump(config, config_file)
 
 
+def log_metrics(entity: str, metrics: np.ndarray, logger: SummaryWriter, epoch_idx: int) -> None:
+    logger.add_scalar(f"vae/{entity}_r_loss", metrics["reconstruction_loss"].mean(), epoch_idx)
+    logger.add_scalar(f"vae/{entity}_kl", metrics["kl_loss"].mean(), epoch_idx)
+    logger.add_scalar(f"vae/{entity}_std", metrics["std"].mean(), epoch_idx)
+    logger.add_scalar(f"vae/{entity}_imitation_loss", metrics["imitation_loss"].mean(), epoch_idx)
+    logger.add_scalar(f"vae/{entity}_distance_loss", metrics["distance_loss"].mean(), epoch_idx)
+
+
 def run_model(
     autoencoder: VariationalAutoencoder,
     data: DataLoader,
-    loss_func: VAELoss,
+    loss_func: IKLoss,
     device: str,
     train: bool = False,
     ):
 
-    imitation_loss_func = ImitationLoss()
-    distance_loss_func = DistanceLoss()
 
     # prepare logging
     log_metrics_array = []
@@ -60,19 +79,15 @@ def run_model(
         ("std", np.float32),
         ("imitation_loss", np.float32),
         ("distance_loss", np.float32)]
-    for target_action, conditional_info in data:
-        # in case of dataset == ActionTargetDataset: x is the action and y is the corresponding target position 
-        # in case of dataset == ActionDataset: x is the action and y is an empty tensor
-        target_action = target_action.to(device)
-        conditional_info = conditional_info.to(device)
-        
-        x_hat, mu, log_std = autoencoder(target_action, conditional_info)  # out shape: (batch_size, number of joints) 
-    
-        # setup loss functions
-        _, _, state_angles = split_state_information(conditional_info)
-        target_action = target_action + state_angles
-        predicted_target_action = x_hat + state_angles
-        loss = loss_func(target_action, predicted_target_action, mu, log_std)
+    for x, c_enc, c_dec, y in data:
+        x = x.to(device)
+        c_enc = c_enc.to(device)
+        c_dec = c_dec.to(device)
+        y = y.to(device)
+
+        x_hat, mu, log_std = autoencoder(x, c_enc, c_dec)  # out shape: (batch_size, number of joints) 
+
+        loss = loss_func(y=y, x_hat=x_hat, mu=mu, log_std=log_std)
         
         if train:
             autoencoder.train(loss)
@@ -84,8 +99,8 @@ def run_model(
                 loss_func.kl_div.cpu().item(),  # kl loss
                 loss.cpu().item(),  # total loss
                 log_std.mean().cpu().item(),  # std
-                imitation_loss_func(target_action, predicted_target_action).item(),  # imitation_loss
-                distance_loss_func(target_action, predicted_target_action).item(),  # distance_loss
+                loss_func.imitation_loss.cpu().item(),  # imitation_loss
+                loss_func.distance_loss.cpu().item(),  # distance_loss
             ])
         )
     # make structured array
@@ -108,6 +123,9 @@ def train(
     val_interval: int = 5,
     path: str = "results/vae"
     ):
+    
+    # post_processor = PostProcessor(- 2 * torch.pi, 2 * torch.pi)
+    # post_processor = PostProcessor(- torch.pi, torch.pi)
     
     for epoch_idx in range(epochs):
         # reset logging history per epoch
@@ -135,7 +153,8 @@ def train(
             # store model checkpoint
             autoencoder.store(
                 path=path + f"/model_{epoch_idx}_val_r_loss_{val_metrics_array['reconstruction_loss'].mean().item():.4f}.pt",
-                epoch_idx=epoch_idx
+                epoch_idx=epoch_idx,
+                metrics=val_metrics_array
                 )
             
         # LOGGING
@@ -144,11 +163,7 @@ def train(
                 train: loss: {train_metrics_array['reconstruction_loss'].mean()} kl_div: {train_metrics_array['kl_loss'].mean()} \n\
                 val: loss: {val_metrics_array['reconstruction_loss'].mean()} kl_div: {val_metrics_array['kl_loss'].mean()}")
             
-            logger.add_scalar("vae/train_r_loss", train_metrics_array["reconstruction_loss"].mean(), epoch_idx)
-            logger.add_scalar("vae/train_kl", train_metrics_array["kl_loss"].mean(), epoch_idx)
-            logger.add_scalar("vae/train_std", train_metrics_array["std"].mean(), epoch_idx)
-            logger.add_scalar("vae/train_imitation_loss", train_metrics_array["imitation_loss"].mean(), epoch_idx)
-            logger.add_scalar("vae/train_distance_loss", train_metrics_array["distance_loss"].mean(), epoch_idx)
+            log_metrics("train", train_metrics_array, logger, epoch_idx)
             # logger.add_histogram("vae/train_latent_mu", mu_array, epoch_idx)
             
             # autoencoder.log_parameters(epoch_idx)
@@ -156,11 +171,7 @@ def train(
             autoencoder.log_decoder_distr(epoch_idx)
             autoencoder.log_z_grad(epoch_idx)
             
-            logger.add_scalar("vae/val_r_loss", val_metrics_array["reconstruction_loss"].mean(), epoch_idx)
-            logger.add_scalar("vae/val_kl", val_metrics_array["kl_loss"].mean(), epoch_idx)
-            logger.add_scalar("vae/val_loss", val_metrics_array["total_loss"].mean(), epoch_idx)
-            logger.add_scalar("vae/val_imitation_loss", val_metrics_array["imitation_loss"].mean(), epoch_idx)
-            logger.add_scalar("vae/val_distance_loss", val_metrics_array["distance_loss"].mean(), epoch_idx)
+            log_metrics("val", val_metrics_array, logger, epoch_idx)
     # test loop
     test_metrics_array = run_model(
         autoencoder,
@@ -169,12 +180,8 @@ def train(
         device,
         train=False
     )
-    logger.add_scalar("vae/test_r_loss", test_metrics_array["reconstruction_loss"].mean(), epoch_idx)
-    logger.add_scalar("vae/test_kl", test_metrics_array["kl_loss"].mean(), epoch_idx)
-    logger.add_scalar("vae/test_loss", test_metrics_array["total_loss"].mean(), epoch_idx)
-    logger.add_scalar("vae/test_imitation_loss", test_metrics_array["imitation_loss"].mean(), epoch_idx)
-    logger.add_scalar("vae/test_distance_loss", test_metrics_array["distance_loss"].mean(), epoch_idx)  
-
+    log_metrics("test", test_metrics_array, logger, epoch_idx)
+            
     print(f"test: loss: {test_metrics_array['reconstruction_loss'].mean()} kl_div: {test_metrics_array['kl_loss'].mean()}")
 
     if logger is not None:
@@ -205,52 +212,44 @@ if __name__ == "__main__":
     
     input_dim = config["num_joints"]
     if config["dataset"] == "action":
-        conditional_info_dim = 0
-        input_dim = config["num_joints"]
-        
         train_dataloader, val_dataloader, test_dataloader = load_action_dataset(config)
         
     elif config["dataset"] == "action_target_v1":
-        conditional_info_dim = 4 + config["num_joints"]
-        input_dim = config["num_joints"]
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
         
     elif config["dataset"] == "action_target_v2":
-        conditional_info_dim = 0
-        input_dim = config["num_joints"] + (config["num_joints"] + 4)   # in brakets is conditional information
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
         
     elif config["dataset"] == "conditional_action_target":
-        conditional_info_dim =  config["num_joints"] + 4  # for the additional state information
-        input_dim = config["num_joints"] + (config["num_joints"] + 4)  # in brakets is conditional information
-        
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
-        
+
+    elif config["dataset"] == "conditional_target":
+        train_dataloader, val_dataloader, test_dataloader = load_target_dataset(config)
+
+    loss_config = config["loss_func"]
+    loss_config["target_mode"] = train_dataloader.dataset.y_mode
+    loss_func = get_loss_func(loss_config, args.device)
+
+    if args.print_config:
+        print(json.dumps(config, sort_keys=True, indent=4))
+        exit()
+    
     path = f"results/vae/{args.subdir}/{config['num_joints']}_{config['latent_dim']}_{int(time.time())}"
     logger = SummaryWriter(path)
 
+    autoencoder = build_model(
+        config,
+        train_dataloader.dataset.input_dim,
+        train_dataloader.dataset.conditional_dim,
+        logger)
+    
+    if args.print_model:
+        print(autoencoder)
+        exit()
+    
+    
     # store config
     store_config(config, path)
-
-    print("kl loss weight: ", config["kl_loss_weight"])
-    print("reconstruction loss weight: ", config["reconstruction_loss_weight"])
-    print("")
-    
-    print("architecture")
-    print(f"{input_dim} -> [Encoder] -> {config['latent_dim']} + {conditional_info_dim} -> [Decoder] -> {config['num_joints']}")
-    
-    autoencoder = VariationalAutoencoder(
-        input_dim=input_dim,
-        latent_dim=config["latent_dim"],
-        output_dim=config["num_joints"],
-        learning_rate=config["learning_rate"],
-        logger=logger,
-        conditional_info_dim=conditional_info_dim,
-        store_history=True, 
-        device=args.device).to(args.device)
-    
-    loss_func = get_loss_func(config)
-    # print("use: ", loss_func.__name__)
         
     train(
         autoencoder,

@@ -8,8 +8,9 @@ from typing import List
 from torch.utils.data import DataLoader
 
 from algorithms.sac.actor.base_actor import Actor
-from vae.helper.loss import VAELoss
+from vae.utils.loss import VAELoss
 from vae.model.vae import VariationalAutoencoder
+from vae.utils.post_processing import PostProcessor
 
 
 def load_checkpoint(checkpoint_path: str):
@@ -17,11 +18,16 @@ def load_checkpoint(checkpoint_path: str):
     return checkpoint
 
 
-def load_cofig(path: str) -> dict:
+def load_config(path: str) -> dict:
     with open(path) as f:
         config = yaml.safe_load(f)
 
     return config
+
+
+def store_vae_config(config, path: str):
+    with open(path + "/vae_config.yaml", "w") as config_file:
+        yaml.dump(config, config_file)
 
 
 def extract_loss(path: str):
@@ -38,8 +44,10 @@ def load_best_checkpoint(vae_results_dir: str, output_dim: int, latent_dim: int)
     d = dict(zip(losses, paths))
     path = d[min(d)]
     print(f"use checkpoint for VAE at {path}")
-    config = load_cofig("/".join(path.split("/")[: -1] + ["config.yaml"]))
-    return load_checkpoint(path), config
+    file_name = path.split("/")[-1]
+    config = load_config("/".join(path.split("/")[: -1] + ["config.yaml"]))
+    return file_name, load_checkpoint(path), config
+
 
 class LatentActor(nn.Module):
     def __init__(
@@ -54,7 +62,9 @@ class LatentActor(nn.Module):
         kl_loss_weight: float = 1,
         reconstruction_loss_weight: float = 1,
         vae_learning: bool = False,
-        checkpoint_dir: str = "resutls/vae",
+        checkpoint_dir: str = "results/vae",
+        log_dir: str = "",
+
         ) -> None:
         super().__init__()
 
@@ -67,8 +77,6 @@ class LatentActor(nn.Module):
             architecture=architecture
             )
         
-        print("use variational autoencoder with architecture:")
-        print(f"{output_dim + conditional_info_dim} -> [Encoder] -> {latent_dim} + {conditional_info_dim} -> [Decoder] -> {output_dim}")
         self.vae_learning = vae_learning
         self.auto_encoder = VariationalAutoencoder(
             input_dim=output_dim + conditional_info_dim,
@@ -77,22 +85,32 @@ class LatentActor(nn.Module):
             learning_rate=learning_rate,
             conditional_info_dim=conditional_info_dim,
             logger=None,
+            post_processor=PostProcessor(enabled=False),  # needs no post processing because it is used in policy net directly
             store_history=False,
-            device=device
+            device=device,
+            verbose=True,
         ).to(device)
-
-        
-        self.auto_encoder_loss_func = VAELoss(
-            kl_loss_weight=kl_loss_weight,
-            reconstruction_loss_weight=reconstruction_loss_weight
-        )
 
         # checkpoint chosen because of the overall performance reconstruction loss + kl loss
         self.vae_config = None
         if not vae_learning:
-            checkpoint, vae_config = load_best_checkpoint(checkpoint_dir, output_dim, latent_dim)
+            file_name, checkpoint, vae_config = load_best_checkpoint(checkpoint_dir, output_dim, latent_dim)
             self.auto_encoder.load_state_dict(checkpoint["model_state_dict"])
             self.vae_config = vae_config
+            self.auto_encoder.store(
+                log_dir + "/" + file_name,
+                checkpoint["epoch"],
+                {"reconstruction_loss": checkpoint["reconstruction_loss"],
+                 "kl_loss": checkpoint["kl_loss"],
+                 "distance_loss": checkpoint["distance_loss"],
+                 "imitation_loss": checkpoint["imitation_loss"]}
+                 )
+            store_vae_config(self.vae_config, log_dir)
+        else:
+            self.auto_encoder_loss_func = VAELoss(
+                kl_loss_weight=kl_loss_weight,
+                reconstruction_loss_weight=reconstruction_loss_weight
+            )
 
 
     def forward(self, x):

@@ -26,7 +26,7 @@ def setup_parser(parser: ArgumentParser) -> ArgumentParser:
         "device",
         type=str,
         default="cpu",
-        help=f"GPU or CPU, current avialable GPU index: {torch.cuda.device_count() - 1}")
+        help=f"GPU or CPU, current available GPU index: {torch.cuda.device_count() - 1}")
     parser.add_argument(
         "-d", "--debug",
         action="store_true",
@@ -109,10 +109,12 @@ def train(
                 val_imitation_losses.append(imitation_loss_func(y, x_hat).item())
 
             print(f"epoch: {epoch_idx}  train_loss: {losses.mean()} val_loss: {val_losses.mean()}")   
+            
             logger.add_scalar("supervised/train_loss", losses.mean(), epoch_idx)
-            logger.add_scalar("supervised/val_loss", val_losses.mean(), epoch_idx)
             logger.add_scalar("supervised/train_imiation_loss", torch.tensor(train_imitation_losses).mean(), epoch_idx)
             logger.add_scalar("supervised/train_distance_loss", torch.tensor(train_distance_losses).mean(), epoch_idx)
+            
+            logger.add_scalar("supervised/val_loss", val_losses.mean(), epoch_idx)
             logger.add_scalar("supervised/val_imiation_loss", torch.tensor(val_imitation_losses).mean(), epoch_idx)
             logger.add_scalar("supervised/val_distance_loss", torch.tensor(val_distance_losses).mean(), epoch_idx)
             

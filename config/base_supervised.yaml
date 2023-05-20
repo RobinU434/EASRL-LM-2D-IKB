@@ -2,7 +2,7 @@ num_joints: 20
 n_epochs: 801
 batch_size: 2048
 val_interval: 5
-feature_source: "state"  # choices: "state" "targets"
+feature_source: "noisy_targets"  # choices: "state" "targets" "noisy_targets"
 learning_rate: 0.0015
 action_radius: 0
 loss_func: "DistanceLoss"  # ImiationLoss DistanceLoss MergeLoss

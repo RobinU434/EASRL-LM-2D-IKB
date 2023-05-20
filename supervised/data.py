@@ -7,10 +7,12 @@ from progress.bar import Bar
 from typing import Any, Tuple
 from matplotlib import pyplot as plt
 from torch.utils.data import Dataset, DataLoader
+from torch.autograd import Variable
 
 from envs.robots.ccd import IK
 from supervised.utils import forward_kinematics
 from supervised.utils import split_state_information
+from vae.data.data_set import YMode
 
 
 class ActionTargetDataset(Dataset):
@@ -100,6 +102,46 @@ class ActionStateDataset(Dataset):
         return features, label_angles
 
 
+class ConditionalTargetDataset(Dataset):
+    def __init__(self, state_file, std) -> None:
+        super().__init__()
+        self.state_csv = pd.read_csv(state_file)
+
+        self.y_mode = YMode.POSITION
+        
+        self.std = std
+        if self.std > 0:
+            logging.info("start action constraining")
+            self.state_csv = self.preprocess_targets()
+            logging.info("done action constraining")
+        logging.info("finished setting up conditional action target dataset")
+
+    def preprocess_targets(self):
+        _, current_positions, state_angles = split_state_information(self.state_csv.to_numpy().copy()   [:, 1:])
+        noise = np.random.normal(np.zeros_like(current_positions), np.ones_like(current_positions) * self.std)
+        target_positions = current_positions + noise
+
+        state = np.concatenate([target_positions, current_positions, state_angles], axis=1)
+        state_df = pd.DataFrame(state)
+        return state_df
+
+    def __len__(self):
+        return len(self.state_csv)
+    
+    def __getitem__(self, idx):
+        state = torch.tensor(self.state_csv.iloc[idx,].to_numpy()).float()  # we work in a two dimensional space
+        state = state.unsqueeze(dim=0)
+        target_position, current_position, current_angles = split_state_information(state)
+
+        x = torch.cat([target_position - current_position, current_position, current_angles], dim=1).squeeze()
+        x = Variable(x, requires_grad=True)
+
+        y = target_position.squeeze()
+
+        return x, y
+
+
+
 def get_datasets(feature_source: str, num_joints: int, batch_size: int, action_radius: float) -> Tuple[DataLoader, DataLoader]:
     action_radius = get_action_radius(action_radius, num_joints) 
     if feature_source == "state":
@@ -126,6 +168,18 @@ def get_datasets(feature_source: str, num_joints: int, batch_size: int, action_r
             target_file=f"./datasets/{num_joints}/val/targets_IK_random_start.csv"
             )
         val_dataloader = DataLoader(val_data, batch_size=batch_size)
+    elif feature_source == "noisy_targets":
+        train_data = ConditionalTargetDataset(
+            state_file=f"./datasets/{num_joints}/train/state_IK_random_start.csv",
+            std=action_radius
+        )
+        train_dataloader = DataLoader(train_data, batch_size=batch_size)
+        val_data = ConditionalTargetDataset(
+            state_file=f"./datasets/{num_joints}/val/state_IK_random_start.csv",
+            std=action_radius
+        )
+        val_dataloader = DataLoader(val_data, batch_size=batch_size)
+        
     else: 
         logging.error(f"feature source has to be either 'targets' or 'state', you chose: {feature_source}")
 

@@ -26,6 +26,27 @@ class DistanceLoss:
 
         dist_loss = torch.linalg.norm(target_pos - real_pos, dim=1).mean()
         return dist_loss
+    
+
+class PointDistanceLoss:
+    def __init__(self) -> None:
+        pass
+
+    def __call__(self, y: torch.Tensor, x_hat: torch.Tensor) -> torch.Tensor:
+        """y is a point in 2D space
+        x_hat is the action that should be close to y 
+
+        Args:
+            y (torch.Tensor): point in 2D space
+            x_hat (torch.Tensor): predicted action
+
+        Returns:
+            torch.Tensor: _description_
+        """
+        real_pos = forward_kinematics(x_hat)[:, -1]
+
+        dist_loss = torch.linalg.norm(y - real_pos, dim=1).mean()
+        return dist_loss
 
 
 class MergeLoss:
@@ -50,7 +71,7 @@ def angle_diff(a : torch.Tensor, b: torch.Tensor):
 
 
 def get_loss_func(loss_func_name: str):
-    loss_func_names = ["ImitationLoss", "DistanceLoss", "MergeLoss"]
+    loss_func_names = ["ImitationLoss", "DistanceLoss", "MergeLoss", "PointDistanceLoss"]
     
     if loss_func_name == "ImitationLoss":
         loss_func = ImitationLoss()
@@ -61,6 +82,8 @@ def get_loss_func(loss_func_name: str):
             imitation_loss_weight=0.1,
             distance_loss_weight=1
         )
+    elif loss_func_name == "PointDistanceLoss":
+        loss_func = PointDistanceLoss()
     else:
         logging.error(f"chose a loss func from: {loss_func_names}, but you chose: ", loss_func_name)
         raise ValueError(f"chose a loss func from: {loss_func_names}, but you chose: ", loss_func_name)

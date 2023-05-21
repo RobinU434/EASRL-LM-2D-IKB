@@ -5,10 +5,10 @@ dataset_mode: "IK_random_start" # "IK_const_start" "IK_random_start" "IK_random_
 action_constrain_radius: 0.5  # only available if dataset == conditional_action_target and conditional_target(here it will be used as std around the current position)
 conditional_info: "state"  # "state" "targets"
 loss_func:  # only IK Loss is available
-  kl_loss_weight: 1
+  kl_loss_weight: 0
   reconstruction_loss_weight: 1
   distance_loss_weight: 1
-  imitation_loss_weight: 1
+  imitation_loss_weight: 0
 batch_size: 1024
 shuffle_data: False
 epochs: 801

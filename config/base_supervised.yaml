@@ -1,11 +1,11 @@
-num_joints: 20
+num_joints: 2
 n_epochs: 801
 batch_size: 2048
 val_interval: 5
 feature_source: "noisy_targets"  # choices: "state" "targets" "noisy_targets"
 learning_rate: 0.0015
-action_radius: 0
-loss_func: "DistanceLoss"  # ImiationLoss DistanceLoss MergeLoss
+action_radius: 0.5
+loss_func: "PointDistanceLoss"  # ImitationLoss DistanceLoss MergeLoss PointDistanceLoss
 post_processor:
   enabled: True
   min_action: -1 # -3.142  # little offset to make it easier for tanh function

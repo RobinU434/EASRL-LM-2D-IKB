@@ -79,10 +79,10 @@ class ActionStateDataset(Dataset):
             # solve IK for this new position
             label_angles, _, _, _ = IK(
                 new_target,
-                (state_angles[state_idx] / np.pi * 180).copy(),
+                np.rad2deg(state_angles[state_idx]).copy(),
                 np.ones_like(state_angles[state_idx]),
                 err_min=0.001)
-            label_angles = label_angles / 180 * np.pi  # convert to rad
+            label_angles = np.deg2rad(label_angles)  # convert to rad
             label_angles = np.cumsum(label_angles) - state_angles[state_idx]
             action_array[state_idx, 1:] = label_angles
 
@@ -106,22 +106,25 @@ class ConditionalTargetDataset(Dataset):
     def __init__(self, state_file, std) -> None:
         super().__init__()
         self.state_csv = pd.read_csv(state_file)
-
+        
         self.y_mode = YMode.POSITION
         
-        self.std = std
+        self.std = std if std is not None else 0
         if self.std > 0:
             logging.info("start action constraining")
             self.state_csv = self.preprocess_targets()
             logging.info("done action constraining")
         logging.info("finished setting up conditional action target dataset")
 
+        
     def preprocess_targets(self):
+        index = np.array(range(len(self.state_csv)))
+        index = np.expand_dims(index, axis=1)
         _, current_positions, state_angles = split_state_information(self.state_csv.to_numpy().copy()   [:, 1:])
         noise = np.random.normal(np.zeros_like(current_positions), np.ones_like(current_positions) * self.std)
         target_positions = current_positions + noise
 
-        state = np.concatenate([target_positions, current_positions, state_angles], axis=1)
+        state = np.concatenate([index, target_positions, current_positions, state_angles], axis=1)
         state_df = pd.DataFrame(state)
         return state_df
 
@@ -129,7 +132,7 @@ class ConditionalTargetDataset(Dataset):
         return len(self.state_csv)
     
     def __getitem__(self, idx):
-        state = torch.tensor(self.state_csv.iloc[idx,].to_numpy()).float()  # we work in a two dimensional space
+        state = torch.tensor(self.state_csv.iloc[idx, 1:].to_numpy()).float()  # we work in a two dimensional space
         state = state.unsqueeze(dim=0)
         target_position, current_position, current_angles = split_state_information(state)
 
@@ -186,7 +189,7 @@ def get_datasets(feature_source: str, num_joints: int, batch_size: int, action_r
     return train_dataloader, val_dataloader
 
 
-def check_dataset(num_joints: int, random: bool = False, action_radius: float = None, num_samples: int = 1):
+def check_action_constrain_dataset(num_joints: int, random: bool = False, action_radius: float = None, num_samples: int = 1):
     dataset = ActionStateDataset(
         action_file=f"./datasets/{num_joints}/test/actions_IK_random_start.csv",
         state_file=f"./datasets/{num_joints}/test/state_IK_random_start.csv",
@@ -234,4 +237,5 @@ def get_action_radius(configuration: Any, num_joints: int):
 
 
 if __name__ == "__main__":
-    check_dataset(2, random=True, action_radius=0.5, num_samples=1)
+    check_action_constrain_dataset(2, random=True, action_radius=0.5, num_samples=1)
+

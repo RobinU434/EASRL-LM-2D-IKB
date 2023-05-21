@@ -50,7 +50,7 @@ class Regressor(nn.Module):
 
 def build_model(feature_source: str, num_joints: int, learning_rate: float, post_processor_config: Dict) -> Regressor:
     post_processor = PostProcessor(**post_processor_config)
-    if feature_source == "state":
+    if feature_source == "state" or feature_source == "noisy_targets":
         logging.info("use 'state' as feature source")
         model = Regressor(4 + num_joints, num_joints, learning_rate, post_processor)
     elif feature_source == "targets":

@@ -29,8 +29,8 @@ class DistanceLoss:
     
 
 class PointDistanceLoss:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, device) -> None:
+        self.device = device
 
     def __call__(self, y: torch.Tensor, x_hat: torch.Tensor) -> torch.Tensor:
         """y is a point in 2D space
@@ -43,7 +43,7 @@ class PointDistanceLoss:
         Returns:
             torch.Tensor: _description_
         """
-        real_pos = forward_kinematics(x_hat)[:, -1]
+        real_pos = forward_kinematics(x_hat)[:, -1].to(self.device)
 
         dist_loss = torch.linalg.norm(y - real_pos, dim=1).mean()
         return dist_loss
@@ -70,7 +70,7 @@ def angle_diff(a : torch.Tensor, b: torch.Tensor):
     return (dif + torch.pi) % (2 * torch.pi) - torch.pi 
 
 
-def get_loss_func(loss_func_name: str):
+def get_loss_func(loss_func_name: str, device):
     loss_func_names = ["ImitationLoss", "DistanceLoss", "MergeLoss", "PointDistanceLoss"]
     
     if loss_func_name == "ImitationLoss":
@@ -83,7 +83,7 @@ def get_loss_func(loss_func_name: str):
             distance_loss_weight=1
         )
     elif loss_func_name == "PointDistanceLoss":
-        loss_func = PointDistanceLoss()
+        loss_func = PointDistanceLoss(device)
     else:
         logging.error(f"chose a loss func from: {loss_func_names}, but you chose: ", loss_func_name)
         raise ValueError(f"chose a loss func from: {loss_func_names}, but you chose: ", loss_func_name)

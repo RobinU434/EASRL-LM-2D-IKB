@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from supervised.data import get_datasets
-from supervised.loss import DistanceLoss, ImitationLoss, get_loss_func
+from supervised.loss import DistanceLoss, ImitationLoss, PointDistanceLoss, get_loss_func
 from supervised.model import Regressor, build_model
 from supervised.utils import split_state_information
 from vae.utils.post_processing import PostProcessor
@@ -37,8 +37,6 @@ def setup_parser(parser: ArgumentParser) -> ArgumentParser:
         action='store_true',
         help='command just prints config and returns'
     )
-   
-    
     return parser
 
 
@@ -77,9 +75,13 @@ def train(
 
             x_hat = model.forward(x)
 
-            predicted_target_action = state_angles + x_hat
-            target_action = state_angles + y
-            loss = loss_func(target_action, predicted_target_action)
+            if isinstance(loss_func, PointDistanceLoss): 
+                predicted_target_action = state_angles + x_hat
+                loss = loss_func(y, predicted_target_action)
+            else:
+                predicted_target_action = state_angles + x_hat
+                target_action = state_angles + y
+                loss = loss_func(target_action, predicted_target_action)
             losses = torch.cat([losses, torch.tensor([loss])])
 
             train_distance_losses.append(distance_loss_func(y, x_hat))
@@ -100,9 +102,14 @@ def train(
 
                 x_hat = model.forward(x)
                 
-                predicted_target_action = state_angles + x_hat
-                target_action = state_angles + y
-                loss = loss_func(target_action, predicted_target_action)
+                if isinstance(loss_func, PointDistanceLoss): 
+                    predicted_target_action = state_angles + x_hat
+                    loss = loss_func(y, predicted_target_action)
+                else:
+                    predicted_target_action = state_angles + x_hat
+                    target_action = state_angles + y
+                    loss = loss_func(target_action, predicted_target_action)
+            
                 val_losses = torch.cat([val_losses, torch.tensor([loss])])
 
                 val_distance_losses.append(distance_loss_func(y, x_hat).item())
@@ -137,7 +144,6 @@ if __name__ == "__main__":
     if args.print_config:
         print(json.dumps(config, sort_keys=True, indent=4))
         exit()
-    
 
     # set logging level
     if args.debug:
@@ -149,7 +155,7 @@ if __name__ == "__main__":
         num_joints=config["num_joints"],
         learning_rate=config["learning_rate"],
         post_processor_config=post_processor_config).to(args.device)
-    loss_func = get_loss_func(config["loss_func"])
+    loss_func = get_loss_func(config["loss_func"], args.device )
 
     train_dataloader, val_dataloader = get_datasets(feature_source=config["feature_source"],
                                                     num_joints=config["num_joints"],

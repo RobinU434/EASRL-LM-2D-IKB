@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import json
+import logging
 import time
 import yaml
 import numpy as np
@@ -9,7 +10,7 @@ from progress.bar import Bar
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from vae.data.data_set import ActionTargetDatasetV2, ConditionalActionTargetDataset, ConditionalTargetDataset
+from vae.data.data_set import ActionTargetDatasetV2, ConditionalActionTargetDataset, ConditionalTargetDataset, YMode
 from vae.data.load_data_set import load_action_dataset, load_action_target_dataset, load_target_dataset
 from vae.utils.extract_angles_and_position import split_conditional_info, split_state_information
 from vae.utils.loss import DistanceLoss, ImitationLoss, VAELoss, get_loss_func, DistVAELoss, IKLoss
@@ -28,6 +29,11 @@ def setup_parser(parser: ArgumentParser) -> ArgumentParser:
         "device",
         type=str,
         help=f"GPU or CPU, current avialable GPU index: {torch.cuda.device_count() - 1}")
+    parser.add_argument(
+        "-d", "--debug",
+        action="store_true",
+        help="if set to true -> debug mode is activated"
+    )
     parser.add_argument(
         "--print_config",
         action='store_true',
@@ -87,7 +93,12 @@ def run_model(
 
         x_hat, mu, log_std = autoencoder(x, c_enc, c_dec)  # out shape: (batch_size, number of joints) 
 
-        loss = loss_func(y=y, x_hat=x_hat, mu=mu, log_std=log_std)
+        # TODO: it is a bit hacky and has to be adapted for other datasets where the current angles are not inside c_dec
+        current_angles = c_dec[:, -autoencoder.output_dim:]
+        action = x_hat + current_angles
+        if loss_func.target_mode == YMode.ACTION:
+            y = y + current_angles
+        loss = loss_func(y=y, x_hat=action, mu=mu, log_std=log_std)
         
         if train:
             autoencoder.train(loss)
@@ -96,7 +107,7 @@ def run_model(
         log_metrics_array.append(
             np.array([
                 loss_func.r_loss.cpu().item(),  # reconstruction_loss
-                loss_func.kl_div.cpu().item(),  # kl loss
+                loss_func.kl_loss.cpu().item(),  # kl loss
                 loss.cpu().item(),  # total loss
                 log_std.mean().cpu().item(),  # std
                 loss_func.imitation_loss.cpu().item(),  # imitation_loss
@@ -206,6 +217,10 @@ def train(
 if __name__ == "__main__":
     parser = setup_parser(ArgumentParser())
     args  = parser.parse_args()
+
+    # set logging level
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
     
     config = load_config()
     config["device"] = args.device

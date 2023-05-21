@@ -74,12 +74,12 @@ def load_target_dataset(config: dict):
     if config["conditional_info"] != "state":
         raise ValueError(f"You can only chose the {ConditionalTargetDataset.__name__} if you select 'state' as the conditional info, but you chose {config['conditional_info']}")
     train_data = ConditionalTargetDataset(
-        f"./datasets/{config['num_joints']}/test/{config['conditional_info']}_{config['dataset_mode']}.csv",
+        f"./datasets/{config['num_joints']}/train/{config['conditional_info']}_{config['dataset_mode']}.csv",
         std=config["action_constrain_radius"]
         )
     train_dataloader = DataLoader(train_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"]) 
     val_data = ConditionalTargetDataset(
-        f"./datasets/{config['num_joints']}/test/{config['conditional_info']}_{config['dataset_mode']}.csv",
+        f"./datasets/{config['num_joints']}/val/{config['conditional_info']}_{config['dataset_mode']}.csv",
         std=config["action_constrain_radius"]
         )
     val_dataloader = DataLoader(val_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"])

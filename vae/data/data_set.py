@@ -249,17 +249,27 @@ class ConditionalTargetDataset(VAEDataset):
         
         self.std = std
         if self.std > 0:
-            logging.info("start action constraining")
+            logging.info("start action preprocessing")
             self.state_csv = self.preprocess_targets()
-            logging.info("done action constraining")
-        logging.info("finished setting up conditional action target dataset")
+            logging.info("done action preprocessing")
+        logging.info("finished setting up conditional target dataset")
 
     def preprocess_targets(self):
+        index = np.array(range(len(self.state_csv)))
+        index = np.expand_dims(index, axis=1)
         _, current_positions, state_angles = split_state_information(self.state_csv.to_numpy().copy()   [:, 1:])
+        _, num_joints = state_angles.shape 
         noise = np.random.normal(np.zeros_like(current_positions), np.ones_like(current_positions) * self.std)
         target_positions = current_positions + noise
 
-        state = np.concatenate([target_positions, current_positions, state_angles], axis=1)
+        # clip target_positions because noise can cause target positions outside the arms reach
+        target_dists = np.linalg.norm(target_positions, axis=1)
+        thetas = np.arctan2(target_positions[:, 0], target_positions[:, 1])
+        max_coords = np.stack([np.cos(thetas), np.sin(thetas)]).T * num_joints
+        bool_mask = np.stack([target_dists > num_joints, target_dists > num_joints]).T
+        target_positions = np.where(bool_mask, max_coords, target_positions)
+
+        state = np.concatenate([index, target_positions, current_positions, state_angles], axis=1)
         state_df = pd.DataFrame(state)
         return state_df
 
@@ -267,11 +277,11 @@ class ConditionalTargetDataset(VAEDataset):
         return len(self.state_csv)
     
     def __getitem__(self, idx):
-        state = torch.tensor(self.state_csv.iloc[idx,].to_numpy()).float()  # we work in a two dimensional space
+        state = torch.tensor(self.state_csv.iloc[idx, 1:].to_numpy()).float()  # we work in a two dimensional space
         state = state.unsqueeze(dim=0)
         target_position, current_position, current_angles = split_state_information(state)
 
-        x = target_position.squeeze()
+        x = (target_position - current_position).squeeze()
 
         c_enc = torch.tensor([])    
         c_enc = Variable(c_enc, requires_grad=True)

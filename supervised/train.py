@@ -47,8 +47,62 @@ def load_config() -> dict:
     return config
 
 
+
+def run_model(model: Regressor,
+              data: DataLoader,
+              criterion,
+              train: bool = False,
+              device: str = "cpu",):
+
+    imitation_loss_func = ImitationLoss()
+    distance_loss_func = DistanceLoss()
+
+    metrics = []
+    metrics_dt = [
+        ("loss", np.float32),
+        ("imitation_loss", np.float32),
+        ("distance_loss", np.float32)
+        ]
+
+    for x, y in data:
+        x = x.to(device)
+        y = y.to(device)
+
+        _, _, state_angles = split_state_information(x)
+
+        x_hat = model.forward(x)
+
+        if isinstance(loss_func, PointDistanceLoss): 
+            predicted_target_action = state_angles + x_hat
+            loss = criterion(y, predicted_target_action)
+            distance_loss = distance_loss_func(y, x_hat)
+            imitation_loss = imitation_loss_func(torch.zeros_like(x_hat), x_hat)
+        else:
+            predicted_target_action = state_angles + x_hat
+            target_action = state_angles + y
+            loss = loss_func(target_action, predicted_target_action)
+            distance_loss = distance_loss_func(y, x_hat)
+            imitation_loss = imitation_loss_func(y, x_hat)
+
+        if train:
+            model.train(loss)
+
+        metrics.append(
+            np.array([
+                loss.item(),
+                imitation_loss.item(),
+                distance_loss.item(),
+            ])
+        )
+    
+    metrics = np.stack(metrics)
+    metrics = np.rec.fromarrays(metrics.T, dtype=metrics_dt)
+
+    return metrics
+
+
 def train(
-        model: Regressor,
+        regressor: Regressor,
         train_data: DataLoader,
         val_data: DataLoader,
         loss_func, 
@@ -59,80 +113,36 @@ def train(
         path: str,
         ) -> None:
 
-    imitation_loss_func = ImitationLoss()
-    distance_loss_func = DistanceLoss()
-
     for epoch_idx in range(n_epochs):
-        losses = torch.tensor([])
+        train_metrics = run_model(model=regressor,
+                                  data=train_data,
+                                  criterion=loss_func,
+                                  train=True,
+                                  device=device)
         
-        train_distance_losses = []
-        train_imitation_losses = []
-        for x, y in train_data:
-            x = x.to(device)
-            y = y.to(device)
-            
-            _, _, state_angles = split_state_information(x)
-
-            x_hat = model.forward(x)
-
-            if isinstance(loss_func, PointDistanceLoss): 
-                predicted_target_action = state_angles + x_hat
-                loss = loss_func(y, predicted_target_action)
-            else:
-                predicted_target_action = state_angles + x_hat
-                target_action = state_angles + y
-                loss = loss_func(target_action, predicted_target_action)
-            losses = torch.cat([losses, torch.tensor([loss])])
-
-            train_distance_losses.append(distance_loss_func(y, x_hat))
-            train_imitation_losses.append(imitation_loss_func(y, x_hat))
-
-            model.train(loss)
-
         if epoch_idx % val_interval == 0: 
-            val_losses = torch.tensor([])
+            val_metrics = run_model(model=regressor,
+                                    data=val_data,
+                                    criterion=loss_func,
+                                    train=False,
+                                    device=device)
 
-            val_distance_losses = []
-            val_imitation_losses = []
-            for x, y in val_data:
-                x = x.to(device)
-                y = y.to(device)
-                
-                _, _, state_angles = split_state_information(x)
-
-                x_hat = model.forward(x)
-                
-                if isinstance(loss_func, PointDistanceLoss): 
-                    predicted_target_action = state_angles + x_hat
-                    loss = loss_func(y, predicted_target_action)
-                else:
-                    predicted_target_action = state_angles + x_hat
-                    target_action = state_angles + y
-                    loss = loss_func(target_action, predicted_target_action)
+            print(f"epoch: {epoch_idx}  train_loss: {train_metrics['loss'].mean()} val_loss: {val_metrics['loss'].mean()}")   
             
-                val_losses = torch.cat([val_losses, torch.tensor([loss])])
-
-                val_distance_losses.append(distance_loss_func(y, x_hat).item())
-                val_imitation_losses.append(imitation_loss_func(y, x_hat).item())
-
-            print(f"epoch: {epoch_idx}  train_loss: {losses.mean()} val_loss: {val_losses.mean()}")   
+            logger.add_scalar("supervised/train_loss", train_metrics['loss'].mean(), epoch_idx)
+            logger.add_scalar("supervised/train_imiation_loss", train_metrics['imitation_loss'].mean(), epoch_idx)
+            logger.add_scalar("supervised/train_distance_loss", train_metrics['distance_loss'].mean(), epoch_idx)
             
-            logger.add_scalar("supervised/train_loss", losses.mean(), epoch_idx)
-            logger.add_scalar("supervised/train_imiation_loss", torch.tensor(train_imitation_losses).mean(), epoch_idx)
-            logger.add_scalar("supervised/train_distance_loss", torch.tensor(train_distance_losses).mean(), epoch_idx)
+            logger.add_scalar("supervised/val_loss", val_metrics['loss'].mean(), epoch_idx)
+            logger.add_scalar("supervised/val_imiation_loss", val_metrics['imitation_loss'].mean(), epoch_idx)
+            logger.add_scalar("supervised/val_distance_loss", val_metrics['distance_loss'].mean(), epoch_idx)
             
-            logger.add_scalar("supervised/val_loss", val_losses.mean(), epoch_idx)
-            logger.add_scalar("supervised/val_imiation_loss", torch.tensor(val_imitation_losses).mean(), epoch_idx)
-            logger.add_scalar("supervised/val_distance_loss", torch.tensor(val_distance_losses).mean(), epoch_idx)
-            
-
             # save model
-            torch.save({
-                'epoch': epoch_idx,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': model.optimizer.state_dict(),
-                'loss': val_losses.mean(),
-            }, path + f"/model_{epoch_idx}_val_loss_{float(val_losses.mean()):.4f}.pt")     
+            regressor.save(
+                path=path + f"/model_{epoch_idx}_val_loss_{float(val_metrics['loss'].mean()):.4f}.pt",
+                epoch_idx=epoch_idx,
+                metrics=val_metrics
+            )
 
 
 if __name__ == "__main__":
@@ -155,12 +165,13 @@ if __name__ == "__main__":
         num_joints=config["num_joints"],
         learning_rate=config["learning_rate"],
         post_processor_config=post_processor_config).to(args.device)
-    loss_func = get_loss_func(config["loss_func"], args.device )
 
     train_dataloader, val_dataloader = get_datasets(feature_source=config["feature_source"],
                                                     num_joints=config["num_joints"],
                                                     batch_size=config["batch_size"],
                                                     action_radius=config["action_radius"])
+
+    loss_func = get_loss_func(config["loss_func"], args.device, train_dataloader.dataset.y_mode )
 
     path = f"results/supervised/{args.subdir}/{config['loss_func']}/{config['num_joints']}_{int(time.time())}"
     logger = SummaryWriter(path)
@@ -170,7 +181,7 @@ if __name__ == "__main__":
         yaml.dump(config, config_file)
 
     train(
-        model=model,
+        regressor=model,
         train_data=train_dataloader,
         val_data=val_dataloader,
         loss_func=loss_func,

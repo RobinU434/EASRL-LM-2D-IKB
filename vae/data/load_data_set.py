@@ -2,7 +2,7 @@ import logging
 from typing import Tuple, Union
 from torch.utils.data import DataLoader
 
-from vae.data.data_set import ActionDataset, ActionTargetDatasetV1, ActionTargetDatasetV2, ConditionalActionTargetDataset, ConditionalTargetDataset
+from vae.data.data_set import ActionDataset, ActionTargetDatasetV1, ActionTargetDatasetV2, ConditionalActionTargetDataset, TargetGaussianDataset
 
 
 def load_action_dataset(config: dict) -> Tuple[DataLoader, DataLoader, DataLoader]:
@@ -70,20 +70,22 @@ def load_action_target_dataset_by_entity(
 
 
 def load_target_dataset(config: dict):
-    print(f"use: {ConditionalTargetDataset.__name__}")
+    print(f"use: {TargetGaussianDataset.__name__}")
+    
     if config["conditional_info"] != "state":
-        raise ValueError(f"You can only chose the {ConditionalTargetDataset.__name__} if you select 'state' as the conditional info, but you chose {config['conditional_info']}")
-    train_data = ConditionalTargetDataset(
+        raise ValueError(f"You can only chose the {TargetGaussianDataset.__name__} if you select 'state' as the conditional info, but you chose {config['conditional_info']}")
+    
+    train_data = TargetGaussianDataset(
         f"./datasets/{config['num_joints']}/train/{config['conditional_info']}_{config['dataset_mode']}.csv",
         std=config["action_constrain_radius"]
         )
     train_dataloader = DataLoader(train_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"]) 
-    val_data = ConditionalTargetDataset(
+    val_data = TargetGaussianDataset(
         f"./datasets/{config['num_joints']}/val/{config['conditional_info']}_{config['dataset_mode']}.csv",
         std=config["action_constrain_radius"]
         )
     val_dataloader = DataLoader(val_data, batch_size=config["batch_size"], shuffle=config["shuffle_data"])
-    test_data = ConditionalTargetDataset(
+    test_data = TargetGaussianDataset(
         f"./datasets/{config['num_joints']}/test/{config['conditional_info']}_{config['dataset_mode']}.csv",
         std=config["action_constrain_radius"]
         )

@@ -1,5 +1,6 @@
 # https://avandekleut.github.io/vae/
 
+import math
 from typing import Tuple, Union
 import torch
 import numpy as np
@@ -66,7 +67,7 @@ class VariationalAutoencoder(nn.Module):
         """performs forward pass into model and through the postprocessor
 
         Args:
-            x (torch.Tensor): input for encoder 
+            x (torch.Tensor): input for encoder
             c_enc (torch.Tensor): conditional information for encoder
             c_dec (torch.Tensor): conditional information for decoder
 
@@ -78,8 +79,9 @@ class VariationalAutoencoder(nn.Module):
         
         # sample the latent space
         sigma = torch.exp(log_std)
+        sigma = torch.ones_like(sigma) * math.exp(-40)
         z = mu + sigma * self.N.sample(mu.shape)
-
+        
         # enhance latent space
         z = torch.cat([z, c_dec], dim=1)
         z = Variable(z, requires_grad=True)
@@ -145,7 +147,7 @@ class VariationalAutoencoder(nn.Module):
                 'kl_loss': metrics["kl_loss"].mean(),
                 'distance_loss': metrics["distance_loss"].mean(),
                 'imitation_loss': metrics["imitation_loss"].mean(),
-            }, path)     
+            }, path)
 
 
     def reset_history(self):

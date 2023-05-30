@@ -231,21 +231,16 @@ class ConditionalActionTargetDataset(VAEDataset):
 
         y = Variable(action, requires_grad=True)
 
-        # has to be concatenated because the will be feed directly into the encoder
-        # features = torch.cat([action, state])
-        # features = Variable(action, requires_grad=True)
-        # 
-        # label = state
-        # label = Variable(label, requires_grad=True)
         return x, c_enc, c_dec, y
 
 
-class ConditionalTargetDataset(VAEDataset):
+class TargetGaussianDataset(VAEDataset):
     def __init__(self, state_file, std) -> None:
         super().__init__()
         self.state_csv = pd.read_csv(state_file)
+        self.action_csv = None
 
-        self.y_mode = YMode.POSITION
+        self.y_mode = YMode.POSITION  # can be flipped between ACTION and POSITION
         
         self.std = std
         if self.std > 0:
@@ -254,12 +249,18 @@ class ConditionalTargetDataset(VAEDataset):
             logging.info("done action preprocessing")
         logging.info("finished setting up conditional target dataset")
 
+        if self.y_mode == YMode.ACTION:
+            logging.info("create action file")
+            self.action_csv = self.generate_actions()
+            loggin.info("done creating action file")
+
     def preprocess_targets(self):
         index = np.array(range(len(self.state_csv)))
         index = np.expand_dims(index, axis=1)
-        _, current_positions, state_angles = split_state_information(self.state_csv.to_numpy().copy()   [:, 1:])
-        _, num_joints = state_angles.shape 
+        _, current_positions, state_angles = split_state_information(self.state_csv.to_numpy().copy()[:, 1:])
+        _, num_joints = state_angles.shape
         noise = np.random.normal(np.zeros_like(current_positions), np.ones_like(current_positions) * self.std)
+        # noise = np.fmod(noise, self.std)  # approximate trunkated gaussian 
         target_positions = current_positions + noise
 
         # clip target_positions because noise can cause target positions outside the arms reach
@@ -273,6 +274,31 @@ class ConditionalTargetDataset(VAEDataset):
         state_df = pd.DataFrame(state)
         return state_df
 
+    def generate_actions(self):
+        index = np.array(range(len(self.state_csv)))
+        index = np.expand_dims(index, axis=1)
+        target_position, _, state_angles = split_state_information(self.state_csv.to_numpy().copy()[:, 1:])
+        
+        action_array = np.zeros_like(state_angles)
+        bar = Bar("get actions for targets", max = len(self))
+        for state_idx in range(len(self)):
+            new_target = np.zeros(3)
+            new_target[0:2] = target_position[state_idx]
+            # solve IK for this new position
+            label_angles, _, _, _ = IK(
+                new_target,
+                np.rad2deg(state_angles[state_idx]).copy(),
+                np.ones_like(state_angles[state_idx]),
+                err_min=0.001)
+            label_angles = np.deg2rad(label_angles)
+            label_angles = np.cumsum(label_angles) - state_angles[state_idx]
+            action_array[state_idx] = label_angles
+            bar.next()
+        bar.finish()
+        
+        action_df = pd.DataFrame(np.concatenate([index, action_array], axis=1))
+        return action_df
+    
     def __len__(self):
         return len(self.state_csv)
     
@@ -281,9 +307,13 @@ class ConditionalTargetDataset(VAEDataset):
         state = state.unsqueeze(dim=0)
         target_position, current_position, current_angles = split_state_information(state)
 
-        x = (target_position - current_position).squeeze()
+        if self.y_mode == YMode.ACTION:
+            action = torch.tensor(self.action_csv.iloc[idx, 1:].to_numpy()).float()
+            x = action.squeeze()
+        elif self.y_mode == YMode.POSITION:
+            x = (target_position - current_position).squeeze()
 
-        c_enc = torch.tensor([])    
+        c_enc =  torch.cat([current_position, current_angles], dim=1).squeeze()
         c_enc = Variable(c_enc, requires_grad=True)
 
         c_dec = torch.cat([current_position, current_angles], dim=1).squeeze()
@@ -300,13 +330,13 @@ def check_action_constrain():
         "./datasets/2/test/actions_IK_random_start.csv",
         "./datasets/2/test/state_IK_random_start.csv",
         action_constrain_radius=constrain_radius)
-    
+
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot()
     # find action distribution
     actions = []
-    
+
     for idx, (target_action, state) in enumerate(dataset):
         target_position, current_position, state_angles = split_state_information(state.unsqueeze(dim=0))
         # for position_sequence in forward_kinematics(state_angles).detach().numpy():
@@ -419,7 +449,7 @@ if __name__ == "__main__":
     # check_action_constrain()
     # plot_action_constrain_radius()
     
-    dataset = ConditionalTargetDataset(f"./datasets/5/test/state_IK_random_start.csv", std=1)
+    dataset = TargetGaussianDataset(f"./datasets/5/test/state_IK_random_start.csv", std=1)
     dataloader = DataLoader(dataset)
 
     for x, y, z in dataloader:

@@ -17,8 +17,17 @@ action_magnitude: 1 # a value inside the interval (0, pi]
 normal_actor:
   enabled: False
 latent_actor: 
-  enabled: True
+  enabled: False
   device: "cuda:5"
   latent_dim: 5
-  vae_learning: False
+  # you can pick from an enum: 
+  # 0 -> Static (no training),
+  # 1 -> fine tuning (load a checkpoint and continue training), 
+  # 2 -> from scratch (start vae model learning from scratch) 
+  learning_mode: 0  
   checkpoint_dir: "results/vae/ac05"  # specify 
+super_actor:
+  enabled: True
+  device: "cuda:6"
+  learning_mode: 0
+  checkpoint_dir: "results/supervised/gaussian_target/PointDistanceLoss"

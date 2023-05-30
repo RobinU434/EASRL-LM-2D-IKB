@@ -400,6 +400,13 @@ def relative_inference(
         plt.show()
 
 
+def target_gaussian_inference(
+        model: VariationalAutoencoder,
+        sample_size: int,
+        show: bool = False):
+    pass
+
+
 def inference(
         model: VariationalAutoencoder,
         fixed_position: bool,
@@ -429,7 +436,7 @@ if __name__ == "__main__":
     parser = setup_parser(argparse.ArgumentParser())
     args = parser.parse_args()
     args_dict = vars(args)
-    
+
     config_path = "/".join(args_dict["model_path"].split("/")[:-1]) + "/config.yaml"
     config = load_config(config_path)
     args_dict["config"] = config
@@ -437,7 +444,7 @@ if __name__ == "__main__":
     if args_dict.pop("print_config"):
         print(json.dumps(config, sort_keys=True, indent=4))
         exit()
-    
+
 
     model = load_model(args_dict.pop("model_path"), config)
     args_dict["model"] = model

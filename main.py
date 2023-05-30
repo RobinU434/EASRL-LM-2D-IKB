@@ -16,6 +16,8 @@ from algorithms.ppo.ppo import PPO
 from algorithms.sac.sac import SAC
 from algorithms.sac.actor.base_actor import Actor
 from algorithms.sac.actor.latent_actor import LatentActor
+from algorithms.sac.actor.super_actor import SuperActor
+
 from logger.fs_logger import FileSystemLogger
 
 
@@ -70,6 +72,7 @@ def load_config(args: Namespace) -> dict:
 
 def extract_actor_config(config: dict) -> dict:
     # there is the normal fead forward actor and the latent actor
+    # TODO(RobinU434): make warning if multiple actors are enabled
     if config["normal_actor"]["enabled"]:
         actor_config = config["normal_actor"]
         actor_config["type"] = Actor
@@ -77,6 +80,10 @@ def extract_actor_config(config: dict) -> dict:
     elif config["latent_actor"]["enabled"]:
         actor_config = config["latent_actor"]
         actor_config["type"] = LatentActor
+        return actor_config
+    elif config["super_actor"]["enabled"]:
+        actor_config = config["super_actor"]
+        actor_config["type"] = SuperActor
         return actor_config
     else:
         logging.error("There must be at least one actor enabled")
@@ -209,6 +216,7 @@ if __name__ == "__main__":
     print(f"Start to do {args.num_runs} experiment")
     for i in range(args.num_runs):
         print(f"Started {i}th experiment")
+        main(config)
         try:
             main(config)
         except ValueError:

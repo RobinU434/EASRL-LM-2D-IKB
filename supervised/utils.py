@@ -1,15 +1,17 @@
 import torch
+
+from torch import Tensor
 from typing import Tuple
 
 
-def split_state_information(x: torch.tensor) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
-    """_summary_
+def split_state_information(x: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
+    """splits the state vector from the environment into its individual parts.
 
     Args:
-        x (torch.tensor): 
+        x (Tensor): state vector from the environment
 
     Returns:
-        _type_: _description_
+        Tuple[Tensor, Tensor, Tensor]: target position, current position, state_angles
     """
     target_pos = x[:, 0:2]
     current_pos = x[:, 2:4]

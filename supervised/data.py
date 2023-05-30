@@ -1,17 +1,16 @@
-import torch
 import logging
+from typing import Any, Tuple
+
 import numpy as np
 import pandas as pd
-
-from progress.bar import Bar
-from typing import Any, Tuple
+import torch
 from matplotlib import pyplot as plt
-from torch.utils.data import Dataset, DataLoader
+from progress.bar import Bar
 from torch.autograd import Variable
+from torch.utils.data import DataLoader, Dataset
 
 from envs.robots.ccd import IK
-from supervised.utils import forward_kinematics
-from supervised.utils import split_state_information
+from supervised.utils import forward_kinematics, split_state_information
 from vae.data.data_set import YMode
 
 
@@ -31,7 +30,7 @@ class ActionTargetDataset(Dataset):
         features = torch.tensor(self.target_csv.iloc[idx, 1:3]).float()  # 2D target position
         label = torch.tensor(self.action_csv.iloc[idx, 1:]).float()
         return features, label
-    
+
 
 class ActionStateDataset(Dataset):
     """
@@ -102,12 +101,13 @@ class ActionStateDataset(Dataset):
         return features, label_angles
 
 
-class ConditionalTargetDataset(Dataset):
+class TargetGaussianDataset(Dataset):
     def __init__(self, state_file, std) -> None:
         super().__init__()
         self.state_csv = pd.read_csv(state_file)
-        
-        self.y_mode = YMode.POSITION
+        self.action_csv = None
+
+        self.y_mode = YMode.ACTION
         
         self.std = std if std is not None else 0
         if self.std > 0:
@@ -116,7 +116,11 @@ class ConditionalTargetDataset(Dataset):
             logging.info("done action constraining")
         logging.info("finished setting up conditional action target dataset")
 
-        
+        if self.y_mode == YMode.ACTION:
+            logging.info("create action file")
+            self.action_csv = self.generate_actions()
+            logging.info("done creating action file")
+
     def preprocess_targets(self):
         index = np.array(range(len(self.state_csv)))
         index = np.expand_dims(index, axis=1)
@@ -127,6 +131,31 @@ class ConditionalTargetDataset(Dataset):
         state = np.concatenate([index, target_positions, current_positions, state_angles], axis=1)
         state_df = pd.DataFrame(state)
         return state_df
+
+    def generate_actions(self):
+        index = np.array(range(len(self.state_csv)))
+        index = np.expand_dims(index, axis=1)
+        target_position, _, state_angles = split_state_information(self.state_csv.to_numpy().copy()[:, 1:])
+        
+        action_array = np.zeros_like(state_angles)
+        bar = Bar("get actions for targets", max = len(self))
+        for state_idx in range(len(self)):
+            new_target = np.zeros(3)
+            new_target[0:2] = target_position[state_idx]
+            # solve IK for this new position
+            label_angles, _, _, _ = IK(
+                new_target,
+                np.rad2deg(state_angles[state_idx]).copy(),
+                np.ones_like(state_angles[state_idx]),
+                err_min=0.001)
+            label_angles = np.deg2rad(label_angles)
+            label_angles = np.cumsum(label_angles) - state_angles[state_idx]
+            action_array[state_idx] = label_angles
+            bar.next()
+        bar.finish()
+        
+        action_df = pd.DataFrame(np.concatenate([index, action_array], axis=1))
+        return action_df
 
     def __len__(self):
         return len(self.state_csv)
@@ -139,7 +168,10 @@ class ConditionalTargetDataset(Dataset):
         x = torch.cat([target_position - current_position, current_position, current_angles], dim=1).squeeze()
         x = Variable(x, requires_grad=True)
 
-        y = target_position.squeeze()
+        if self.y_mode == YMode.ACTION:
+            y = torch.tensor(self.action_csv.iloc[idx, 1:].to_numpy()).float()
+        elif self.y_model == YMode.POSITION:
+            y = target_position.squeeze()
 
         return x, y
 
@@ -171,13 +203,13 @@ def get_datasets(feature_source: str, num_joints: int, batch_size: int, action_r
             target_file=f"./datasets/{num_joints}/val/targets_IK_random_start.csv"
             )
         val_dataloader = DataLoader(val_data, batch_size=batch_size)
-    elif feature_source == "noisy_targets":
-        train_data = ConditionalTargetDataset(
+    elif feature_source == "gaussian_target":
+        train_data = TargetGaussianDataset(
             state_file=f"./datasets/{num_joints}/train/state_IK_random_start.csv",
             std=action_radius
         )
         train_dataloader = DataLoader(train_data, batch_size=batch_size)
-        val_data = ConditionalTargetDataset(
+        val_data = TargetGaussianDataset(
             state_file=f"./datasets/{num_joints}/val/state_IK_random_start.csv",
             std=action_radius
         )

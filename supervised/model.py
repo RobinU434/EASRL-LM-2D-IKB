@@ -1,5 +1,6 @@
 import logging
-from typing import Dict
+from typing import Dict, Union
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -21,7 +22,7 @@ class Regressor(nn.Module):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.learning_rate = learning_rate
-        
+
         self.model = nn.Sequential(
             nn.Linear(input_dim, 128),
             nn.ReLU(),
@@ -35,8 +36,9 @@ class Regressor(nn.Module):
         self.post_processor = post_processor
 
         self.optimizer = optim.Adam(self.parameters(), lr=learning_rate) 
-
+    
     def forward(self, x):
+        print("foo")
         out = self.model.forward(x)
         out = self.post_processor(out)
 
@@ -47,10 +49,18 @@ class Regressor(nn.Module):
         loss.backward()
         self.optimizer.step()
 
+    def save(self, path: str, epoch_idx: int, metrics: Union[np.ndarray, dict]):
+        torch.save({
+            'epoch': epoch_idx,
+            'model_state_dict': self.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'loss': metrics['loss'].mean(),
+            }, path)
+
 
 def build_model(feature_source: str, num_joints: int, learning_rate: float, post_processor_config: Dict) -> Regressor:
     post_processor = PostProcessor(**post_processor_config)
-    if feature_source == "state" or feature_source == "noisy_targets":
+    if feature_source == "state" or feature_source == "gaussian_target":
         logging.info("use 'state' as feature source")
         model = Regressor(4 + num_joints, num_joints, learning_rate, post_processor)
     elif feature_source == "targets":

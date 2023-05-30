@@ -191,7 +191,7 @@ class SAC:
                     self._q1.soft_update(self._q1_target, self._tau)
                     self._q2.soft_update(self._q2_target, self._tau)
 
-                if type(self._pi.actor) == LatentActor and self._pi.actor.vae_learning:
+                if type(self._pi.actor) == LatentActor and self._pi.actor.vae_learning_mode:
                     data = BufferDataset(self._memory)
                     data = DataLoader(data, batch_size=128, shuffle=True)
                     r_loss_mean, kl_loss_mean = self._pi.actor.train_vae(data, self._train_iterations) 
@@ -221,7 +221,7 @@ class SAC:
                     self._logger.add_figure("sac/polar_exploration", fig, epoch_idx)
                     plt.close()
                     # log vae stats
-                    if type(self._pi.actor) == LatentActor and self._pi.actor.vae_learning:
+                    if type(self._pi.actor) == LatentActor and self._pi.actor.vae_learning_mode:
                         self._logger.add_scalar("vae/r_loss", r_loss_mean, epoch_idx)
                         self._logger.add_scalar("vae/kl_loss", kl_loss_mean, epoch_idx)
 
@@ -236,7 +236,7 @@ class SAC:
                     self._fs_logger.add_scalar("sac/alpha_loss", torch.tensor(alpha_losses).mean(), epoch_idx)
                     self._fs_logger.add_scalar("sac/log_prob", np.array(log_probs).mean(), epoch_idx)
                     # log vae stats
-                    if type(self._pi.actor) == LatentActor and self._pi.actor.vae_learning:
+                    if type(self._pi.actor) == LatentActor and self._pi.actor.vae_learning_mode:
                         self._fs_logger.add_scalar("vae/r_loss", r_loss_mean, epoch_idx)
                         self._fs_logger.add_scalar("vae/kl_loss", kl_loss_mean, epoch_idx)
 

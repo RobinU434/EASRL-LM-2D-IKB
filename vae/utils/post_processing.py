@@ -1,4 +1,3 @@
-from typing import Any
 import torch
 
 
@@ -14,6 +13,7 @@ class PostProcessor:
 
         self.enabled = enabled
         self.call_func = self.resacale if self.enabled else lambda x: x
+
 
     def convert_to_float(self, value: str):
         try:
@@ -38,7 +38,7 @@ class PostProcessor:
         x = x * self.span # ranging now from 0 to self.max_action - self.min_action
         x = x + self.min_action  # ranging now from self.min_action to self.max_action
 
-        return x 
-    
+        return x
+
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         return self.call_func(x)

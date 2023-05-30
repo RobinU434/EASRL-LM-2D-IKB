@@ -137,7 +137,7 @@ class PointDistanceLoss(VAELoss):
         """
         self.r_loss = torch.linalg.norm(y - x_hat, dim=1).mean() 
         return self.r_loss
-    
+
 
 class IKLoss:
     """
@@ -157,7 +157,7 @@ class IKLoss:
             distance_loss_weight: float = 1, 
             target_mode: int = YMode.UNDEFINED,
             device: str = "cpu") -> None:
-        
+
         self.kl_loss_weight = kl_loss_weight
         self.reconstruction_loss_weight = reconstruction_loss_weight
 
@@ -173,20 +173,31 @@ class IKLoss:
         self.target_mode = target_mode
         if self.target_mode == YMode.UNDEFINED:
             raise ValueError(f"You have to chose a proper target mode. You can chose from {list(YMode)}. Normally you get this value from your loaded dataset member variable y_mode")
-        
+
         elif self.target_mode == YMode.ACTION:
             logging.info("DistanceLoss and ImitationLoss are enabled")
             logging.info(f"corresponding weights: distance: {self.distance_loss_weight}, imitation: {self.imitation_loss_weight}")
             self.imitation_loss_func = ImitationLoss()
             self.distance_loss_func = DistanceLoss()
 
+            if self.distance_loss_weight == 0 and self.imitation_loss_weight == 0:
+                logging.error("distance loss weight and imitation loss weight is 0, therefor it is not possible to create any gradient")
+
         elif self.target_mode == YMode.POSITION:
             logging.warning(f"Only DistanceLoss is enabled ImitationLoss is disabled. The corresponding weight {self.imitation_loss_weight} will not be taken into account")
             self.imitation_loss_func = lambda *x: torch.zeros(1).to(device)
             self.distance_loss_func = DistanceLoss()
 
+            if self.distance_loss_weight == 0:
+                logging.error("distance loss weight is zero and imitation loss is disabled, therefor it is not possible to create any gradient")
+
         else:
             raise ValueError(f"Unrecognized target mode {self.target_mode}. You can choose from {list(YMode)}")
+        
+        if self.reconstruction_loss_weight == 0:
+            logging.warning("reconstruction loss is disabled")
+        if self.kl_loss_weight == 0:
+            logging.warning("kl loss is disabled")
 
         self.device = device
 
@@ -194,7 +205,7 @@ class IKLoss:
             self,
             y: torch.Tensor,
             x_hat: torch.Tensor):
-        
+
         self.imitation_loss = self.imitation_loss_func(y, x_hat)
 
         predicted_position = forward_kinematics(x_hat)[:, -1].to(self.device)
@@ -202,18 +213,18 @@ class IKLoss:
             target_position = y
         elif self.target_mode == YMode.ACTION:
             target_position = forward_kinematics(y)[:, -1].to(self.device)
-        
+
         self.distance_loss = self.distance_loss_func(target_position, predicted_position)
 
         self.r_loss = self.imitation_loss_weight * self.imitation_loss + \
             self.distance_loss_weight * self.distance_loss
-        
+
         return self.r_loss
-    
+
     def kl_divergence(self, mu: torch.Tensor, log_std: torch.Tensor):
         self.kl_loss = kl_divergence(mu, log_std)
         return self.kl_loss
-    
+
     def __call__(
             self,
             y: Tuple[torch.Tensor, torch.Tensor],
@@ -223,10 +234,10 @@ class IKLoss:
         self.loss = self.reconstruction_loss_weight * self.reconstruction_loss(y, x_hat) + \
             self.kl_loss_weight * self.kl_divergence(mu, log_std)
         return self.loss
-    
+
     def __str__(self) -> str:
-        imitation_enabled = True if type(self.imitation_loss_func) == ImitationLoss else False
-        distance_enabled = True if type(self.distance_loss_func) == DistanceLoss else False
+        imitation_enabled = isinstance(self.imitation_loss_func, ImitationLoss) 
+        distance_enabled = isinstance(self.distance_loss_func, DistanceLoss)
         s =  f"""Use: {type(self).__name__}
         kl_loss_weight: {self.kl_loss_weight}
         reconstruction_loss_weight: {self.reconstruction_loss_weight}

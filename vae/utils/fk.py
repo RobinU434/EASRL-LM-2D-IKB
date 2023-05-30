@@ -1,5 +1,6 @@
 import torch
 
+
 def forward_kinematics(angles: torch.Tensor):
     """_summary_
 
@@ -26,4 +27,3 @@ def forward_kinematics(angles: torch.Tensor):
         positions[:, idx + 1] = new_pos
 
     return positions
-

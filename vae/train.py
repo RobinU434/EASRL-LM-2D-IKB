@@ -10,7 +10,7 @@ from progress.bar import Bar
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from vae.data.data_set import ActionTargetDatasetV2, ConditionalActionTargetDataset, ConditionalTargetDataset, YMode
+from vae.data.data_set import ActionTargetDatasetV2, ConditionalActionTargetDataset, TargetGaussianDataset, YMode
 from vae.data.load_data_set import load_action_dataset, load_action_target_dataset, load_target_dataset
 from vae.utils.extract_angles_and_position import split_conditional_info, split_state_information
 from vae.utils.loss import DistanceLoss, ImitationLoss, VAELoss, get_loss_func, DistVAELoss, IKLoss
@@ -97,6 +97,7 @@ def run_model(
         current_angles = c_dec[:, -autoencoder.output_dim:]
         action = x_hat + current_angles
         if loss_func.target_mode == YMode.ACTION:
+            # y is expected to be the target action we want to encode
             y = y + current_angles
         loss = loss_func(y=y, x_hat=action, mu=mu, log_std=log_std)
         
@@ -238,7 +239,7 @@ if __name__ == "__main__":
     elif config["dataset"] == "conditional_action_target":
         train_dataloader, val_dataloader, test_dataloader = load_action_target_dataset(config)
 
-    elif config["dataset"] == "conditional_target":
+    elif config["dataset"] == "target_gaussian":
         train_dataloader, val_dataloader, test_dataloader = load_target_dataset(config)
 
     loss_config = config["loss_func"]

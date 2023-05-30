@@ -11,7 +11,11 @@ from torch.distributions import constraints
 
 from algorithms.common.distributions import get_distribution
 from algorithms.sac.actor.latent_actor import LatentActor
+from algorithms.sac.actor.super_actor import SuperActor
+
 from algorithms.sac.actor.multi_actor import Actor, InformedMultiAgent, MultiAgent
+from algorithms.sac.actor.super_actor import SuperActor
+from supervised.utils import split_state_information
 
 class PolicyNet(nn.Module):
     def __init__(
@@ -39,9 +43,18 @@ class PolicyNet(nn.Module):
                                      output_dim=output_dim,
                                      learning_rate=learning_rate,
                                      conditional_info_dim=observation_space_dim,
-                                     vae_learning=actor_config["vae_learning"],
+                                     vae_learning_mode=actor_config["learning_mode"],
                                      checkpoint_dir=actor_config["checkpoint_dir"], 
                                      log_dir=actor_config["log_dir"])
+        elif actor_config["type"] == SuperActor:
+            self.actor = SuperActor(
+                device=actor_config["device"],
+                input_dim=input_dim,
+                output_dim=output_dim, 
+                learning_rate=learning_rate,
+                super_learning_mode=actor_config["learning_mode"],
+                checkpoint_dir=actor_config["checkpoint_dir"], 
+                log_dir=actor_config["log_dir"])
     
         # self.actor = InformedMultiAgent(input_size, output_size, learning_rate, 2)
         # self.actor = MultiAgent(input_size, output_size, learning_rate, 2)
@@ -79,7 +92,7 @@ class PolicyNet(nn.Module):
         log_prob = log_prob.sum(dim=1) # independence assumption between individual probabilities
         # log(p(a1, a2)) = log(p(a1) * p(a2)) = log(p(a1)) + log(p(a2))
 
-        if type(self.actor) == LatentActor:
+        if isinstance(self.actor, LatentActor):
             if self.actor.auto_encoder.conditional_info_dim == 0:
                 action = self.actor.auto_encoder.decoder.forward(action)
             elif self.actor.auto_encoder.conditional_info_dim == 2:
@@ -91,12 +104,20 @@ class PolicyNet(nn.Module):
                 action = self.actor.auto_encoder.decoder.forward(latent_input)
             # move action to cpu
             action = action.cpu()
-            # action = action + 1 * int(self.actor.vae_config["normalize"])
+        elif isinstance(self.actor, SuperActor):
+            normalized_action = torch.tanh(action)
+            _, current_position, state_angles = split_state_information(x)
+            supervised_input = torch.cat([normalized_action, current_position, state_angles], dim=1)
+            supervised_input = supervised_input.to(self.actor.device)
+            action = self.actor.supervised_model.forward(supervised_input)
+
+            action = action.cpu()
             
         # shape action for buffer layout
         # action = action.squeeze()
        
         # real_action = (torch.tanh(action) + 1.0) * torch.pi  # multiply by pi in order to match the action space
+        # TODO(RobunU434): add post processor functionality in here
         real_action = torch.tanh(action) * self.action_magnitude - (1 - self.action_magnitude)
         
         # Squash correction (from original SAC implementation)

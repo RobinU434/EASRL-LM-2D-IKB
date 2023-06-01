@@ -107,7 +107,7 @@ class TargetGaussianDataset(Dataset):
         self.state_csv = pd.read_csv(state_file)
         self.action_csv = None
 
-        self.y_mode = YMode.ACTION
+        self.y_mode = YMode.POSITION
         
         self.std = std if std is not None else 0
         if self.std > 0:
@@ -170,7 +170,7 @@ class TargetGaussianDataset(Dataset):
 
         if self.y_mode == YMode.ACTION:
             y = torch.tensor(self.action_csv.iloc[idx, 1:].to_numpy()).float()
-        elif self.y_model == YMode.POSITION:
+        elif self.y_mode == YMode.POSITION:
             y = target_position.squeeze()
 
         return x, y

@@ -152,7 +152,7 @@ def get_loss_func(loss_func_name: str, device: str, y_mode: int = YMode.UNDEFINE
             imitation_loss_weight=1,
             distance_loss_weight=1,
             regularizer_weight=0.1,
-            y_mode=y_mode,
+            target_mode=y_mode,
         )
     else:
         logging.error(f"chose a loss func from: {loss_func_names}, but you chose: ", loss_func_name)

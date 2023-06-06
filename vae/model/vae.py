@@ -1,4 +1,4 @@
-# https://avandekleut.github.io/vae/
+#  0
 
 import math
 from typing import Tuple, Union

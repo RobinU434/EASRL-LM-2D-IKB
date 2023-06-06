@@ -70,23 +70,24 @@ def load_config(args: Namespace) -> dict:
     return config
 
 
-def extract_actor_config(config: dict) -> dict:
+def extract_actor_config(config: dict, log_dir: str = "") -> dict:
     # there is the normal fead forward actor and the latent actor
     # TODO(RobinU434): make warning if multiple actors are enabled
+    config = copy.deepcopy(config)
     if config["normal_actor"]["enabled"]:
         actor_config = config["normal_actor"]
         actor_config["type"] = Actor
-        return actor_config
     elif config["latent_actor"]["enabled"]:
         actor_config = config["latent_actor"]
         actor_config["type"] = LatentActor
-        return actor_config
     elif config["super_actor"]["enabled"]:
         actor_config = config["super_actor"]
         actor_config["type"] = SuperActor
-        return actor_config
     else:
         logging.error("There must be at least one actor enabled")
+
+    actor_config["log_dir"] = log_dir
+    return actor_config
 
 
 def build_env(config: dict):
@@ -120,7 +121,7 @@ def main(config):
     # reseed the environment
     time_stamp = int(time.time())
     torch.manual_seed(time_stamp)
-
+    
     env = build_env(config)
     
     # path for file system logging
@@ -216,7 +217,6 @@ if __name__ == "__main__":
     print(f"Start to do {args.num_runs} experiment")
     for i in range(args.num_runs):
         print(f"Started {i}th experiment")
-        main(config)
         try:
             main(config)
         except ValueError:

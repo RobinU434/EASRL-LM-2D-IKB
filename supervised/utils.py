@@ -1,7 +1,7 @@
-import torch
-
-from torch import Tensor
 from typing import Tuple
+
+import torch
+from torch import Tensor
 
 
 def split_state_information(x: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
@@ -19,14 +19,14 @@ def split_state_information(x: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
     return target_pos, current_pos, angles
 
 
-def forward_kinematics(angles: torch.tensor):
-    """_summary_
+def forward_kinematics(angles: torch.Tensor) -> torch.Tensor:
+    """computes forward kinematics for a robot arm with segment length = 1
 
     Args:
         angles (np.array): shape (num_arms, num_joints)
 
     Returns:
-        _type_: _description_
+        torch.Tensor: individual segment positions (num_arms, num_joints + 1, 2)
     """
     num_arms, num_joints = angles.size()
     positions = torch.zeros((num_arms, num_joints + 1, 2))
@@ -38,11 +38,10 @@ def forward_kinematics(angles: torch.tensor):
         new_pos = torch.zeros((num_arms, 2))
         new_pos[:, 0] = torch.cos(angles[:, idx])
         new_pos[:, 1] = torch.sin(angles[:, idx])
-        
+
         # translate position
         new_pos += origin
 
         positions[:, idx + 1] = new_pos
 
     return positions
-

@@ -1,6 +1,7 @@
 import numpy as np
 
-def sample_target(radius: float, n_points: int = 1) -> np.array:
+
+def sample_target(radius: float, n_points: int = 1) -> np.ndarray:
     """
     sample goal position in a circular shape around the origin
     radius and angle is sampled uniformly
@@ -13,6 +14,6 @@ def sample_target(radius: float, n_points: int = 1) -> np.array:
     """
     # angle to sample from
     theta = np.random.uniform(0, 2 * np.pi, size=n_points)
-    radius = np.random.uniform(0, radius, size=n_points)
-    vector = radius * np.array([np.cos(theta), np.sin(theta)])
+    radius_array = np.random.uniform(0, radius, size=n_points)
+    vector = radius_array * np.array([np.cos(theta), np.sin(theta)])
     return vector.squeeze().T

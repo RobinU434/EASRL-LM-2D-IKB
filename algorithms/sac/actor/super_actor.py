@@ -10,7 +10,7 @@ import torch.nn as nn
 from algorithms.sac.actor.base_actor import Actor, TrainMode
 from supervised.model import Regressor
 
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Literal
 
 from vae.utils.post_processing import PostProcessor
 
@@ -34,14 +34,16 @@ def extract_loss(path: str) -> float:
         path (str): path to checkpoint
 
     Returns:
-        loss: validation loss 
+        loss: validation loss
     """
     checkpoint_name = path.split("/")[-1]
-    loss = float(checkpoint_name.split("_")[-1][: -3])
+    loss = float(checkpoint_name.split("_")[-1][:-3])
     return loss
 
 
-def load_best_checkpoint(vae_results_dir: str, output_dim: int) -> Tuple[str, Any, dict]:
+def load_best_checkpoint(
+    vae_results_dir: str, output_dim: int
+) -> Tuple[str, Any, dict]:
     """_summary_
 
     Args:
@@ -53,28 +55,30 @@ def load_best_checkpoint(vae_results_dir: str, output_dim: int) -> Tuple[str, An
     """
     paths = glob.glob(vae_results_dir + f"/{output_dim}_*/*.pt")
     if len(paths) == 0:
-        logging.error(f"there is not supervised model trained with output_dim dim: {output_dim}")
+        logging.error(
+            f"there is not supervised model trained with output_dim dim: {output_dim}"
+        )
     losses = map(extract_loss, paths)
     d = dict(zip(losses, paths))
     path = d[min(d)]
     print(f"use checkpoint for supervised at {path}")
     file_name = path.split("/")[-1]
-    config = load_config("/".join(path.split("/")[: -1] + ["config.yaml"]))
+    config = load_config("/".join(path.split("/")[:-1] + ["config.yaml"]))
     return file_name, load_checkpoint(path), config
 
 
 class SuperActor(nn.Module):
     def __init__(
-        self, 
+        self,
         device,
         input_dim: int,
         output_dim: int,
         learning_rate: float,
         architecture: List[int] = [128, 128],
-        super_learning_mode: int = TrainMode.STATIC,
+        super_learning_mode: Literal[TrainMode] = TrainMode.STATIC,
         checkpoint_dir: str = "results/supervised",
         log_dir: str = "",  # for saving the loaded checkpoint
-        ) -> None:
+    ) -> None:
         super().__init__()
 
         self.device = device
@@ -83,23 +87,31 @@ class SuperActor(nn.Module):
             input_dim=input_dim,
             output_dim=2,  # we want to predict a relative target position in 2D space
             learning_rate=learning_rate,
-            architecture=architecture
+            architecture=architecture,
         )
 
         self.supervised_model = Regressor(
             input_dim=input_dim,
             output_dim=output_dim,
             learning_rate=learning_rate,
-            post_processor=PostProcessor(enabled=False)  # important to disable because the is an additional tanh function in policy net
+            # important to disable because the is an additional tanh function in policy net
+            post_processor=PostProcessor(enabled=False),
         ).to(self.device)
 
         self.super_learning_mode = super_learning_mode
         if self.super_learning_mode == TrainMode.STATIC.value:
             # load model and perform NO tuning at all
-            file_name, checkpoint, supervised_config = load_best_checkpoint(checkpoint_dir, output_dim)
+            file_name, checkpoint, supervised_config = load_best_checkpoint(
+                checkpoint_dir, output_dim
+            )
             self.supervised_model.load_state_dict(checkpoint["model_state_dict"])
             self.supervised_config = supervised_config
-            
+            self.supervised_model.save(
+                log_dir + "/" + file_name,
+                checkpoint["epoch"],
+                {"loss": checkpoint["loss"]},
+            )
+
         elif self.super_learning_mode == TrainMode.FINE_TUNING.value:
             # load model and perform fine tuning on that checkpoint
             raise NotImplementedError
@@ -107,7 +119,9 @@ class SuperActor(nn.Module):
             # load NO checkpoint and train the supervised learning model on the fly
             raise NotImplementedError
         else:
-            raise ValueError(f"You picked the wrong super_learning status: {self.super_learning_mode}")
+            raise ValueError(
+                f"You picked the wrong super_learning status: {self.super_learning_mode}"
+            )
 
     def forward(self, x: Tensor):
         mu, std = self.actor.forward(x)

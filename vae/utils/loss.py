@@ -20,13 +20,13 @@ def cyclic_mse_loss(x: torch.Tensor, x_hat: torch.Tensor) -> torch.Tensor:
     return mse
 
 
-def mse(diff: torch.tensor):
+def mse(diff: torch.Tensor):
     # mean squared error
     # sum over the number of joints and mean for the batch
     return torch.float_power(diff, 2).mean()
 
 
-def angle_diff(a : torch.Tensor, b: torch.Tensor, kappa: torch.Tensor = torch.pi):
+def angle_diff(a : torch.Tensor, b: torch.Tensor, kappa: float = torch.pi):
         # source: https://stackoverflow.com/questions/1878907/how-can-i-find-the-smallest-difference-between-two-angles-around-a-point
         dif = a - b
         return (dif + kappa) % (2 * kappa) - kappa
@@ -89,10 +89,10 @@ class CyclicVAELoss(VAELoss):
 
         self.kappa = torch.pi
 
-    def angle_diff(self, a: torch.tensor, b: torch.tensor):
+    def angle_diff(self, a: torch.Tensor, b: torch.Tensor):
         return angle_diff(a, b, self.kappa)
 
-    def reconstruction_loss(self, x: torch.tensor, x_hat: torch.tensor):
+    def reconstruction_loss(self, x: torch.Tensor, x_hat: torch.Tensor):
         r_loss = mse(self.angle_diff(x, x_hat))
         self.r_loss = r_loss
         return r_loss      
@@ -209,6 +209,7 @@ class IKLoss:
         self.imitation_loss = self.imitation_loss_func(y, x_hat)
 
         predicted_position = forward_kinematics(x_hat)[:, -1].to(self.device)
+        target_position = None
         if self.target_mode == YMode.POSITION:
             target_position = y
         elif self.target_mode == YMode.ACTION:

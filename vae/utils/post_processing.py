@@ -29,7 +29,7 @@ class PostProcessor:
             x (torch.Tensor): tensor to rescale
 
         Returns:
-            torch.Tensor: rescaled tensro
+            torch.Tensor: rescaled tensor
         """
         x = torch.tanh(x)
 

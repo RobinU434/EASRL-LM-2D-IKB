@@ -41,9 +41,9 @@ class PlaneRobotEnv(gym.Env):
         self._discrete_mode = discrete_mode
 
         if action_mode == "strategic":
-            self._strategic_mode = 1
+            self._strategic_mode = True
         elif action_mode == "one_shot":
-            self._strategic_mode = 0
+            self._strategic_mode = False
         else:
             logging.error("action mode has to be either 'strategic' or 'one_shot'")
 
@@ -80,14 +80,13 @@ class PlaneRobotEnv(gym.Env):
     def get_target_position(radius: float):
         return sample_target(radius)
 
-    def _apply_action(self, action: np.array):
-        """apply +-1 action on robot arm
-        TODO: check for constraints
+    def _apply_action(self, action: np.ndarray):
+        """adds action to the robot arm angles
 
         Args:
-            action (np.array): +-1 action
+            action (np.ndarray): continuous action shape: () 
         """
-        if type(action) == torch.Tensor:
+        if isinstance(action, torch.Tensor):
             # detach if the action tensor requires grad = True
             action = action.detach().numpy()
 
@@ -98,7 +97,7 @@ class PlaneRobotEnv(gym.Env):
         
         self._robot_arm.set(action)
 
-    def _observe(self, normalize: bool = True):
+    def _observe(self, normalize: bool = False):
         if normalize:
             # normalize observations 
             target_position = self._target_position / self._robot_arm.arm_length
@@ -135,7 +134,7 @@ class PlaneRobotEnv(gym.Env):
         
         return obs
 
-    def reset(self, target_position: np.array = None) -> Any:
+    def reset(self, target_position: np.ndarray = None) -> Any:
         self._robot_arm.reset()
         self._task.reset()
 
@@ -148,7 +147,7 @@ class PlaneRobotEnv(gym.Env):
 
         return self._observe()
 
-    def step(self, action: np.array) -> Tuple[np.array, float, bool, Dict[str, Any]]:
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
         """_summary_
 
         Args:
@@ -164,10 +163,13 @@ class PlaneRobotEnv(gym.Env):
         normalize_factor = 1 / (2 * self._robot_arm.arm_length)
 
         # calculate reward
-        if type(self._task) == ReachGoalTask:
+        if isinstance(self._task, ReachGoalTask):
             reward = self._task.reward(self._robot_arm.end_position, self._target_position, normalize_factor) 
-        elif type(self._task) == ImitationTask:
+        elif isinstance(self._task, ImitationTask):
             reward = self._task.reward(self._target_position, self._robot_arm.angles)
+        else:
+            logging.warning("no reward calculation")
+            reward = 0
 
         # get observation
         obs = self._observe()
@@ -193,7 +195,7 @@ class PlaneRobotEnv(gym.Env):
 
         img.save(path)
 
-    def _draw_goal(self, draw, origin: np.array = np.zeros((2)), radius=4):
+    def _draw_goal(self, draw, origin: np.ndarray = np.zeros((2)), radius=4):
         x, y = origin
         # distances to origin
         # (left, upper, right, lower)

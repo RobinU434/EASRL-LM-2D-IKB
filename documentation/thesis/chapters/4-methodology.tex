@@ -1,0 +1,87 @@
+\chapter{Methodology}\label{chap:Methodology}
+
+covers:
+research idea
+rl-environment
+experiments on VAE, Supervised and merged pipeline
+
+\section{Research Idea}
+
+The primary research idea of my thesis is to pursue a transformation from the RL environment action space $\mathcal{A}$ into a lower-dimensional latent action space $\mathcal{A}_L$. This latent action space will align with the latent space between the encoder and decoder of a VAE model or the feature space of a feed-forward-neural network. By doing so, we aim to enable RL agents to effectively explore and learn within a more compact and smoothened action representation.
+
+We propose two potential approaches for achieving this reduction in dimensionality: VAEs and supervised models.
+
+In the VAE approach, a conditional or unconditional generative model is employed to learn a latent representation of the action space. By training the VAE on actions from an expert or on state target combinations to emphasis a solution which is independent from an expert, we aim to capture the underlying structure and patterns within the action space from the RL environment. This latent representation can potentially offer a more concise and informative representation of the actions, encourage more efficient learning and exploration for RL agents.
+
+Alternatively, the supervised model approach involves training a supervised learning model, such as a neural network, to directly transform the a defined lower dimensional latent action into the high-dimensional action space. This transformation is learned based on labeled examples of actions and their corresponding latent representations. In the conducted experiments the lower dimensional-action space is just the desired action outcome. By leveraging supervised learning techniques, we aim to find a mapping between state information and desired action outcome to the RL environment action space, allowing RL agent to operate effectively on a higher level within the reduced-dimensional latent action space..
+
+\section{RL Environment}
+
+To apply RL in general you need an environment the agent can send actions to and receives feedback as discussed in \secref{sec:RL-Framework}. As previously introduced the key problem we are targeting is inverse kinematics of a robot arm. This problem turn out to be suitable because:
+\begin{itemize}
+    \item the action space is scalable by simply adding additional joints to the robot arm
+    \item it can be simplified into a 2D space with a fast and reliable implementation
+    \item it is expandable. You are always able to extend the environment with additional constrains like objects the robot has to navigate around or joint angle constrains.
+\end{itemize}
+
+In this section I'm going to present the a novel RL-Environment for bench-marking the performance of different algorithms to solve inverse kinematics for a robot arm with $N$ many joints and subsequently $N$ many segments with lengths $l \in\mathbb{R}_{>0}^N$ in 2D space.  
+
+\subsection{State Space}
+
+The state space $\mathcal{S} \subset \mathbb{R}^{4 + N}$ for this environment consists of three main building blocks. 
+
+\begin{itemize}
+    \item \textbf{goal information} $p_\text{target} \in \mathbb{R}^2$: This vector provides information where to move the end-effector. This position is lies always in for the robot arm, reachable distance. Mathematical speaking: $||p_\text{target}||_2 \leq \sum l$ 
+    \item \textbf{state position} $p_\text{current} \in \mathbb{R}^2$: This vector should help the agent to understand where the current end-effector is placed and how an action has influenced the current end-effector position. Because the current position is attached to the robot arm: $||p_\text{current}||_2 \leq \sum l$
+    \item \textbf{joint angles} $q \in [0, 2\pi)^N$: This vector contains information about the current joint angle configuration.
+\end{itemize}
+A state $\mathcal{s}_t \in \mathcal{S}$ at time $t$ has for all $t$ the same composition
+
+\begin{equation}
+    \mathcal{s}_t = (p_{\text{target}, t}, p_{\text{current}, t}, q_t)
+\end{equation}\label{eqn: state}
+
+\subsection{Action Space}
+
+The action space $\mathcal{A} \subset \mathbb{R}^N$
+
+\subsection{Reward Function}
+
+The reward function is a vital component of the RL formulation as it aims to mathematically capture the desired behavior of the robot. It follows a simple pattern: positive rewards are used to reinforce desired actions or trajectories. This reinforcement helps shape the agent's policy, encouraging it to explore and exploit actions that maximize the cumulative reward over time. On the other hand negative rewards are employed to discourage unsuccessful or unintended behavior. Achieving a balance between the reward function and episode termination is crucial. While you don't want the agent to remain stuck indefinitely, it is also important to penalize states where the agent may become trapped. This encourages the agent to explore alternative options and avoid undesired states, striking a balance between exploration and exploitation. Throughout the thesis the reward function is refered to as $R: \mathcal{S} \to \mathcal{R}$ which maps a state of the state space to an element of all possible rewards $R \subseteq \mathbb{R}$.
+
+\section{Dataset Creation}
+
+why do we need a dataset
+what kinds of different ways to create a dataset
+
+\subsection{Uniform Sampling}
+
+Vanilla uniform sampling algorithm for sampling from a uniform distributions.
+What can we observe:
+    radius distribution of 2D forward kinematics is very similar to a half Normal distribution
+    with increasing number of joints the std relative the arms reach shrinks
+    plot how strong it shrinks
+    but we need a uniform distribution wrt. radius and angle. 
+
+\subsection{Expert Guidance}
+
+Dataset creation with expert guidance describes an algorithm:
+    1. sample a position in 2D space from a uniform and takes it as the state position
+    2. sample initial arm angles from a uniform distribution
+    3. solve IK for this position and with the random angles from 2. as start and take the resulting angles as the state angles
+    4. sample a second position in 2D as the target position
+    5. solve IK for the target position and with the state angles as start and take the difference between resulting angles and state angles as the action.
+
+advantages:
+    - we are able to sample target positions and state positions uniformly wrt. angel and radius
+
+disadvantages:
+    - we are bound the the solutions an expert is providing
+    - it is slower compared to the vanilla uniform sampling algorithm
+
+Plots
+    Runtime complexity wrt. number of joints
+    expert actions with 2 joints for demonstrating that the actions of the action space cover only a very limited subset of possible actions. Why Two -> because we can just draw a heatmap in two dimensions
+
+
+\sectioon

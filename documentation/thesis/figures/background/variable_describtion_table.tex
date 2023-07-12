@@ -1,0 +1,42 @@
+
+
+\begin{table}[]
+    \centering
+    \begin{tabular}{Ll} 
+        \hline
+        \text{\textbf{Dimensions}} & Description \\
+        \hline
+        N & Number of joints, $N \in \{x \in \mathbb{N} | x > 1\}$ \\ 
+        
+        \hline
+        \text{\textbf{Variables}} & Description \\
+        \hline
+        l & segment lengths, $l \in \{x \in \mathbb{R}_{>0}^N$
+        q & joint angles, $q \in [0, 2\pi)^N$\\ 
+        p, \ v & position, vector in 2D space, $p, v \in \mathbb{R}^2$\\
+        t & time step, $t \in \mathbb{N}$
+        \pi & pi $\approx 3.141$
+        \theta & parameters
+        \pi_\theta & parameterized actor
+        
+        \hline
+        \text{\textbf{Sets}} & Description \\
+        \hline
+        \mathbb{N}, natural numbers
+        \mathbb{R}, \mathbb{R}_{>0} & real numbers, $\{x \in \mathbb{R} | x > 0\}$  
+        \mathcal{S} & state space \\ 
+        \mathcal{A} & action space \\
+        
+        \hline
+        \text{\textbf{Distributions}} & Description \\
+        \hline
+        
+        \hline
+        \text{\textbf{Functions}} & Description \\
+        \hline
+        ||\mathcal{x}||_2 & Euclidean or $L^2$ norm $||x||_2 = \sqrt{\sum_{x\in\mathcal{x}} x^2}$
+        (X, Y) & concatenations of two vectors $X$ and $Y$, \todo{define concatenations of multiple elements recursively?}
+    \end{tabular}
+    \caption{Notation and names of variables}
+    \label{tab:notation}
+\end{table}

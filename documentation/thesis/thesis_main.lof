@@ -1,0 +1,20 @@
+\babel@toc {english}{}\relax 
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {1}{\ignorespaces interaction between agent and the environment\relax }}{10}{figure.caption.10}%
+\contentsline {figure}{\numberline {2}{\ignorespaces neural network schema}}{16}{figure.caption.11}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {schematic drawing of a feed forward neural network}}}{16}{subfigure.2.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {schematic drawing of a single neuron}}}{16}{subfigure.2.2}%
+\contentsline {figure}{\numberline {3}{\ignorespaces common activation functions in a neural network}}{16}{figure.caption.12}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Sigmoid}}}{16}{subfigure.3.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {hyperbolic tangent function}}}{16}{subfigure.3.2}%
+\contentsline {subfigure}{\numberline {(c)}{\ignorespaces {rectified linear unit}}}{16}{subfigure.3.3}%
+\contentsline {figure}{\numberline {4}{\ignorespaces Autoencoder schematics}}{18}{figure.caption.13}%
+\contentsline {figure}{\numberline {5}{\ignorespaces Conditional Variational Autoencoder schematics}}{20}{figure.caption.14}%
+\contentsline {figure}{\numberline {6}{\ignorespaces CCD geometry\relax }}{27}{figure.caption.15}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

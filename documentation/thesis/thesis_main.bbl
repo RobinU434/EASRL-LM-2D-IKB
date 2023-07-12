@@ -1,0 +1,18 @@
+\begin{thebibliography}{1}
+
+\bibitem{kingma2014adam}
+D.~Kingma and J.~Ba, ``Adam: A method for stochastic optimization,'' {\em arXiv
+  preprint arXiv:1412.6980}, 2014.
+
+\bibitem{bromley1993siamesesignature}
+J.~Bromley, J.~W. Bentz, L.~Bottou, I.~Guyon, Y.~LeCun, C.~Moore,
+  E.~S{\"a}ckinger, and R.~Shah, ``Signature verification using a “siamese”
+  time delay neural network,'' {\em International Journal of Pattern
+  Recognition and Artificial Intelligence}, vol.~7, no.~04, pp.~669--688, 1993.
+
+\bibitem{muja2009flann}
+M.~Muja and D.~G. Lowe, ``Fast approximate nearest neighbors with automatic
+  algorithm configuration.,'' {\em VISAPP (1)}, vol.~2, no.~331-340, p.~2,
+  2009.
+
+\end{thebibliography}

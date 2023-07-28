@@ -2,8 +2,10 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {algorithm}{\numberline {1}{\ignorespaces Soft Actor Critic\relax }}{13}{algorithm.1}%
-\contentsline {algorithm}{\numberline {2}{\ignorespaces Cyclic Coordinate Descent Pseudo Code\relax }}{26}{algorithm.2}%
+\contentsline {algorithm}{\numberline {1}{\ignorespaces Soft Actor Critic\relax }}{23}{algorithm.1}%
+\contentsline {algorithm}{\numberline {2}{\ignorespaces Stochastic gradient descent\relax }}{29}{algorithm.2}%
+\contentsline {algorithm}{\numberline {3}{\ignorespaces Forward Kinematics\relax }}{43}{algorithm.3}%
+\contentsline {algorithm}{\numberline {4}{\ignorespaces Cyclic Coordinate Descent Pseudo Code\relax }}{46}{algorithm.4}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }

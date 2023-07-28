@@ -6,51 +6,50 @@
 \contentsline {chapter}{\numberline {2}Related Work}{7}{chapter.2}%
 \contentsline {chapter}{\numberline {3}Background}{9}{chapter.3}%
 \contentsline {section}{\numberline {3.1}RL Framework}{9}{section.3.1}%
-\contentsline {section}{\numberline {3.2}Soft Actor Critic}{11}{section.3.2}%
-\contentsline {subsection}{\numberline {3.2.1}Actor-Critic Algorithms}{11}{subsection.3.2.1}%
-\contentsline {subsection}{\numberline {3.2.2}Soft Actor Critic Algorithm}{12}{subsection.3.2.2}%
-\contentsline {subsection}{\numberline {3.2.3}SAC in Practice}{12}{subsection.3.2.3}%
-\contentsline {section}{\numberline {3.3}Neural Networks}{14}{section.3.3}%
-\contentsline {subsection}{\numberline {3.3.1}The Rise of Deep Learning}{14}{subsection.3.3.1}%
-\contentsline {subsection}{\numberline {3.3.2}Neural Network Architecture}{15}{subsection.3.3.2}%
-\contentsline {subsection}{\numberline {3.3.3}Supervised Learning}{17}{subsection.3.3.3}%
-\contentsline {subsection}{\numberline {3.3.4}Applications of Neural Networks}{17}{subsection.3.3.4}%
-\contentsline {section}{\numberline {3.4}Variational Autoencoder}{17}{section.3.4}%
-\contentsline {subsection}{\numberline {3.4.1}Introduction}{17}{subsection.3.4.1}%
-\contentsline {subsection}{\numberline {3.4.2}Autoencoders}{18}{subsection.3.4.2}%
-\contentsline {subsection}{\numberline {3.4.3}Variational Autoencoders}{18}{subsection.3.4.3}%
-\contentsline {subsection}{\numberline {3.4.4}Conditional Variational Autoencoders}{19}{subsection.3.4.4}%
-\contentsline {subsection}{\numberline {3.4.5}VAEs and CVAEs in Practice}{21}{subsection.3.4.5}%
-\contentsline {section}{\numberline {3.5}Inverse Kinematics}{22}{section.3.5}%
-\contentsline {subsection}{\numberline {3.5.1}Existing Approaches to Solve Inverse Kinematics}{23}{subsection.3.5.1}%
-\contentsline {subsection}{\numberline {3.5.2}Cyclic Coordinate Descent}{24}{subsection.3.5.2}%
-\contentsline {chapter}{\numberline {4}Approach}{29}{chapter.4}%
-\contentsline {section}{\numberline {4.1}Problem Definition}{29}{section.4.1}%
-\contentsline {subsection}{\numberline {4.1.1}the environment}{29}{subsection.4.1.1}%
-\contentsline {section}{\numberline {4.2}Variational Autoencoder}{29}{section.4.2}%
-\contentsline {subsection}{\numberline {4.2.1}Pure Actions}{30}{subsection.4.2.1}%
-\contentsline {subsection}{\numberline {4.2.2}Conditioning on the States}{30}{subsection.4.2.2}%
-\contentsline {subsection}{\numberline {4.2.3}Fitting Random Noise}{30}{subsection.4.2.3}%
-\contentsline {section}{\numberline {4.3}Supervised learning}{30}{section.4.3}%
-\contentsline {subsubsection}{\nonumberline distance function}{30}{subsubsection*.17}%
-\contentsline {section}{\numberline {4.4}SAC}{31}{section.4.4}%
-\contentsline {subsection}{\numberline {4.4.1}MLP}{31}{subsection.4.4.1}%
-\contentsline {subsection}{\numberline {4.4.2}RNN}{31}{subsection.4.4.2}%
-\contentsline {subsection}{\numberline {4.4.3}imitation learning}{31}{subsection.4.4.3}%
-\contentsline {subsection}{\numberline {4.4.4}hyperparamter tuning}{31}{subsection.4.4.4}%
-\contentsline {subsection}{\numberline {4.4.5}strategic vs one shot}{31}{subsection.4.4.5}%
-\contentsline {subsection}{\numberline {4.4.6}latent actor}{31}{subsection.4.4.6}%
-\contentsline {subsection}{\numberline {4.4.7}Problems with exploration}{31}{subsection.4.4.7}%
-\contentsline {subsection}{\numberline {4.4.8}actions with constraints}{31}{subsection.4.4.8}%
-\contentsline {chapter}{\numberline {5}Experiments}{33}{chapter.5}%
-\contentsline {section}{\numberline {5.1}VAE}{33}{section.5.1}%
-\contentsline {subsection}{\numberline {5.1.1}Pure Actions}{33}{subsection.5.1.1}%
-\contentsline {subsection}{\numberline {5.1.2}Conditioning on States}{34}{subsection.5.1.2}%
-\contentsline {subsection}{\numberline {5.1.3}Fitting Random Noise}{35}{subsection.5.1.3}%
-\contentsline {section}{\numberline {5.2}SAC}{35}{section.5.2}%
-\contentsline {subsection}{\numberline {5.2.1}Hyperparameters}{35}{subsection.5.2.1}%
-\contentsline {subsection}{\numberline {5.2.2}Baseline}{35}{subsection.5.2.2}%
-\contentsline {chapter}{\numberline {6}Conclusion}{37}{chapter.6}%
-\contentsline {chapter}{\numberline {7}Acknowledgments}{39}{chapter.7}%
-\contentsline {chapter}{Bibliography}{41}{chapter*.20}%
+\contentsline {section}{\numberline {3.2}Generalized Policy Iteration}{13}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Soft Actor Critic}{14}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Actor-Critic Algorithms}{15}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Entropy Regularization}{16}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Algorithm Architecture}{19}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}Advantages}{22}{subsection.3.3.4}%
+\contentsline {subsubsection}{\nonumberline Applications}{24}{subsubsection*.14}%
+\contentsline {section}{\numberline {3.4}Neural Networks}{24}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}The Rise of Deep Learning}{24}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Neural Network Architecture}{25}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Train Neural Networks}{28}{subsection.3.4.3}%
+\contentsline {subsection}{\numberline {3.4.4}Applications of Neural Networks}{30}{subsection.3.4.4}%
+\contentsline {section}{\numberline {3.5}Variational Autoencoder}{31}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}Autoencoders}{31}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.5.2}Variational Autoencoders}{32}{subsection.3.5.2}%
+\contentsline {subsection}{\numberline {3.5.3}Conditional Variational Autoencoders}{36}{subsection.3.5.3}%
+\contentsline {subsection}{\numberline {3.5.4}Evidence Lower Bound}{38}{subsection.3.5.4}%
+\contentsline {subsection}{\numberline {3.5.5}VAEs and CVAEs in Practice}{41}{subsection.3.5.5}%
+\contentsline {section}{\numberline {3.6}Kinematics}{42}{section.3.6}%
+\contentsline {subsection}{\numberline {3.6.1}Forward kinematics}{42}{subsection.3.6.1}%
+\contentsline {subsection}{\numberline {3.6.2}Inverse kinematics}{44}{subsection.3.6.2}%
+\contentsline {subsubsection}{\nonumberline Existing Approaches to Solve Inverse Kinematics}{44}{subsubsection*.22}%
+\contentsline {subsubsection}{\nonumberline Cyclic Coordinate Descent}{45}{subsubsection*.24}%
+\contentsline {chapter}{\numberline {4}Methodology}{49}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Research Idea}{49}{section.4.1}%
+\contentsline {section}{\numberline {4.2}RL Environment}{50}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}State Space}{51}{subsection.4.2.1}%
+\contentsline {subsection}{\numberline {4.2.2}Action Space}{52}{subsection.4.2.2}%
+\contentsline {subsection}{\numberline {4.2.3}Reward Function}{52}{subsection.4.2.3}%
+\contentsline {section}{\numberline {4.3}Dataset Creation}{52}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}Uniform Sampling}{53}{subsection.4.3.1}%
+\contentsline {subsection}{\numberline {4.3.2}Expert Guidance}{53}{subsection.4.3.2}%
+\contentsline {section}{\numberline {4.4}Latent Criterion}{54}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Learning Variational Autoencoder}{55}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Learning conditional Variational Autoencoder}{55}{section.4.6}%
+\contentsline {chapter}{\numberline {5}Experiments}{57}{chapter.5}%
+\contentsline {section}{\numberline {5.1}VAE}{57}{section.5.1}%
+\contentsline {subsection}{\numberline {5.1.1}Pure Actions}{57}{subsection.5.1.1}%
+\contentsline {subsection}{\numberline {5.1.2}Conditioning on States}{58}{subsection.5.1.2}%
+\contentsline {subsection}{\numberline {5.1.3}Fitting Random Noise}{59}{subsection.5.1.3}%
+\contentsline {section}{\numberline {5.2}SAC}{59}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Hyperparameters}{59}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Baseline}{59}{subsection.5.2.2}%
+\contentsline {chapter}{\numberline {6}Conclusion}{61}{chapter.6}%
+\contentsline {chapter}{\numberline {7}Acknowledgments}{63}{chapter.7}%
+\contentsline {chapter}{Bibliography}{67}{chapter*.29}%
 \providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

@@ -2,17 +2,23 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {1}{\ignorespaces interaction between agent and the environment\relax }}{10}{figure.caption.10}%
-\contentsline {figure}{\numberline {2}{\ignorespaces neural network schema}}{16}{figure.caption.11}%
-\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {schematic drawing of a feed forward neural network}}}{16}{subfigure.2.1}%
-\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {schematic drawing of a single neuron}}}{16}{subfigure.2.2}%
-\contentsline {figure}{\numberline {3}{\ignorespaces common activation functions in a neural network}}{16}{figure.caption.12}%
-\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Sigmoid}}}{16}{subfigure.3.1}%
-\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {hyperbolic tangent function}}}{16}{subfigure.3.2}%
-\contentsline {subfigure}{\numberline {(c)}{\ignorespaces {rectified linear unit}}}{16}{subfigure.3.3}%
-\contentsline {figure}{\numberline {4}{\ignorespaces Autoencoder schematics}}{18}{figure.caption.13}%
-\contentsline {figure}{\numberline {5}{\ignorespaces Conditional Variational Autoencoder schematics}}{20}{figure.caption.14}%
-\contentsline {figure}{\numberline {6}{\ignorespaces CCD geometry\relax }}{27}{figure.caption.15}%
+\contentsline {figure}{\numberline {3.1}{\ignorespaces interaction between agent and the environment\relax }}{10}{figure.caption.10}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces policy iteration concept}}{14}{figure.caption.11}%
+\contentsline {figure}{\numberline {3.3}{\ignorespaces policy iteration funnel. The red arrows are a symbolic policy improvement step which is moving away from a precise value function. The blue arrows are a symbolic policy evaluation step which is moving the current policy further away from a greedy and thus stable policy. Both criterions are moving over time closer together until convergence with the optimal policy $\pi _*$ and the optimal value function $v_*$}}{14}{figure.caption.12}%
+\contentsline {figure}{\numberline {3.4}{\ignorespaces neural network and neuron schema}}{26}{figure.caption.15}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {schematic drawing of a feed forward neural network}}}{26}{subfigure.4.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {schematic drawing of a single neuron}}}{26}{subfigure.4.2}%
+\contentsline {figure}{\numberline {3.5}{\ignorespaces common activation functions in a neural network}}{26}{figure.caption.16}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {Sigmoid}}}{26}{subfigure.5.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {hyperbolic tangent function}}}{26}{subfigure.5.2}%
+\contentsline {subfigure}{\numberline {(c)}{\ignorespaces {rectified linear unit}}}{26}{subfigure.5.3}%
+\contentsline {figure}{\numberline {3.6}{\ignorespaces advanced neural network architectures}}{27}{figure.caption.17}%
+\contentsline {subfigure}{\numberline {(a)}{\ignorespaces {schematic drawing of convolutional neural network}}}{27}{subfigure.6.1}%
+\contentsline {subfigure}{\numberline {(b)}{\ignorespaces {schematic drawing of a recurrent neural network}}}{27}{subfigure.6.2}%
+\contentsline {figure}{\numberline {3.7}{\ignorespaces Autoencoder schematics}}{32}{figure.caption.18}%
+\contentsline {figure}{\numberline {3.8}{\ignorespaces Variational Autoencoder schematics}}{34}{figure.caption.19}%
+\contentsline {figure}{\numberline {3.9}{\ignorespaces Conditional Variational Autoencoder schematics}}{37}{figure.caption.20}%
+\contentsline {figure}{\numberline {3.10}{\ignorespaces CCD geometry\relax }}{47}{figure.caption.25}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }

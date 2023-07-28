@@ -1,0 +1,12 @@
+\begin{algorithm}
+    \caption{Forward Kinematics}\label{alg:FK}
+    \begin{algorithmic}
+        \State{} Input: Current joint angles $q$, Segment Length $l$.
+        \State{} Define origin position in 2D space: $p \leftarrow (0, 0)$
+        \For{each $i$ in $[0, \ldots, N - 1]$}
+            \State{} Update position
+            \State{} $p_0 \leftarrow p_0 + \cos(q_i) * l_i$
+            \State{} $p_1 \leftarrow p_1 + \sin(q_i) * l_i$
+        \EndFor{}
+\end{algorithmic}
+\end{algorithm}

@@ -3,8 +3,6 @@
 The following part is to provide a short introduction into the theory of reinforcement learning, the Soft Actor Critic Algorithm (SAC) as well to Variational Autoencoders (VAE) and Conditional Variational Autoencoders (CVAE).
 \todo{update!!!}
 
-
-
 \section{RL Framework}\label{sec:RL-Framework}
 
 Learning is a topic that is present in all our lives since their beginning. We all learn to move our arms, like an infant that is wiggling around, learn to walk, to speak and more or less any other skill that we find in our personal repository until now.  
@@ -12,7 +10,7 @@ Learning is a topic that is present in all our lives since their beginning. We a
 Reinforcement Learning (RL) is about to have a computational approach to this kind of learning.
 In the class of RL-Problems the environment provides a challenge like, riding a bicycle. But it is not told how this goal can be achieved.  Therefore it has be learned how to derive actions from situations on or off the bike in order to complete this task or - speaking of the numerical approach - maximize a reward function.
 In most cases the problem solving methods that are classified as RL-methods are applied on tasks that require not only a sequence of actions to interact with an environment but also some kind of feedback.
-Therefore these setups are designed to provide this kind of feedback. Either if it is an immediate feedback like an additional time step the agent has not crashed the bike or if it is more like a long shot feedback, for example a bonus that the agent has earned after a board game. 
+Therefore these setups are designed to provide this kind of feedback. Either if it is an immediate feedback like an additional time step the agent has not crashed the bike or if it is more like a long shot feedback, for example a bonus that the agent has earned after winning board game. 
 These principals can be boiled down to three main characteristics of reinforcement learning problems:
 
 \begin{itemize}
@@ -23,12 +21,8 @@ These principals can be boiled down to three main characteristics of reinforceme
 
 Before we can have an exemplary look on the closed loop mechanics, we would like to introduce a couple of key components of RL including the Markov Decision Process.
 
-Every agent exists in a specified environment and also interacts within a sequence of discrete time steps $t \in \mathbb{N}$. In order to do so the agent has to perceive the environment through a \textbf{state} representation $S_t \in \mathcal{S}$ which is an element of all possible states, the state space $\mathcal{S}$. To really interact with the environment the agent has to perform an \textbf{action} $A_t \in \mathcal{A}(S_t)$ where $\mathcal{A}(S_t)$ is the set of all possible actions in given state $S_t$. To chose an action the agent calculates for each possible action $A_t$ a probability $\pi_t(A_t|S_t)$ for a given state $S_t$ and chooses the maximum with respect to the given actions. To achieve a more compact notation we will refer to the action $A_t = a$, the state $S_t = s$ and therefore also the policy as $\pi_t(a|s)$.  
-This probability distribution is called the \textbf{policy}. 
-After the agent has chosen and executed an action, which also mean we will move one time step further $t \to t + 1$, the environment will return the next state $S_{t+1}$ the agent will perceive and a \textbf{reward} $R_{t+1} \in \mathbb{R}$.\\
-The long term goal of the agent is to adapt its policy to maximize the total amount reward the agent receives from the environment.
-
-\begin{figure}[htb!]
+% \include{figures/background/agent-envorinment-interaction}
+\begin{figure}
 	\centering
 	\minipage{0.5\textwidth}
     \includegraphics[width=\linewidth,]{figures/background/agent-environment-interaction.png}
@@ -39,58 +33,249 @@ The long term goal of the agent is to adapt its policy to maximize the total amo
 \todo{cite figure}
 
 
+Every agent exists in a specified environment and also interacts within a sequence of discrete time steps $t \in \mathbb{N}$. In order to do so the agent has to perceive the environment through a \textbf{state} representation $S_t \in \mathcal{S}$ which is an element of all possible states, the state space $\mathcal{S}$. To really interact with the environment the agent has to perform an \textbf{action} $A_t \in \mathcal{A}(S_t)$ where $\mathcal{A}(S_t)$ is the set of all possible actions in given state $S_t$. To chose an action the agent calculates for each possible action $A_t$ a probability $\pi_{\theta, t}(A_t|S_t)$ for a given state $S_t$ and chooses the maximum with respect to the given actions. To achieve a more compact notation we will refer to the action $A_t = a$ and the state $S_t = s$. To avoid confusions with the number $\pi \approx 3.141$ we refer to the policy always as a parameterized policy $\pi_\theta = \pi_{\theta, t}(a|s)$.  
+This probability distribution is called the \textbf{policy}. 
+After the agent has chosen and executed an action, which also means the environment will move one time step further $t \to t + 1$, the environment will return the next state $S_{t+1}$ and the agent will perceive a \textbf{reward} $R_{t+1} \in \mathbb{R}$ with $\mathbb{R}$ as the set of all possible rewards.\\
+The long term goal of the agent is to adapt its policy to maximize the total amount reward the agent receives from the environment.
+These key terminology can also be found in the notation of a Markov Decision Process which is classified as a 4-Tuple of: $(\mathcal{S}, \mathcal{A}, P_a(s, s'), R_a(s, s'))$ with $ P_a(s, s')$ as a probability distribution that action $a$ in state state $s$ will lead to the next state $s' = s_{t+1}$ and $ R_a(s, s')$ as reward function for transitioning from $s$ to $s'$ with $a$.
+
 \todo{
 Explain the concept of reinforcement learning and its applications
 Describe the Markov decision process (MDP) and the Bellman equation
 Discuss the challenges of using reinforcement learning in practice}
 
-\section{Soft Actor Critic}
-Briefly explain what the SAC algorithm is and why it is important
-Provide a preview of what the chapter will cover
+\todo{Es wird gern gesehen: Optimal value function optimal policy / Tradeoff, Sutton Barto. Generalized Policy iteration. Es geht darum einaml ne policy und ne value function zu fnden, Bellman equations}
 
-L1 smooth loss for $x, y \in \mathbb{R}$
-\begin{equation}
-    \mathcal{L}_\beta(x_i, y_i) = \begin{cases} \frac{1}{2 \beta} \cdot (x_i - y_i)^2 & \text{if $|x_i - y_i| < \beta$} \\ |x_i - y_i| -  \frac{\beta}{2} & \text{else}\end{cases} \\ 
+The overall goal of an agent is to maximize its received cumulative return $G_t$ for one run until time step $T$. This is metric is denoted in \eqref{eqn:discounted-cumulative-return}. In \eqref{eqn:discounted-cumulative-return} $\gamma$ is the discount rate, $0 \leq \gamma \leq 1$, a parameter to regularize the \textit{importance} of individual received rewards over time. 
+
+\todo{cite sutton barto}
+
+\begin{align}
+	G_t & \ \dot{=} \sum_{k=t+1}^T \gamma^{k-t-1}R_k \label{eqn:discounted-cumulative-return} \\
+	&= R_{t+1} + \gamma G_{t+1} \label{eqn:discounted-cumulative-return-recursive}
+\end{align}
+
+Unfortunately the individual rewards $R_t$ are highly dependent on state action pairs in the future, so they are not accessible at the current time step. To solve this problem reinforcement algorithms are trying to maximize the expected return $v_{\pi_\theta}(s)$ as in \eqref{eqn:expected-return}, or value function, for a given state. For Markov decision process we can define the value function as in \eqref{eqn:Bellman-valuefunction}. 
+
+\todo{cite sutton barto}
+
+\begin{align}
+	% v_{\pi_\theta}(s) = \sum_a \pi_\theta(a|s) \sum_{s', r} P(s', r| s, a)\left[r + \gamma v_{\pi_\theta}(s'm)\right] 
+	v_{\pi_\theta}(s) & \ \dot{=} \ \mathbb{E}_{\pi_\theta}[G_t | S_t = s] \label{eqn:expected-return} \\
+	&\overset{\mathclap{\strut(\ref{eqn:discounted-cumulative-return-recursive})}}{=} \mathbb{E}_{\pi_\theta}[R_{t+1} + \gamma G_{t+1}| S_t = s] \nonumber \\
+	& = \sum_a \pi_\theta(a|s) \sum_{s'} \sum_r P(s', r| s, a)\left[r + \gamma \mathbb{E}_{\pi_\theta}[G_{t+1} | S_{t+1} = s']\right] \nonumber \\
+	& = \sum_a \pi_\theta(a|s) \sum_{s', r} P(s', r| s, a)\left[r + \gamma v_{\pi_\theta}(s'm)\right] \label{eqn:Bellman-valuefunction}
+\end{align}
+
+For a finite Markov decision process we can also find a the optimal value function $v_*(s)$ with respect to the optimal policy in \eqref{eqn:Bellman-optimal-valuefunction}. 
+
+\begin{equation}\label{eqn:Bellman-action-valuefunction}
+	q_{\pi_\theta}(s, a) = \sum_{s', r} P(s', r |s, a) \left[r + \gamma \sum_{a'} \pi_\theta(a'| s')q_{\pi_\theta}(s', a')\right]
 \end{equation}
+
+\begin{align}
+	v_*(s) & \ \dot{=} \max_{\pi_\theta} v_{\pi_\theta}(s) \label{eqn:optimal-valuefunction} \\
+	&=\max_a \sum_{s', r} P(s', r| s, a)[r + \gamma v_*(s')] \label{eqn:Bellman-optimal-valuefunction}
+\end{align}
+
+Because \eqref{eqn:optimal-valuefunction} holds this implies the reinforcement learning problem in \eqref{eqn:RL-policy-problem} for the optimal policy $\pi_\theta^*$ and a performance measure $J(\pi_\theta) = \mathbb{E}_{\pi_\theta}[G_t | S_t = s]$ as following:
+\begin{align}
+	\pi_\theta^* &= \arg \max_{\pi_\theta}J(\pi_\theta) \label{eqn:RL-policy-problem} \\
+	&= \arg \max_{\pi_\theta} \mathbb{E}_{\pi_\theta}[G_t | S_t = s] \\
+	&\overset{\mathclap{\strut(\ref{eqn:expected-return})}}{=} \arg \max_{\pi_\theta} v_{\pi_\theta}(s) \label{eqn:RL-policy-valuefunction}
+\end{align}
+
+\begin{equation}\label{eqn:Bellman-optimal-action-valuefunction}
+	q_*(s, a) = \sum_{s', r} P(s', r|s, a)\left[r + \gamma \max_{a'} q_*(s', a')\right]
+\end{equation}
+
+\section{Generalized Policy Iteration}\label{sec:Generalized-Policy-Iteration}
+
+This section is about to provide an introduction to the idea of policy iteration. For a more detailed look into the topic it is recommended refer to the Reinforcement Learning Textbook from Richard Sutton and Andrew Barto.
+
+One fundamental concept for reinforcement learning algorithms is policy iteration. At Its core it is described as the alternating interaction between a policy improvement step and a policy evaluation step as in \figref{fig:policy-iteration-concept}. This interaction goes back and forth during the execution of most reinforcement learning algorithms until a state of convergence in the value function and policy has arrived. That means both value function and policy are optimal for the given problem. This state can be reached if the ``value function is consistent with the current policy, and the policy stabilizes only when it is greedy with respect to the current value function''. This can be also seen in the Bellman optimally equation as in \eqref{eqn:Bellman-optimal-valuefunction}. 
+
+% \include{figures/background/policy-iteration}
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=0.5\linewidth]{figures/place_holder.png}
+        \caption[policy iteration concept]{\textbf{schematic drawing of a conditional Variational Autoencoder}}
+        \label{fig:policy-iteration-concept}
+    \end{center}
+\end{figure}
+
+We can also think about this process as a tradeoff between improving the policy towards an optimal greedy behavior which makes the value function incorrect (blue arrows indicate a policy improvement step) and adapting the value function with respect to the current policy which makes the policy automatically less optimal (red arrows indicate a policy evaluation step). \todo{Why?} Despite this tradeoff the algorithm tends to find an optimal solution for the policy and the value function in the long run. \todo{Where is the proof}
+
+% \include{figures/background/policy_iteration_funnel}
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=0.5\linewidth]{figures/place_holder.png}
+        \caption[policy iteration funnel. The red arrows are a symbolic policy improvement step which is moving away from a precise value function. The blue arrows are a symbolic policy evaluation step which is moving the current policy further away from a greedy and thus stable policy. Both criterions are moving over time closer together until convergence with the optimal policy $\pi_*$ and the optimal value function $v_*$]{\textbf{schematic drawing of a conditional Variational Autoencoder}}
+        \label{fig:policy-iteration-concept-funnel}
+    \end{center}
+\end{figure}
+
+\section{Soft Actor Critic}\label{sec:SAC}
+% Briefly explain what the SAC algorithm is and why it is important
+% Provide a preview of what the chapter will cover
+
+Soft Actor-Critic was introduced by \todo{cite paper} in \todo{year}. It is an algorithm belonging to the family of model free, off-policy, actor-critic reinforcement learning algorithms. The family of actor-critic algorithms addresses challenges in exploration and sample efficiency. Similar to  other actor-critic algorithms it also employs the alternating concept of a policy improvement step and a policy evaluation step. In contrast to other actor-critic algorithms like XXXX \todo{fill} it uses the concept of entropy regularization and uses a stochastic policy for promoting exploration in the reinforcement learning environment. 
+By jointly optimizing the policy and value functions using the maximum entropy objective enabled by entropy regularized, SAC effectively explores the environment while seeking to maximize rewards. This approach results in robust and adaptive policies that can efficiently handle various RL tasks. \todo{examples by paper }
+
+In this section will introduce the concept of actor-critic algorithms, provide a detailed description of the SAC algorithm architecture, including entropy regularization and explain how to train the algorithm under the maximum entropy objective. 
+
+% L1 smooth loss for $x, y \in \mathbb{R}$
+% \begin{equation}
+%     \mathcal{L}_\beta(x_i, y_i) = \begin{cases} \frac{1}{2 \beta} \cdot (x_i - y_i)^2 & \text{if $|x_i - y_i| < \beta$} \\ |x_i - y_i| -  \frac{\beta}{2} & \text{else}\end{cases} \\ 
+% \end{equation}
 
 \subsection{Actor-Critic Algorithms}
 
 % Describe the basic actor-critic architecture and its limitations
 % Explain the difference between on-policy and off-policy learning
 % Describe the advantage of using a critic in the actor-critic algorithm
-The basic actor-critic architecture is a type of reinforcement learning algorithm that consists of two components: an actor and a critic. The actor is responsible for selecting actions based on the current state, while the critic evaluates the quality of the actor's actions by estimating the expected return from the current state. The actor uses this feedback from the critic to adjust its policy and improve its performance.
+The basic actor-critic architecture is a type of reinforcement learning algorithm that consists of two components: an actor and a critic. The actor also referred to as the policy $\pi_\theta$ is responsible for selecting actions based on the current state, while the critic also referred to as a value function $v_{\pi_\theta}$ or a state value function $q_{\pi_\theta}$, evaluates the quality of the actor's actions by estimating the expected return. Like as introduced in \secref{sec:Generalized-Policy-Iteration} the actor uses the feedback from the critic to adjust its policy and improve its performance.
 
-On-policy learning and off-policy learning refer to different methods for updating the policy in reinforcement learning. In on-policy learning, the agent learns from the data generated by its current policy, while in off-policy learning, the agent learns from data generated by a different policy. On-policy learning can be more stable, but it may require more data to converge. Off-policy learning can be more efficient, but it can be more sensitive to the quality of the data.
+\todo{Maybe in RL Formulation or a separated section?}
+One additional factor to distinguish between reinforcement learning algorithms and also actor-critic algorithms is by either on-policy learning or off-policy learning. On-policy learning or off-policy learning refer to different methods for updating the policy in reinforcement learning. In on-policy learning, the agent learns from the data generated by its current policy, while in off-policy learning, the agent learns from data generated by a different policy. On-policy learning can be more stable, but it may require more data to converge. Off-policy learning can be more efficient, but it can be more sensitive to the quality of the data.
+\todo{cite sutton barto}
 
-The advantage of using a critic in the actor-critic algorithm is that it provides a more stable feedback signal than using only rewards. The critic estimates the expected return from a state, which takes into account the long-term consequences of actions. This allows the actor to learn from the critic's feedback and improve its performance more efficiently than if it only received reward signals. Additionally, the critic can help to generalize across different states and actions, improving the overall performance of the algorithm.
+The advantage of using a critic in the actor-critic algorithm is: it provides a more stable feedback signal than using only rewards. The critic estimates the expected return from a state, for the value function, or a state action pair for the action-value function, which takes into account the long-term consequences of actions. This allows the actor to learn from the critic's feedback and improve its performance more efficiently than if it only received reward signals. Additionally, the critic can help to generalize across different states and actions, improving the overall performance of the algorithm.
 
 One limitation of the basic actor-critic architecture is that it can suffer from high variance and slow convergence due to the interaction between the actor and critic. This can be addressed through the use of techniques such as baseline subtraction and eligibility traces.
+\todo{look for paper}
+\todo{cite sutton barto}
 
-\subsection{Soft Actor Critic Algorithm}
+Popular examples for actor critic algorithms are:
+\begin{itemize}
+	\item Deep Deterministic Policy Gradient
+	\item Soft Actor-Critic
+	\item Proximal Policy optimization
+\end{itemize}
+
+
 % Explain the concept of entropy regularization and its role in the SAC algorithm
 % Describe the architecture of the SAC algorithm and how it differs from traditional actor-critic algorithms
 % Explain how the actor and critic are trained using the maximum entropy objective
 % Discuss the advantages of the SAC algorithm, such as improved sample efficiency and exploration
 
+\subsection{Entropy Regularization}\label{sec:entropy-regularization}
+
+Entropy regularization is a policy regularization technique by incorporating the policy entropy, used to encourage the policy to explore a diverse range of actions during training. In SAC, entropy regularization is achieved by adding the entropy $H(\pi_\theta)$ as in \eqref{eqn:policy-entropy} to the policy objective function in \eqref{eqn:policy-update}.
+
+\begin{align}
+	H(\pi_\theta) &= \underset{s\sim\mathcal{S}, a\sim\mathcal{A}}{\mathbb{E}}\left[- \log(\pi_\theta(a|s))\right] \nonumber \\
+	&= -\log(\pi_\theta(a|s)) \label{eqn:policy-entropy}
+\end{align} \todo{is this correct?} \todo{something has to be cleared up with $H(\pi_\theta) != H(\pi_\theta(\cdot|s))$}
+
+Including entropy into the objective function encourages the policy to generate actions with higher entropy (higher randomness), leading to more exploration, possibly accelerate training and preventing converging to a poor local optimum. \todo{cite: spinning up open ai} 
+
+The randomness or uncertainty of a policy for a given state action pair $\pi_\theta(a|s)$ can be computed  by seeing  $\pi_\theta(a|s)$ as a density function and taking $\pi_\theta(\cdot|s) = \mathcal{N}\left(\mu(\pi_\theta(\cdot|s)), \sigma(\pi_\theta(\cdot|s))\right)$ as a parameterized normal distribution from which the action $a \sim \pi_\theta(\dot|s)$ is sampled. Therefor it possible to acquire the probability $\pi_\theta(a|s)$ of an action $a$ with as in \eqref{eqn:Gauss-Prob-Policy}.
+
+\begin{align}
+	\pi_\theta(a|s) = \frac{1}{\sigma(\pi_\theta(\cdot|s)) \sqrt{2\pi}} \exp\left(-\frac{1}{2}\frac{(a -\mu(\pi_\theta(\cdot|s)))^2}{\sigma(\pi_\theta(\cdot|s))^2}\right) \label{eqn:Gauss-Prob-Policy}
+\end{align}
+
+As a result of entropy regularization in each time step both value function $v_{\pi_\theta}$ and action-valuefunction $q_{\pi_\theta}$ become affected and turn into their counterpart $v_{\pi_\theta, H}$ and $q_{\pi_\theta, H}$ in \eqref{eqn:valuefunction-entropy-reg} and \eqref{eqn:action-valuefunction-entropy-reg} below.  Note that \eqref{eqn:action-valuefunction-entropy-reg-recursive} is the recursive version of \eqref{eqn:action-valuefunction-entropy-reg}.
+
+\begin{align}
+	v_{\pi_\theta, H}(s) &= \underset{\tau\sim\pi_\theta}{\mathbb{E}}\left[\sum_{t=0}^T\gamma^t\left(R_t + \alpha H(\pi_\theta(\cdot|s_t))\right)\mid s_0 = s\right]\label{eqn:valuefunction-entropy-reg} \\
+	q_{\pi_\theta, H}(s, a) &= \underset{\tau\sim\pi_\theta}{\mathbb{E}}\left[\sum_{t=0}^T\gamma^t R_t + \alpha \sum_{t=1}^T \gamma^t H(\pi_\theta(\cdot|s_t))\mid s_0 = s, a_0=a\right]\label{eqn:action-valuefunction-entropy-reg} \\
+	&= \underset{s'\sim P, a' \sim \pi_\theta}{\mathbb{E}}\left[R_t + \gamma (q_{\pi_\theta, H}(s', a') + \alpha H(\pi_\theta(\cdot|s')))\right]\label{eqn:action-valuefunction-entropy-reg-recursive} 
+\end{align} \todo{include entropy in the first time step -> look at the code and search for the appropriate paper}
+
+This changes subsequently also the original relation between $v_{\pi_\theta}$ and $q_{\pi_\theta}$. $v_{\pi_\theta, H}$ and $q_{\pi_\theta, H}$ are connected vai \eqref{eqn:valuefunction-action-valuefucntion-reg-connection}.
+
+\begin{equation}\label{eqn:valuefunction-action-valuefucntion-reg-connection}
+	v_{\pi_\theta, H}(s) = \mathbb{E}_{\pi_\theta}\left[q_{\pi_\theta}(s, a)\right] + \alpha H(\pi_\theta)
+\end{equation} \todo{proof in appendix}
+
+Note that we introduce a new parameter $\alpha$ into $v_{\pi_\theta,H}$ and $q_{\pi_\theta,H}$. This parameter controls the tradeoff between exploration and exploitation.  Higher values of $\alpha$ promote more exploration, whereas lower values of $\alpha$ encourage more exploitation in the Soft Actor-Critic algorithm. For more details how to this parameter is used in Soft-Actor-Critic please have look into \secref{sec:SAC-architectur}
+
+For simplification we will now refer to the entropy regularized value function $v_{\pi_\theta,H}$ as $v_{\pi_\theta}$ and action-value-function $q_{\pi_\theta,H}$ as $q_{\pi_\theta}$. 
+
+This change also influences the original reinforcement learning problem as stated in \eqref{eqn:RL-policy-valuefunction} and converts it into \eqref{eqn:RL-policy-problem-reg}. Due to the stated relation between regularized value-function and regularized action-value-function as in \eqref{eqn:valuefunction-action-valuefucntion-reg-connection} we can make the optimization problem independent from the value-function and get \eqref{eqn:RL-policy-problem-reg-action-value-function}.
+
+\begin{align}
+	\pi_\theta^* &= \arg \max_{\pi_\theta} v_{\pi_\theta,H} \nonumber \\
+	&\overset{\mathclap{\strut(\ref{eqn:RL-policy-valuefunction})}}{=} \arg \max_{\pi_\theta} \mathbb{E}_{\pi_\theta}\left[\sum_{t=0}^T \gamma^t \left(R_t + \alpha H(\pi_\theta)\right)\mid S_t = s\right] \label{eqn:RL-policy-problem-reg} \\
+	&\overset{\mathclap{\strut(\ref{eqn:valuefunction-action-valuefucntion-reg-connection})}}{=} \arg \max_{\pi_\theta} \mathbb{E}_{\pi_\theta}\left[q_{\pi_\theta}(s, a)\right] + \alpha H(\pi_\theta) \nonumber \\
+	&\overset{\mathclap{\strut(\ref{eqn:policy-entropy})}}{=}\arg \max_{\pi_\theta} \mathbb{E}_{\pi_\theta}\left[q_{\pi_\theta}(s, a) - \alpha \log \pi_\theta(a|s)\right]\label{eqn:RL-policy-problem-reg-action-value-function}
+\end{align} \todo{was ist allgemeiner .... bis inf oder bis T}
+
+\subsection{Algorithm Architecture}\label{sec:SAC-architectur}
+
+In contrast to other actor-critic algorithms like: XXX, or XXX, \todo{add examples} SAC learns additional to a parameterized policy $\pi_\theta$, two critics in the form of two parametrized $q$ functions $Q_{\phi_0}$ and $Q_{\phi_1}$ as well as their corresponding target functions $Q_{\phi_{\text{target}, 1}}$ and $Q_{\phi_{\text{target}, 1}}$. The usage of target action-value functions enhances the accuracy of the estimates and contributes to a more stable learning process. \todo{proof}
+
+Further SAC utilizes a stochastic policy, which means that the policy outputs a parameterized probability distribution over actions instead of directly selecting deterministic actions and optionally adding noise on top. This stochastic nature allows SAC to capture the exploration-exploitation trade-off directly within the policy.
+The training process in SAC is based on the maximum entropy objective. Its goal is to find a policy that maximizes the cumulative reward \eqref{eqn:discounted-cumulative-return} and the maximum entropy \eqref{eqn:policy-entropy}. Fortunately we have derived an entropy regularized value-function and action-value-function in \secref{sec:entropy-regularization} and are able to use those definition to derive loss functions for actor and critic based on the maximum entropy objective. 
+
+Because we will have a closer look into actual implementation, we now refer to the action-value-function as their parameterized approximations $Q_{\pi_i}$.
+
+To \textbf{train the parameterized action-value-functions} the objective function (\ref{eqn:q-loss}) is defined as the expected squared difference between the action-state-value $Q_{\phi_i}(s, a)$ and its temporal difference target $y(r, s', d)$. \eqref{eqn:q-loss} leads directly to the update equation (\ref{eqn:q-update}) as its derived empirical counterpart.
+
+\begin{equation}\label{eqn:q-loss}
+	L_Q(\phi_i, \mathcal{D}) = \mathbb{E}_\mathcal{D}\left[\left(Q_{\phi_i}(s, a) - y(r, s', d)\right)^2\right]
+\end{equation}
+
+The temporal difference target target $y$ is defined as in \eqref{eqn:td-target} with $\hat{a}' \sim \pi\theta(\cdot| s')$. \todo{drop the buzz word: td target }. To stabilize the target signal SAC applies the clipped double-Q trick, where it selects the minimum q-value between the two target q-functions $Q_{\phi_{\text{target}, i}}$.
+
+\begin{equation}\label{eqn:td-target}
+	y(r, s', d) = r + \gamma(1 - d) \left(\min_{j=0,1}Q_{\phi_{\text{target}, i}}(s', \hat{a}') - \alpha \log \pi\theta(\hat{a}'| s')\right)
+\end{equation} \todo{where exactly is the target coming from?}
+
+This function is employed in the SAC algorithm in \eqref{eqn:td-target-batch} but with the small difference that all arguments are sampled from a minibatch $\mathcal{B}$. 
+
+To \textbf{train the policy} we are required to use the reparameterization trick to be able to differenciate the parameterized policy $\pi_\theta$. \todo{cite: https://sassafras13.github.io/ReparamTrick/\#:~:text=So\%20in\%20short\%2C\%20the\%20reparameterization,\%2C\%20q*\%20\%5B3\%5D.}
+This process transforms the action $\hat{a}$ sampled from the policy into the function as specified in \eqref{eqn:reparameterization-trick}. 
+
+\begin{equation}\label{eqn:reparameterization-trick}
+	\hat{a}_\theta(s, \epsilon) = \tanh(\mu(\pi_\theta(\cdot|s)) + \sigma(\pi_\theta(\cdot|s)) \bigodot \epsilon), \ \epsilon \sim \mathcal{N}(0, I)
+\end{equation}
+
+Within the reparameterization of an action we also bound it into a finite range of $(-1, 1)$ this has the advantage , .... \todo{fill}. Since we squash the actions with $\tanh$ we also have to adapt the log-likelihood $\log \pi_\theta(a|s)$ of an action into:
+
+\begin{equation*}
+	\log \pi_\theta(a|s) = \log \pi_\theta(a|s) - \sum_{i=1}^{|\mathcal{A}|} \log(1 - \tanh(\hat{a}_\theta(s, \epsilon))), \ \epsilon \sim \mathcal{N}(0, I)
+\end{equation*}
+
+For more details please refer to \todo{cite: https://arxiv.org/pdf/1812.05905.pdf}.
+
+To compute the policy loss, as in training the action-value-function approximation, the crucial step involves replacing $q_{\pi_\theta}$ with one of our function approximators $Q_{\phi_i}$. SAC utilizes the minimum of the two $q_{\pi_\theta}$ approximators $\min_{i=0,1} Q_{\phi_i}$. Consequently, the policy is optimized based on this minimum action-state-value approximation and therefor make only more conservative estimates.
+\begin{equation}\label{eqn:policy-loss}
+	L_\pi(\theta, \mathcal{D}) = - \mathbb{E}_{\mathcal{D}, \mathcal{N}(0, I)}\left[\min_{i=0,1}Q_{\phi_i}(s, \hat{a}_\theta(s, \epsilon) - \alpha \log \pi_\theta(\hat{a}_\theta(s, \epsilon)| s))\right]
+\end{equation}
+
+Note that we are taking the negative expectation because we want to maximize the expected return and the entropy by using SGD as in \eqref{eqn:policy-update} in \algoref{alg:SGD}. The different notation can be explained a ${\{s, a, r, s', d\}}_{\mathcal{B}, k}$ stand for the $k$th element from the minibatch $\mathcal{B}$..
+
+Now lets turn to the entropy regularization parameter $\alpha$. In general there are two types of Soft-Actor-Critic implementations. On proposed by XXXX \todo{fill} treads $\alpha$ as constant parameter.  The optimal $\alpha$ parameter, leading to the most stable and rewarding learning, may vary across different environments, necessitating thoughtful tuning for optimal performance.
+The second approach how to treat $\alpha$, proposed by XXX \todo{fill}, adjusts $\alpha$ constantly during the training process. The optimization criterion is stated as:
+
+\begin{equation}\label{eqn:alpha-criterion}
+	L_\alpha = \underset{a_t\sim\pi_\theta}{\mathbb{E}}\left[-\alpha \log \pi_(a_t|s_t) - \alpha \bar{H}\right]
+\end{equation}
+
+\eqref{eqn:alpha-criterion} resembles an objective for dual gradient descent because we are trying to minimize $\alpha$ but also the expected difference between the policy entropy and a target entropy $\bar{H}$ as a hyperparameter. In practice this can be translated into a positive gradient if the expected difference is positive so the agent is less exploring as should be and into a negative gradient if the difference is negative so the agent is to focused on exploring. Selecting a target entropy is not as delicate as selecting a fixed $\alpha$ because you are able to read from training results if your environment requires a more or less greedy policy. 
+\todo{dual gradient descent chapter. }
 
 \input{figures/background/algo_SAC}
+\todo{rework equations from pseudo code}
 
-\subsection{SAC in Practice}
+\subsection{Advantages}
+
+SAC offers several advantages over other actor-critic algorithms. Firstly, the entropy regularization leads to improved exploration, enabling the agent to efficiently explore its environment and discover optimal or near-optimal solutions \todo{paper}. Secondly, by encouraging stochastic policies, SAC provides more robust and adaptive policies that can handle uncertainties and variations in the environment.
+
+Moreover, the SAC algorithm exhibits enhanced sample efficiency, meaning that it requires fewer interactions with the environment to learn effective policies. The utilization of two critics $Q_{\phi_0}$ and $Q_{\phi_1}$ further contributes to a more stable learning process and can mitigate the issues of overestimation bias, leading to more accurate value estimates. \todo{paper}
+
+\subsubsection{Applications}
 
 % Provide examples of real-world applications of the SAC algorithm, such as robotics and game playing
 % Explain how the SAC algorithm can be used in continuous action spaces
 % Describe the limitations of the SAC algorithm and how they can be addressed
 
-In robotics, the SAC algorithm has been used to control robots in tasks such as grasping objects, locomotion, and manipulation. The SAC algorithm's ability to handle continuous action spaces makes it a suitable choice for robotic control, where fine-grained control is often required.
+In robotics, the SAC algorithm has been used to control robots in tasks such as grasping objects, locomotion, and manipulation. The SAC algorithm's ability to handle continuous action spaces makes it a suitable choice for robotic control, where fine-grained control is often required. \todo{look for papers to support this claim}
 
-In game playing, the SAC algorithm has been used to train agents to play video games such as Atari and Super Mario Bros. The SAC algorithm's ability to balance exploration and exploitation makes it effective in game playing, where agents must learn to navigate complex environments and respond to changing conditions.
-
-The chapter also discusses how the SAC algorithm can be used in continuous action spaces. The SAC algorithm uses a Gaussian distribution to represent the policy, which allows it to handle continuous action spaces. The use of a Gaussian distribution also enables the SAC algorithm to handle multimodal policies, where multiple actions can be appropriate for a given state.
-
-Finally, the chapter discusses the limitations of the SAC algorithm and how they can be addressed. The SAC algorithm can suffer from high variance and slow convergence, especially in high-dimensional state spaces. This can be addressed through techniques such as batch normalization, automatic entropy adjustment, and value function regularization. The chapter also discusses future directions for research, such as incorporating model-based methods into the SAC algorithm to improve sample efficiency.
-
-Conclusion:
-The Soft Actor Critic algorithm is a powerful approach to reinforcement learning that has been applied in a variety of domains, including robotics and game playing. Its ability to handle continuous action spaces makes it a suitable choice for many real-world applications. However, the SAC algorithm has limitations that must be addressed, such as high variance and slow convergence. These limitations can be addressed through the use of appropriate techniques and future research directions. The SAC algorithm is an exciting area of research with potential applications in many fields.
+In game playing, the SAC algorithm has been used to train agents to play video games such as Atari and Super Mario Bros. \todo{paper} The SAC algorithm's ability to balance exploration and exploitation makes it effective in game playing, where agents must learn to navigate complex environments and respond to changing conditions.
 
 % \subsection{Extensions to SAC}
 % 
@@ -111,9 +296,12 @@ The Soft Actor Critic algorithm is a powerful approach to reinforcement learning
  
 \section{Neural Networks}
 
-Briefly explain what neural networks are and why they are important
-Provide a preview of what the chapter will cover
+% Briefly explain what neural networks are and why they are important
+% Provide a preview of what the chapter will cover. 
 
+Neural networks are a class of artificial intelligence algorithms inspired by the structure and functioning of the human brain. They consist of interconnected layers of artificial neurons that process and transform data. Neural networks are crucial in modern machine learning and deep learning applications due to their ability to learn complex patterns and representations from data, enabling them to solve a wide range of problems effectively.
+
+In this chapter, we will delve into neural networks, looking at their evolution, architecture, training process and diverse applications.
 % \subsection{Historical Overview}
 % 
 % Discuss the early history of neural networks, including the work of Warren McCulloch and Walter Pitts in the 1940s
@@ -122,9 +310,13 @@ Provide a preview of what the chapter will cover
 
 \subsection{The Rise of Deep Learning}
 
-Explain how the development of new algorithms and the availability of large datasets led to a resurgence in interest in neural networks in the 2000s
-Describe the key breakthroughs that made deep learning possible, including the development of convolutional neural networks and recurrent neural networks
-Provide examples of important applications of deep learning, such as image and speech recognition
+Neural networks were first invented in the 1940s and 1950s as a computational model inspired by the interconnected structure and functioning of the human brain, but their practical development was hindered by limitations in computing power and the lack of large datasets. 
+The resurgence of interest in neural networks in the 2000s can be attributed to two major factors: the development of new algorithms and the availability of large datasets. Before the 2000s, neural networks faced limitations in training and optimization, hindering their effectiveness. However, new algorithms, such as the backpropagation algorithm and variants like stochastic gradient descent, emerged, making it feasible to train deeper networks efficiently. Additionally, advancements in computing power and the availability of vast datasets facilitated by the internet like image net \todo{cite} allowed neural networks to leverage big data for improved learning and performance.
+
+Nowadays neural networks are employed over a vast variety of tasks like image recognition, speech recognition, natural language processing or robotics. 
+% Explain how the development of new algorithms and the availability of large datasets led to a resurgence in interest in neural networks in the 2000s
+% Describe the key breakthroughs that made deep learning possible, including the development of convolutional neural networks and recurrent neural networks
+% Provide examples of important applications of deep learning, such as image and speech recognition
 
 \subsection{Neural Network Architecture}
 
@@ -132,21 +324,41 @@ Provide examples of important applications of deep learning, such as image and s
 % Describe different types of neural networks, including feedforward networks, recurrent networks, and convolutional networks
 % Explain how neural networks can be trained using techniques such as backpropagation and stochastic gradient descent
 
-Neural networks are a type of machine learning model inspired by the structure and function by the cell type of neurons. It consists like their biological paradigm, of interconnected layers of individual units, called neurons.
+Neural networks are a type of machine learning model inspired by the structure and function by the cell type of neurons. It consists like their biological model, of interconnected layers of individual units, called neurons.
 
-The basic architecture as in \figref{fig:neural_network_schema/architecture}, of a neural network includes an input layer (yellow), one or more hidden layers (blue and green), and an output layer (red). The input layer receives the input data, which is then passed through the hidden layers before producing the output. This is why we call this basic architecture a feed forward neural network. The number of nodes in each layer and the connections between them are dictated by the architecture of a network.
+The basic architecture of a neural network as in \figref{fig:neural_network_schema/feed-forward-architecture},  includes an input layer (yellow), one or more hidden layers (blue and green), and an output layer (red). The input layer receives the input data, which is then passed through the hidden layers before producing the output. Because the flow of information is only in the forward direction we call this basic architecture a feed forward neural network. The number of nodes in each layer and the connections between them are configured by the architecture of a network.
 
 \input{figures/background/neural_network}
 
-Each neuron as in \figref{fig:neural_network_schema/neuron}, is designed in the same way. First it calculates a weighted $z$ of its inputs $x$, the corresponding weights $w$ and bias $b$ before passing it on to an activation function $h$. This function is designed to introduce nonlinearity into the model, allowing it to capture complex relationships between variables otherwise the whole network would be a single linear combination of its inputs and weights. Common activation functions include the sigmoid function, the hyperbolic tangent function, and the rectified linear unit (ReLU) function as in \figref{fig:action_function}
+If we look at each individual neuron as in \figref{fig:neural_network_schema/neuron}, we can observe that each neuron is designed in the same way. First it calculates a weighted sum $z$ of its inputs $x$, the corresponding weights $w$ and bias $b$, before passing it into an activation function $h$ and finally passing the information to the next neuron. The activation function is designed to introduce nonlinearity into the model, allowing it to capture complex relationships between variables. Without a nonlinear activation function the whole network would be a single linear combination of its inputs and weights. Common activation functions include the sigmoid function, the hyperbolic tangent function, and the rectified linear unit (ReLU) function as in \figref{fig:activation_function}
 
 \input{figures/background/activation_function}
+\include{figures/background/network_architectures}
 
-There are several types of neural networks, including feedforward networks, recurrent networks, and convolutional networks. Feedforward networks are the simplest type of neural network, consisting of a series of layers that process information in a single direction. Recurrent networks, on the other hand, allow information to be passed between nodes in a cyclical manner, making them suitable for processing sequential data. Convolutional networks are designed for image processing tasks and use convolutional layers to identify patterns and features within images.
+There are several types of neural network architectures but most of them are based on following types: 
+\begin{itemize}
+	\item \textbf{Feedforward networks} as in \figref{fig:neural_network_schema/feed-forward-architecture} are the simplest type of neural network, consisting of a series of layers that process information in a single direction.
+	\item \textbf{Convolutional networks} as in \figref{fig:neural-network-architecture/convolutional-architecture} are designed for image processing tasks and use convolutional layers to identify patterns and features within images. 
+	\item \textbf{Recurrent networks} as in \figref{fig:neural-network-architecture/recurrent-architecture}allow information to be passed between nodes in a cyclical manner, making them suitable for processing sequential data. The development of Long Short-Term Memory (LSTM) and Gated Recurrent Unit (GRU) architectures further improved RNNs' ability to model long-range dependencies.
+\end{itemize}
 
-Neural networks are trained using techniques such as backpropagation and stochastic gradient descent. Backpropagation is an algorithm for calculating the gradient of the error with respect to the weights of the network, which can then be used to update the weights and improve the performance of the model. Stochastic gradient descent is a technique for minimizing the error of the model by iteratively adjusting the weights based on randomly selected subsets of the training data. These techniques allow neural networks to learn from large datasets and make accurate predictions on new data.
 
-\subsection{Supervised Learning}
+\subsection{Train Neural Networks}
+
+Neural networks are trained using techniques such as backpropagation and stochastic gradient descent as presented in \algoref{alg:SGD}. Backpropagation is an algorithm for calculating the gradient $\hat{g}$ of an optimization criterion with respect to the weights of the network. The gradient can then be used to update the weights and therefor improve the performance of the model with respect to the opimization function. A we can see in \algoref{alg:SGD} stochastic gradient descent minimizes the error presented by the opimization criterion by iteratively adjusting the weights based on randomly selected subsets of the training data. 
+
+\include{figures/background/algo_SGD}
+
+Selecting a random subset of training data has a couple of advantages. 
+\begin{itemize}
+	\item \textbf{Computational Efficiency}: In one epoch we are computing the gradient only on a small subset. We do not have to pass the complete dataset through the network to get a sufficient gradient.
+	\item \textbf{Improved Generalization}: Because each minibatch contains a different composition of data points from the dataset the gradient signal is also varying. These variations are improving the generalization of the model with respect to unseen data.
+	\item \textbf{Avoiding Local Minima}: One of the risks during the training-process of a neural network are local minima. By introducing randomness through mini-batch sampling, SGD can escape local minima more easily and continue to explore the parameter space, increasing the chances of finding a global minimum.
+	\item \textbf{Parallel Processing}: Using mini-batches allows parallel processing during training. 
+\end{itemize}
+\todo{find sources}
+
+
 
 \subsection{Applications of Neural Networks}
 
@@ -161,21 +373,12 @@ Neural networks are widely used in real-world applications like in computer visi
 % Discuss potential future applications of neural networks, such as personalized medicine and % climate modeling
 % Explain challenges that must be addressed in order for neural networks to continue to advance
 
-% \subsection{Conclusion}
-% 
-% Summarize the main points of the chapter
-% Emphasize the importance of neural networks in a variety of fields
-% Encourage further exploration of the topic.
-
 
 \section{Variational Autoencoder}
-In this chapter we want to provide a intuition about Autoencoders 
-Based on the manifold hypothesis
-
-appoaches to solve this by principal component analysis
-Is a technique of unsupervised learning
-
-\subsection{Introduction}
+% In this chapter we want to provide a intuition about Autoencoders 
+% Based on the manifold hypothesis
+% appoaches to solve this by principal component analysis
+% Is a technique of unsupervised learning
 
 Variational autoencoders (VAEs) and conditional variational autoencoders (CVAEs) are types of deep generative models that are used for unsupervised learning. Unsupervised learning is a type of machine learning where the model is not given labeled data for training. Instead, the model is tasked with finding patterns or structure in the data on its own. The goal of unsupervised learning is often to find hidden relationships or groupings within the data that can be used for further analysis or decision-making
 VAEs and CVAEs are important because they can learn to generate realistic and diverse samples from complex high-dimensional data distributions, such as images or audio.
@@ -185,21 +388,49 @@ VAEs and CVAEs are important because they can learn to generate realistic and di
 % Describe traditional autoencoders and their limitations
 % Explain how autoencoders can be used for unsupervised learning
 
-Lets start with a Autoencoder. An Autoencoder $f = d \circ e$ consists of two function approximators in series, one encoder $e$ and one decoder $d$. In most cases these function approximators are resembled by neural networks.
+Lets start with a Autoencoder. An Autoencoder $f = d \circ e$ consists of two parameterized function approximators in series, one encoder $e_\phi$ and one decoder $d_\psi$. 
+The encoder maps the high dimensional input $x \in \mathbb{X}$ into a lower dimensional latent space $z \in \mathbb{Z}$, $z = e(x)$.
+The latent vector $z$ is typically a lower dimensional representation of the input $x$. 
+In the second stage we map the latent vector $z$ back into the high dimensional features space $X$, $d: \mathbb{Z} \to \mathbb{X}$. This should optimally reconstruct the given input $\hat{x} = d(z) = d(e(x))$. 
 
-In a forward pass through the module first the encoder maps the high dimensional input $x \in \mathbb{X}$ into a lower dimensional latent space $z \in \mathbb{Z}$, $z = e(x)$. This latent vector $z$ contains with a trained encoder, an encoding of certain properties from the input $x$. Therefor similar input values $x$ should correspond to similar latent vectors $z$. \\
-In the second stage we map the latent vector $z$ back into the high dimensional features space $X$, $d: \mathbb{Z} \to \mathbb{X}$. This should optimally reconstruct the given input $\hat{x} = d(z) = d(e(x))$. \\
+Because Autoenders are designed to learn a compact determin representation in the latent space it follows that similar input values $x$ should correspond to similar latent vectors $z$ and similar latent vectors $z$ correspond to similar outputs $\hat{x}$.
+
+Traditional Autoenders have prooven to be successful on a variaty of task like: ..., but their simple and effective design comes along with some limitations:
+\begin{itemize}
+	\item Overfitting: Because of the deterministic mapping into the latent space and from the latent space back to the feature space traditional Autoencoders are prone to suffer from overfitting and can lack of regularization which could lead to poor performance on unseen data.
+	\item Incomplete or noisy data: Due to the focus on only reconstructing the input, Autoencoders are not well suited for incomplete or noisy data. One reason could be the lack of disentanglement in the latent space, which means that different dimensions correspond to different underlying features in the input data distribution. 
+	\item Probabilistic Interpretation: Another drawback of the deterministic mapping approach is the lack of probabilistic interpretation capabilities for uncertainty in the learned representation and generated outputs.  
+\end{itemize}
 
 \input{figures/background/AE}
 
-\subsection{Variational Autoencoders}
+\subsection{Variational Autoencoders}\label{sec:VAE}
 
-A VAE is very similar to a basic Autoencoder. It also contains an encoder and a decoder. The key difference lays in the in the latent variable. Instead of feeding the output from the encoder directly into the decoder the latent variable gets sampled from a parameterized distribution. The parameters for this distributions are the output from the encoder.
+\todo{ELBO: https://probml.github.io/pml-book/book2.html 779}
 
-Explain the concept of a latent variable and how it relates to VAEs
-Describe the architecture of a VAE and how it differs from a traditional autoencoder
-Explain how the encoder and decoder are trained using a variational inference approach
-Describe the role of the Kullback-Leibler (KL) divergence in the loss function
+A Variational Autoencoder is similar to an Autoencoder but also with some key changes. Similar are the basic setup as a generative unsupervised learning model and the underlying encoder decoder structure. The key difference lays in the in the latent space between the encoder and decoder. Instead of having a fixed deterministic latent space VAEs operate on a probabilistic latent space.
+
+\include{figures/background/VAE}
+
+The encoder network denoted as a approximated parameterized posterior distribution $q_\phi(z|x)$, is a conditional probability distribution in Bayesian inference with the probability of the latent variable $p(z)$ (the prior) and the evidence $p(x)$: 
+
+\begin{align}
+	q(z|x) &= \frac{p(x|z) p(z)}{p(x)} \label{eqn:Bayesian-inference}\\
+	p(x) &= \int p(x|z)p(z) dz \label{eqn:p(x)}
+\end{align}
+
+In the context of a Variational Autoencoder, calculating $q(z|x)$ is not possible. As we can see in \eqref{eqn:p(x)} accessing the evidence as the probability of the observed data is not possible because we have to integrate over all possible values of the latent variable $z$. Therefor we approximate the posterior distribution with a parameterized conditional distribution $q_\phi(z|x)$. $q_\phi(z|x)$ as known as the encoder network, parameterized with $\phi$, hereby maps input data $x$ to latent parameters like mean and variance for a gaussian distribution, of the latent distribution with random variable $z$. 
+
+On the other hand, the decoder network takes samples from the latent space with latent variables $z$ and reconstructs the data from these samples, generating a parameterized probabilistic distribution over the data given the latent variables $p_\psi(x|z)$. 
+
+As mentioned before the objective in training a Variational Autoencoder is to find parameters $\phi$ and $\psi$ and matches best the true posterior distribution. In order to do so we can use the Evidence Lower Bound as the objective function. We go a bit deeper into the fundamentals of the Evidence Lower bound in \secref{sec:ELBO}. \\
+During training, the VAE aims to maximize the ELBO by iteratively adjusting its parameters $\phi$ and$\psi$ using backpropagation. The encoder network maps the input data to a distribution over latent variables, while the decoder network reconstructs the data from the sampled latent variables. The reparameterization trick similar to SAC in \secref{sec:SAC} is employed to ensure differentiability during backpropagation through the stochastic sampling process. \todo{reparaphrase}
+
+
+% Explain the concept of a latent variable and how it relates to VAEs
+% Describe the architecture of a VAE and how it differs from a traditional autoencoder
+% Explain how the encoder and decoder are trained using a variational inference approach
+% Describe the role of the Kullback-Leibler (KL) divergence in the loss function
 
 \subsection{Conditional Variational Autoencoders}
 
@@ -207,14 +438,62 @@ Describe the role of the Kullback-Leibler (KL) divergence in the loss function
 % Describe the architecture of a CVAE and how it differs from a VAE
 % Explain how CVAEs can be used for supervised learning tasks
 % Describe the role of the conditional input in the encoder and decoder
-A Conditional Variational Autoencoder (CVAE) is an extension of the VAE architecture that takes into account conditional information. In a CVAE, both the encoder and decoder are modified to accept an additional input that represents the conditional information. This input is usually in the form of a label or a set of labels that describe the class or category to which the input belongs.
+A Conditional Variational Autoencoder is an extension of the VAE architecture that takes into account conditional information $c$. As we can see in \figref{fig:conditional-Variational_Autoencoder_schematics}In a Conditional Variational Autoencoder, both the encoder and decoder are modified to accept an additional input that represents the conditional information. 
+
+The role of the conditional input in the encoder is to help the model capture the conditional dependencies between the input data and the class label. So the conditional information could be for instance a label encoding or a set of labels that describe the class or category to which the input belongs. The encoder must learn to map both the input data and the conditional input to a meaningful latent space representation that captures the relevant information for the generation process. In the decoder, the conditional input is used to guide the generation process and ensure that the generated samples are representative of the specified class.
+
+Similar to Variational Autoencoders the objective function to train the encoder and decoder is the Evidence Lower Bound. But there have to be a couple of changes to make the individual ELBO components suitable to take the conditional information $c$. The final objective can be observed in \eqref{eqn:ELBO-CVAE}. 
 
 
-The architecture of a CVAE is similar to that of a VAE, with the addition of the conditional input. The encoder takes the input data and the conditional input, and maps them to a latent space representation. The decoder takes the latent space representation and the conditional input, and maps them back to the input space.
+\subsection{Evidence Lower Bound}\label{sec:ELBO}
 
-CVAEs can be used for supervised learning tasks, where the goal is to generate samples that belong to a specific category or class. In this case, the conditional input represents the class label or category to which the input data belongs. By conditioning the generation process on the class label, the CVAE can learn to generate samples that are representative of that class.
+The Evidence Lower Bound (ELBO) is a fundamental concept in the training of Variational Autoencoders (VAEs)
+It is derived from the principle of variational inference and represents a lower bound on the log-likelihood of the data given the model's parameters. Maximizing the ELBO is equivalent to minimizing the Kullback-Leibler (KL) divergence between the true posterior distribution $q(z|x)$ over latent variables $z$ and the approximated posterior distribution $q_\phi(z|x)$ used in the VAE.
 
-The role of the conditional input in the encoder is to help the model capture the conditional dependencies between the input data and the class label. The encoder must learn to map both the input data and the conditional input to a meaningful latent space representation that captures the relevant information for the generation process. In the decoder, the conditional input is used to guide the generation process and ensure that the generated samples are representative of the specified class.
+\begin{equation}\label{eqn:ELBO}
+	L_\text{ELBO}(x, z) = \mathbb{E}_{z\sim q_\phi(\cdot|x)} \left[ \log p\psi(x|z) \right] - \text{KL}\left( q_\phi(z|x) \| p(z) \right)
+\end{equation}
+
+Further I will discuss the individual components of the Evidence lower bound 
+\begin{itemize}
+	\item \textbf{Posterior Distribution}: In general the posterior distribution $q(z|x)$ is considered as the probability of the latent variable $z$ given the observed data $x$. Specific for Variational Autoencoder it can be computed from Bayesian Inference as in \eqref{eqn:Bayesian-inference} which is as mentioned in \secref{sec:VAE} not feasible is therefor approximated.
+	\item \textbf{Likelihood}: The likelihood function $p(x|z)$ or conditional likelihood in the context of probabilistic models is the probability distribution of the observed data $x$ given the latent variables $z$. Dependent on the observed data it is possible to chose from a set of different probability distributions. Examples are a multivariate gaussian distribution for continuous data, a Bernoulli distribution for binary data or categorical distribution for discrete data with multiple categories.
+	\item \textbf{Prior Distribution}: The prior distribution $p(z)$ is a probabilistic distribution that represents the initial belief or assumption about the latent variables $z$ in Bayesian inference. Additional $p(z)$ serves in Variational Autoencoder as a regularizer during training as it encourages the VAE to learn meaningful and smooth latent representations in the latent space. Most popular choice for the prior distribution is the standard normal distribution $\mathcal(N)(0, I)$.  
+	\item \textbf{Evidence}: p(x) represents the evidence, also known as the marginal likelihood or model evidence, in the context of Bayesian statistics. It is the probability of the observed data $x$ given a particular statistical model. The evidence serves in \eqref{eqn:p(x)} as a normalization constant, ensuring that the posterior distribution $q(z|x)$ over model parameters integrates to 1. It quantifies how well the model, with its specific set of parameters, explains or fits the observed data.
+	\item \textbf{Reconstrion Loss}: 
+	\begin{equation}\label{eqn:general-reconstruction-loss}
+		\mathbb{E}_{z\sim q(\cdot|x)} \left[ \log p(x|z) \right] \approx \mathbb{E}_{z\sim q_\phi(\cdot|x)} \left[ \log p_\psi(x|z) \right]
+	\end{equation}
+	Therm (\ref{eqn:general-reconstruction-loss}) measures the similarity between the reconstructed data and the original input. 
+	Described in words it is the expected log-likelihood of the data given the latent variables, which is computed by sampling from the approximating distribution $q_\phi(z|x)$ and evaluating the likelihood $p_\psi(x|z)$ using the decoder network.
+	\item \textbf{KL Divergence Loss}: 
+	\begin{equation}
+		\text{KL}\left( q(z|x) \| p(z) \right) \approx \text{KL}\left( q_\phi(z|x) \| p(z) \right)
+	\end{equation}
+	This term quantifies the difference between the approximated parameterized posterior distribution $q_\psi(z|x) $ over latent variables $z$ and a chosen prior distribution $p(z)$. As mentioned before it is a popular choice to use a standard normal distribution $p(z)=\mathcal(N)(0,I)$ as the prior distribution. The KL divergence encourages the latent variables to be close to the prior distribution, promoting regularization and preventing overfitting.
+\end{itemize}
+
+\todo{Explain prior and posterior distributions}
+\iffalse
+The posterior distribution, denoted as q(z|x), is a conditional probability distribution in Bayesian inference. In the context of Variational Autoencoders (VAEs), the posterior distribution refers to the distribution of the latent variables z given the observed data x.
+In VAEs, the encoder network parameterizes the approximate posterior distribution q(z|x), which takes the input data x as input and outputs the parameters (e.g., mean and variance) of the distribution over the latent variables z. The encoder learns to map the data x to a distribution in the latent space, where each point in the latent space represents a potential encoding of the data.
+The posterior distribution q(z|x) is essential in the VAE framework because it allows the model to learn meaningful and compressed representations of the input data. By optimizing the ELBO (Evidence Lower Bound), VAEs simultaneously maximize the likelihood term (the data reconstruction term) and minimize the KL divergence term, encouraging the approximate posterior to be close to the prior distribution p(z).
+The posterior distribution q(z|x) plays a central role in VAEs, enabling the model to capture the underlying structure of the data and support various applications, such as data generation and latent space interpolation.
+
+The prior distribution, denoted as p(z), is a probabilistic distribution that represents our initial belief or assumption about the latent variables z in Bayesian inference. In the context of Variational Autoencoders (VAEs), the prior distribution refers to the distribution of the latent variables z before observing any data.
+In VAEs, the prior distribution is typically chosen to be a simple and well-known distribution, such as a standard normal distribution with zero mean and unit variance, i.e., p(z) = N(0, 1). Using a standard normal distribution as the prior is a common choice due to its simplicity and ease of sampling.
+The prior distribution serves as a regularizer during training and plays a crucial role in VAEs' generative process. By incorporating the prior distribution in the ELBO (Evidence Lower Bound) objective function, VAEs are encouraged to learn meaningful and smooth latent representations. The KL divergence term in the ELBO measures the difference between the approximate posterior distribution q(z|x) (learned by the encoder) and the prior distribution p(z). Minimizing this term ensures that the approximate posterior is close to the prior distribution, promoting regularization and preventing overfitting.
+The choice of the prior distribution can impact the VAE's performance and the characteristics of the generated data. While a standard normal distribution is commonly used, VAEs can be adapted to use other types of priors, such as uniform distributions or more complex distributions, depending on the specific requirements of the application.
+\fi
+
+The basic notation of the Evidence Lower Bound for Variational Autoencoders as in \eqref{eqn:ELBO} can be easily extented for an Conditional Variational Autoencoder:
+\begin{equation}\label{eqn:ELBO-CVAE}
+	L_\text{ELBO}(x, z, c) = \mathbb{E}_{z\sim q_\phi(\cdot|x, c)} \left[ \log p\psi(x|z, c) \right] - \text{KL}\left( q_\phi(z|x, c) \| p(z|c) \right)
+\end{equation}
+\todo{Describe also the components of the CVAE ELBO }
+
+
+By optimizing the ELBO, VAEs effectively learn to approximate the true posterior distribution and generate meaningful latent representations of the data, enabling various tasks such as data generation, interpolation, and denoising within a Bayesian framework.
 
 \subsection{VAEs and CVAEs in Practice}
 
@@ -226,9 +505,10 @@ VAEs and CVAEs have been successfully applied to a wide range of real-world appl
 
 VAEs and CVAEs can also be used for data compression and denoising. By learning a compressed representation of the input data, VAEs and CVAEs can reduce the dimensionality of the input space while preserving important features. Similarly, by learning to reconstruct the original input from noisy or corrupted data, VAEs and CVAEs can be used for denoising and data restoration.
 
-One of the advantages of VAEs and CVAEs is their ability to learn a continuous latent representation of the input data. This allows for easy manipulation and exploration of the latent space, enabling applications such as image editing and style transfer. Additionally, VAEs and CVAEs can be trained using stochastic gradient descent, making them computationally efficient for large datasets.
+One of the advantages of VAEs and CVAEs is their ability to learn a continuous latent representation of the input data. This allows for easy manipulation and exploration of the latent space, enabling applications such as image editing and style transfer \todo{cite paper}.
 
-However, VAEs and CVAEs have some limitations. The generated samples may not be as sharp or detailed as those produced by other generative models such as GANs. Additionally, the trade-off between the reconstruction loss and the KL divergence term can be difficult to balance, potentially leading to overfitting or underfitting. Nonetheless, VAEs and CVAEs remain a popular and powerful tool for generative modeling and data compression.
+However, VAEs and CVAEs have some limitations. The generated samples may not be as sharp or detailed as those produced by other generative models such as GANs \todo{cite}. Additionally, the trade-off between the reconstruction loss and the KL divergence term can be difficult to balance, potentially leading to overfitting or underfitting \todo{paper}. Nonetheless, VAEs and CVAEs remain a popular and powerful tool for generative modeling and data compression.
+
 
 % \subsection{Extensions to VAEs and CVAEs}
 % 
@@ -247,27 +527,50 @@ However, VAEs and CVAEs have some limitations. The generated samples may not be 
 % Emphasize the importance of VAEs and CVAEs in a variety of fields
 % Encourage further exploration of the topic.
 
-\section{Inverse Kinematics}
+\section{Kinematics}
+
+Kinematics is the study of motion, specifically the description and analysis of the position, velocity, and acceleration of objects or systems without considering the forces causing the motion. It focuses on understanding the spatial relationships and geometrical aspects of moving objects. The following sections provide an insight into forward and inverse kinematics for kinematic chains. Those two concepts are often used in robotics, animation, virtual reality or even protein folding. 
+
+\subsection{Forward kinematics}
+
+Forward kinematics is a concept from robotics that involves determining the position and orientation of an end-effector, like a gripper of a robot arm, based on the joint angles and geometric parameters, like segment length, of the system. It provides a mathematical model for mapping the joint angles to the end-effector position in order to understand the overall configuration and motion of the robot. \eqref{alg:FK} describes a forward kinematics implementation. 
+
+\include{figures/background/algo_fk}
+
+Throughout this thesis this function is used with a constant segment length $l = \{1\}^N$ therefor it is referred to as in \eqref{eqn:FK} which maps an angle configuration $q$ into the end-effector position in 2D space.
+
+\begin{equation}[p]\label{eqn:FK}
+	fk: \mathbb{R}^N \to \mathbb{R}^2
+\end{equation}
+
+\subsection{Inverse kinematics}
 
 Inverse kinematics (IK) is a fundamental problem in robotics, animation or virtual reality that involves finding a required joint angle configuration or positions to reach a desired end-effector position and optionally a desired orientation. It plays a crucial role in controlling the motion and manipulation of robotic systems, enabling them to interact with the environment and perform complex tasks. 
 In this section you will find a brief summary of existing approaches, a deeper explanation of the Cyclic Coordinate Descent algorithm and the description of the used inverse kinematics RL environment.
 
-\subsection{Existing Approaches to Solve Inverse Kinematics}
-\todo{subsection created by chatGPT}
+\subsubsection{Existing Approaches to Solve Inverse Kinematics}
 
-Numerous approaches have been proposed to solve the inverse kinematics problem. These approaches can be broadly categorized into analytical methods, numerical methods, heuristic methods, sampling-based methods, and machine learning-based methods.
+Numerous approaches have been proposed to solve the inverse kinematics problem. These approaches can be broadly categorized into: 
+\begin{itemize}
+	\item analytical methods: rely on geometric methods to derive closed form solutions.
+	\item numerical methods: iteratively approximate the joint angles that satisfy the desired end-effector position and orientation.
+	\item heuristic methods: iteratively propagate positions along the kinematic chain to converge on the desired end-effector position.
+	\item sampling-based methods: randomized search strategy to explore the joint space and find feasible solutions to the inverse kinematics problem
+\end{itemize}
 
-\textbf{Analytical Methods}: Some robotic systems with simple geometries and kinematic structures can be solved analytically using closed-form solutions. Analytical methods often rely on geometric techniques and mathematical equations such as the Denavit-Hartenberg (DH) parameters to derive explicit formulas for the joint angles. These methods provide fast and exact solutions when applicable, but they are limited to specific cases with well-defined geometric relationships.
+% \subsubsection{Existing Approaches to Solve Inverse Kinematics Extended}
 
-\textbf{Numerical Methods}: Numerical methods for inverse kinematics aim to iteratively approximate the joint angles that satisfy the desired end-effector position and orientation. Jacobian-based methods, such as the Jacobian transpose method and the Jacobian pseudo-inverse method, leverage the Jacobian matrix to relate the end-effector velocities to the joint velocities. These methods iteratively adjust the joint angles based on the discrepancy between the actual and desired end-effector positions. Other numerical techniques, including cyclic coordinate descent, Gauss-Newton, Levenberg-Marquardt, and optimization algorithms like Particle Swarm Optimization and Genetic Algorithms, aim to find optimal joint configurations by minimizing an objective function that represents the error between the desired and actual end-effector positions.
+% \textbf{Analytical Methods}: Some robotic systems with simple geometries and kinematic structures can be solved analytically using closed-form solutions. Analytical methods often rely on geometric techniques and mathematical equations such as the Denavit-Hartenberg (DH) parameters to derive explicit formulas for the joint angles. These methods provide fast and exact solutions when applicable, but they are limited to specific cases with well-defined geometric relationships.
 
-\textbf{Heuristic Methods}: Heuristic methods, such as the Forward and Backward Reaching Inverse Kinematics (FABRIK) algorithm, iteratively propagate positions along the kinematic chain to converge on the desired end-effector position. These methods provide an intuitive and efficient way to solve inverse kinematics problems and handle complex robotic structures with multiple degrees of freedom.
+% \textbf{Numerical Methods}: Numerical methods for inverse kinematics aim to iteratively approximate the joint angles that satisfy the desired end-effector position and orientation. Jacobian-based methods, such as the Jacobian transpose method and the Jacobian pseudo-inverse method, leverage the Jacobian matrix to relate the end-effector velocities to the joint velocities. These methods iteratively adjust the joint angles based on the discrepancy between the actual and desired end-effector positions. Other numerical techniques, including cyclic coordinate descent, Gauss-Newton, Levenberg-Marquardt, and optimization algorithms like Particle Swarm Optimization and Genetic Algorithms, aim to find optimal joint configurations by minimizing an objective function that represents the error between the desired and actual end-effector positions.
 
-\textbf{Sampling-Based Methods}: Sampling-based methods, such as Randomized Kinodynamic Planning (RRT), adopt a randomized search strategy to explore the joint space and find feasible solutions to the inverse kinematics problem. By sampling and connecting valid configurations in the joint space, these methods can discover feasible joint angles that satisfy the end-effector constraints.
+% \textbf{Heuristic Methods}: Heuristic methods, such as the Forward and Backward Reaching Inverse Kinematics (FABRIK) algorithm, iteratively propagate positions along the kinematic chain to converge on the desired end-effector position. These methods provide an intuitive and efficient way to solve inverse kinematics problems and handle complex robotic structures with multiple degrees of freedom.
 
-\textbf{Machine Learning-based Methods}: Machine learning approaches, including neural networks and reinforcement learning algorithms, have been increasingly explored for solving inverse kinematics. Neural networks can be trained to approximate the inverse kinematics mapping based on input-output data pairs. Reinforcement learning algorithms, such as Soft Actor-Critic (SAC), can learn inverse kinematics policies through trial-and-error interactions with the environment, optimizing joint configurations to achieve desired end-effector positions.
+% \textbf{Sampling-Based Methods}: Sampling-based methods, such as Randomized Kinodynamic Planning (RRT), adopt a randomized search strategy to explore the joint space and find feasible solutions to the inverse kinematics problem. By sampling and connecting valid configurations in the joint space, these methods can discover feasible joint angles that satisfy the end-effector constraints.
 
-\subsection{Cyclic Coordinate Descent}
+% \textbf{Machine Learning-based Methods}: Machine learning approaches, including neural networks and reinforcement learning algorithms, have been increasingly explored for solving inverse kinematics. Neural networks can be trained to approximate the inverse kinematics mapping based on input-output data pairs. Reinforcement learning algorithms, such as Soft Actor-Critic (SAC), can learn inverse kinematics policies through trial-and-error interactions with the environment, optimizing joint configurations to achieve desired end-effector positions.
+
+\subsubsection{Cyclic Coordinate Descent}
 
 Cyclic Coordinate Descent (CCD) is a popular numerical method for solving inverse kinematics. It is an iterative algorithm that adjusts the joint angles of a robotic system one at a time, from a base joint to the end-effector, in order to align the end-effector with the desired target position.
 

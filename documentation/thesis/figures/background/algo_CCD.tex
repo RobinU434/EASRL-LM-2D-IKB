@@ -1,10 +1,10 @@
-\begin{algorithm}[p]
+\begin{algorithm}
     \caption{Cyclic Coordinate Descent Pseudo Code}\label{alg:CCD}
     \begin{algorithmic}
         \State{} Input: Current joint angles $q$, Desired end-effector position $p_\text{target}$.
         \While{unitl convergence}
             \For{each $i$ in $[N-1, \ldots, 0]$}
-                \State{} Calculate the vector from the current joint poisition to the end-effector position:
+                \State{} Calculate the vector from the current joint position to the end-effector position:
                 \State{} $V_\text{current} \leftarrow p_{N-1} - p_i$
 
                 \State{} Calculate the vector from the current joint position to the target position:

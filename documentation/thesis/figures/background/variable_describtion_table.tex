@@ -7,17 +7,22 @@
         \text{\textbf{Dimensions}} & Description \\
         \hline
         N & Number of joints, $N \in \{x \in \mathbb{N} | x > 1\}$ \\ 
-        
+        F & dimensionality of feature space
+        L & dimensionality of label space
+        P & dimensionality of prediction space
         \hline
         \text{\textbf{Variables}} & Description \\
         \hline
         l & segment lengths, $l \in \{x \in \mathbb{R}_{>0}^N$
         q & joint angles, $q \in [0, 2\pi)^N$\\ 
         p, \ v & position, vector in 2D space, $p, v \in \mathbb{R}^2$\\
-        t & time step, $t \in \mathbb{N}$
-        \pi & pi $\approx 3.141$
-        \theta & parameters
-        \pi_\theta & parameterized actor
+        t & time step, $t \in \mathbb{N}$ \\
+        x & feature, $x \in \mat{R}^F$ \\
+        y & label, $y \in \mat{R}^L$ \\
+        \hat{x} & prediction, $\hat{x} \in \mat{R}^P$  \\ 
+        \pi & pi $\approx 3.141$  \\ 
+        \theta & parameters  \\
+        \pi_\theta & parameterized actor  \\
         
         \hline
         \text{\textbf{Sets}} & Description \\
@@ -34,9 +39,11 @@
         \hline
         \text{\textbf{Functions}} & Description \\
         \hline
-        ||\mathcal{x}||_2 & Euclidean or $L^2$ norm $||x||_2 = \sqrt{\sum_{x\in\mathcal{x}} x^2}$
-        (X, Y) & concatenations of two vectors $X$ and $Y$, \todo{define concatenations of multiple elements recursively?}
+        P & Probability function
+        FK & Forward kinematics
+        ||\mathcal{x}||_2 & Euclidean or $L^2$ norm $||x||_2 = \sqrt{\sum_{x\in\mathcal{x}} x^2}$ \\
+        (X, Y) & concatenations of two vectors $X$ and $Y$, \todo{define concatenations of multiple elements recursively?} \\
     \end{tabular}
     \caption{Notation and names of variables}
-    \label{tab:notation}
+\label{tab:notation}
 \end{table}

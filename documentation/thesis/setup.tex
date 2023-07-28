@@ -43,6 +43,8 @@
     \usepackage{graphicx}  % include graphics
     \usepackage{subfig}  % divide figure, e.g. 1(a), 1(b)...
     \usepackage{amsmath}  % |
+    \numberwithin{equation}{chapter}
+    \numberwithin{figure}{chapter}
     \usepackage{amsthm}   % | math, bmatrix etc
     \usepackage{amsfonts} % |
     \usepackage{calc}  % calculate within LaTeX
@@ -50,6 +52,7 @@
                 bookmarksopen=true,bookmarksopenlevel=1,breaklinks=false,
                 pdfborder={0 0 0},backref=false,colorlinks=false]{hyperref}
     \usepackage{etoolbox} % if-else commands
+    \usepackage{mathtools}
 
 
     %==========================================

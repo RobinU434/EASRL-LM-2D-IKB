@@ -1,0 +1,16 @@
+\begin{algorithm}
+    \caption{Stochastic gradient descent}\label{alg:SGD}
+    \begin{algorithmic}
+        \State{} Input: Learning rate schedule: $\epsilon_1, \epsilon_2, \ldots$. Initial parameter $\theta$
+
+        \State{} $k \leftarrow 1$
+        \While{stopping criterion not met}
+            \State{} Sample a minibatch of $m$ examples from training set $\{x^{(1)}, \ldots, x^{(m)}\}$ with corresponding targets $y^{(i)}$.
+            \State{} Compute gradient estimate:
+            \State{} $\hat{g} \leftarrow \frac{1}{m}\nabla_\theta \sum_i L(f(x^{(i)}; \theta), y^{(i)})$
+            \State{} Apply update:
+            \State{} $\theta \leftarrow \theta - \epsilon_k \hat{g}$
+            \State{} $k \leftarrow k + 1$
+        \EndWhile{}
+\end{algorithmic}
+\end{algorithm} 

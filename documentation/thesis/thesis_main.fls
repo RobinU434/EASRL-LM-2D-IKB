@@ -1,6 +1,6 @@
-PWD c:\Users\Robin Uhrich\Documents\Bachelorthesis
+PWD c:\Users\Robin Uhrich\Documents\Informatik\Bachelor\Bachelorthesis\documentation\thesis
 INPUT C:\Users\Robin Uhrich\AppData\Local\MiKTeX\miktex\data\le\pdftex\pdflatex.fmt
-INPUT c:\Users\Robin Uhrich\Documents\Bachelorthesis\thesis_main.tex
+INPUT c:\Users\Robin Uhrich\Documents\Informatik\Bachelor\Bachelorthesis\documentation\thesis\thesis_main.tex
 OUTPUT thesis_main.log
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\koma-script\scrbook.cls
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\koma-script\scrbook.cls
@@ -182,6 +182,10 @@ INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\rerunfileche
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\rerunfilecheck\rerunfilecheck.sty
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\generic\uniquecounter\uniquecounter.sty
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\generic\uniquecounter\uniquecounter.sty
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\mathtools\mathtools.sty
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\mathtools\mathtools.sty
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\mathtools\mhsetup.sty
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\mathtools\mhsetup.sty
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\algorithms\algorithm.sty
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\algorithms\algorithm.sty
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\float\float.sty
@@ -316,9 +320,21 @@ INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\tex\latex\lipsum\lipsu
 INPUT .\thesis_main.aux
 INPUT .\thesis_main.aux
 INPUT thesis_main.aux
+INPUT .\figures\background\network_architectures.aux
+INPUT .\figures\background\network_architectures.aux
+INPUT figures\background\network_architectures.aux
+INPUT .\figures\background\algo_SGD.aux
+INPUT .\figures\background\algo_SGD.aux
+INPUT figures\background\algo_SGD.aux
+INPUT .\figures\background\VAE.aux
+INPUT .\figures\background\VAE.aux
+INPUT figures\background\VAE.aux
 INPUT .\figures\background\CVAE_structure.aux
 INPUT .\figures\background\CVAE_structure.aux
 INPUT figures\background\CVAE_structure.aux
+INPUT .\figures\background\algo_fk.aux
+INPUT .\figures\background\algo_fk.aux
+INPUT figures\background\algo_fk.aux
 INPUT .\figures\background\algo_CCD.aux
 INPUT .\figures\background\algo_CCD.aux
 INPUT figures\background\algo_CCD.aux
@@ -465,15 +481,21 @@ INPUT .\figures\background\agent-environment-interaction.png
 INPUT .\figures\background\agent-environment-interaction.png
 INPUT .\figures\background\agent-environment-interaction.png
 INPUT .\figures\background\agent-environment-interaction.png
-INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\jknappen\ec\ecrm0800.tfm
-INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\public\amsfonts\cmextra\cmex7.tfm
-INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\public\amsfonts\symbols\msam5.tfm
-INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\public\amsfonts\symbols\msbm5.tfm
-INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\public\cm\cmbx5.tfm
-INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\public\amsfonts\cmextra\cmmib5.tfm
-INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\public\amsfonts\cmextra\cmbsy5.tfm
-INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\jknappen\ec\ecrm0600.tfm
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\jknappen\ec\ecti1095.tfm
+INPUT .\figures\place_holder.png
+INPUT .\figures\place_holder.png
+INPUT .\figures\place_holder.png
+INPUT .\figures\place_holder.png
+INPUT .\figures\place_holder.png
+INPUT .\figures\place_holder.png
+INPUT .\figures\place_holder.png
+INPUT .\figures\place_holder.png
+INPUT .\figures\place_holder.png
+INPUT .\figures\place_holder.png
+INPUT .\figures\place_holder.png
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\jknappen\ec\ecsx1200.tfm
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\jknappen\ec\ecrm0800.tfm
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\jknappen\ec\ecrm0600.tfm
 INPUT .\figures\background\algo_SAC.tex
 INPUT .\figures\background\algo_SAC.tex
 INPUT .\figures\background\algo_SAC.tex
@@ -517,9 +539,32 @@ INPUT .\figures\place_holder.png
 INPUT .\figures\place_holder.png
 INPUT .\figures\place_holder.png
 INPUT .\figures\place_holder.png
-INPUT .\figures\place_holder.png
-INPUT .\figures\place_holder.png
-INPUT .\figures\place_holder.png
+INPUT .\figures\background\network_architectures.tex
+INPUT .\figures\background\network_architectures.tex
+OUTPUT figures\background\network_architectures.aux
+INPUT .\figures\background\network_architectures.tex
+INPUT .\figures\background\network_architectures.tex
+INPUT figures\background\network_architectures.tex
+INPUT .\figures\background\conv-net-architecture.png
+INPUT .\figures\background\conv-net-architecture.png
+INPUT .\figures\background\conv-net-architecture.png
+INPUT .\figures\background\conv-net-architecture.png
+INPUT .\figures\background\conv-net-architecture.png
+INPUT .\figures\background\conv-net-architecture.png
+INPUT .\figures\background\conv-net-architecture.png
+INPUT .\figures\background\rnn-net-architecture.png
+INPUT .\figures\background\rnn-net-architecture.png
+INPUT .\figures\background\rnn-net-architecture.png
+INPUT .\figures\background\rnn-net-architecture.png
+INPUT .\figures\background\rnn-net-architecture.png
+INPUT .\figures\background\rnn-net-architecture.png
+INPUT .\figures\background\rnn-net-architecture.png
+INPUT .\figures\background\algo_SGD.tex
+INPUT .\figures\background\algo_SGD.tex
+OUTPUT figures\background\algo_SGD.aux
+INPUT .\figures\background\algo_SGD.tex
+INPUT .\figures\background\algo_SGD.tex
+INPUT figures\background\algo_SGD.tex
 INPUT .\figures\background\AE.tex
 INPUT .\figures\background\AE.tex
 INPUT .\figures\background\AE.tex
@@ -532,6 +577,19 @@ INPUT .\figures\background\AE.png
 INPUT .\figures\background\AE.png
 INPUT .\figures\background\AE.png
 INPUT .\figures\background\AE.png
+INPUT .\figures\background\VAE.tex
+INPUT .\figures\background\VAE.tex
+OUTPUT figures\background\VAE.aux
+INPUT .\figures\background\VAE.tex
+INPUT .\figures\background\VAE.tex
+INPUT figures\background\VAE.tex
+INPUT .\figures\background\VAE.png
+INPUT .\figures\background\VAE.png
+INPUT .\figures\background\VAE.png
+INPUT .\figures\background\VAE.png
+INPUT .\figures\background\VAE.png
+INPUT .\figures\background\VAE.png
+INPUT .\figures\background\VAE.png
 INPUT .\figures\background\CVAE_structure.tex
 INPUT .\figures\background\CVAE_structure.tex
 OUTPUT figures\background\CVAE_structure.aux
@@ -542,6 +600,12 @@ INPUT .\figures\place_holder.png
 INPUT .\figures\place_holder.png
 INPUT .\figures\place_holder.png
 INPUT .\figures\place_holder.png
+INPUT .\figures\background\algo_fk.tex
+INPUT .\figures\background\algo_fk.tex
+OUTPUT figures\background\algo_fk.aux
+INPUT .\figures\background\algo_fk.tex
+INPUT .\figures\background\algo_fk.tex
+INPUT figures\background\algo_fk.tex
 INPUT .\figures\background\algo_CCD.tex
 INPUT .\figures\background\algo_CCD.tex
 OUTPUT figures\background\algo_CCD.aux
@@ -555,11 +619,11 @@ INPUT .\figures\background\CCD-geometry.png
 INPUT .\figures\background\CCD-geometry.png
 INPUT .\figures\background\CCD-geometry.png
 INPUT .\figures\background\CCD-geometry.png
-INPUT .\chapters\4-approach.tex
-INPUT .\chapters\4-approach.tex
-INPUT .\chapters\4-approach.tex
-INPUT .\chapters\4-approach.tex
-INPUT chapters\4-approach.tex
+INPUT .\chapters\4-methodology.tex
+INPUT .\chapters\4-methodology.tex
+INPUT .\chapters\4-methodology.tex
+INPUT .\chapters\4-methodology.tex
+INPUT chapters\4-methodology.tex
 INPUT .\chapters\5-experiments.tex
 INPUT .\chapters\5-experiments.tex
 INPUT .\chapters\5-experiments.tex
@@ -576,14 +640,30 @@ INPUT .\chapters\7-acknowledgments.tex
 INPUT .\chapters\7-acknowledgments.tex
 INPUT .\chapters\7-acknowledgments.tex
 INPUT chapters\7-acknowledgments.tex
+INPUT .\todo_list.tex
+INPUT .\todo_list.tex
+INPUT .\todo_list.tex
+INPUT .\todo_list.tex
+INPUT todo_list.tex
 INPUT .\thesis_main.bbl
 INPUT .\thesis_main.bbl
 INPUT thesis_main.bbl
-INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\tfm\jknappen\ec\ecti1095.tfm
 INPUT thesis_main.aux
+INPUT .\figures\background\network_architectures.aux
+INPUT .\figures\background\network_architectures.aux
+INPUT figures\background\network_architectures.aux
+INPUT .\figures\background\algo_SGD.aux
+INPUT .\figures\background\algo_SGD.aux
+INPUT figures\background\algo_SGD.aux
+INPUT .\figures\background\VAE.aux
+INPUT .\figures\background\VAE.aux
+INPUT figures\background\VAE.aux
 INPUT .\figures\background\CVAE_structure.aux
 INPUT .\figures\background\CVAE_structure.aux
 INPUT figures\background\CVAE_structure.aux
+INPUT .\figures\background\algo_fk.aux
+INPUT .\figures\background\algo_fk.aux
+INPUT figures\background\algo_fk.aux
 INPUT .\figures\background\algo_CCD.aux
 INPUT .\figures\background\algo_CCD.aux
 INPUT figures\background\algo_CCD.aux
@@ -604,10 +684,14 @@ INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\ams
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmmi8.pfb
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmr10.pfb
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmr10.pfb
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmr6.pfb
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmr6.pfb
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmr8.pfb
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmr8.pfb
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmsy10.pfb
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmsy10.pfb
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmsy6.pfb
+INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmsy6.pfb
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmsy8.pfb
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmsy8.pfb
 INPUT C:\Users\Robin Uhrich\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\symbols\msbm10.pfb

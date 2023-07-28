@@ -24,30 +24,52 @@ To apply RL in general you need an environment the agent can send actions to and
     \item it is expandable. You are always able to extend the environment with additional constrains like objects the robot has to navigate around or joint angle constrains.
 \end{itemize}
 
-In this section I'm going to present the a novel RL-Environment for bench-marking the performance of different algorithms to solve inverse kinematics for a robot arm with $N$ many joints and subsequently $N$ many segments with lengths $l \in\mathbb{R}_{>0}^N$ in 2D space.  
+In this section I'm going to present the a novel RL-Environment for bench-marking the performance of different algorithms to solve inverse kinematics for a robot arm with $N$ many joints and subsequently $N$ many segments with lengths $l \in\mathbb{R}_{>0}^N$ in 2D space. For simplicity reasons $l$ is constant with $l = \{ 1 \}^N$.
 
 \subsection{State Space}
 
 The state space $\mathcal{S} \subset \mathbb{R}^{4 + N}$ for this environment consists of three main building blocks. 
 
 \begin{itemize}
-    \item \textbf{goal information} $p_\text{target} \in \mathbb{R}^2$: This vector provides information where to move the end-effector. This position is lies always in for the robot arm, reachable distance. Mathematical speaking: $||p_\text{target}||_2 \leq \sum l$ 
-    \item \textbf{state position} $p_\text{current} \in \mathbb{R}^2$: This vector should help the agent to understand where the current end-effector is placed and how an action has influenced the current end-effector position. Because the current position is attached to the robot arm: $||p_\text{current}||_2 \leq \sum l$
-    \item \textbf{joint angles} $q \in [0, 2\pi)^N$: This vector contains information about the current joint angle configuration.
+    \item \textbf{goal information} $p_{\text{target}, t} \in \mathbb{R}^2$: This vector provides information where to move the end-effector. This position is lies always in for the robot arm, reachable distance. Mathematical speaking: $||p_\text{target}||_2 \leq \sum l$ 
+    \item \textbf{state position} $p_{\text{current},t} \in \mathbb{R}^2$: This vector contains the current end-effector position in 2D space and should help the agent to understand where the end-effector is placed and how an action has influenced the current end-effector position. Because the current position is attached to the robot arm: $||p_\text{current}||_2 \leq \sum l$.
+    \item \textbf{joint angles} $q_t \in [0, 2\pi)^N$: This vector contains information about the joint angle configuration at time $t$.
 \end{itemize}
 A state $\mathcal{s}_t \in \mathcal{S}$ at time $t$ has for all $t$ the same composition
 
-\begin{equation}
+\begin{equation}[p]\label{eqn: state}
     \mathcal{s}_t = (p_{\text{target}, t}, p_{\text{current}, t}, q_t)
-\end{equation}\label{eqn: state}
+\end{equation}
+
+To refer to individual parts from index $i$ to $j$ of a state with: $s_{t, (i, j)}$. Therefor we can extract the individual parts with:
+\begin{itemize}
+    \item $p_{\text{target}, t} = s_{t, (0, 1)}$ 
+    \item $p_{\text{current}, t} = s_{t, (2, 3)}$
+    \item $q_{t} = s_{t, (4, N + 4)}$
+\end{itemize}
 
 \subsection{Action Space}
 
-The action space $\mathcal{A} \subset \mathbb{R}^N$
+The action space $\mathcal{A} \subseteq \mathbb{R}^N$ for this particular environment is continuous and contains all possible joint angle configurations for a robot arm with $N$ joints. 
+
+A generated action $\hat{a}$ from the agent is sent to the environment. Inside the environment the incoming action is added on top of the current state angles $q_t$. To ensure the constrains of $q_{t+1} \in [0, 2\pi)^N$ we take the signed remainder of a division by $2\pi$ to write into $q_{t+1}$:
+\begin{equation*}
+    q_{t+1} = (q_t + \hat{a}) \ \% \ 2\pi
+\end{equation*}
+
+Subsequently after updating the state angles the current end-effector position get updated by a forward kinematics call on $q_{t+1}$:
+\begin{equation*}
+    p_{\text{current}, t} = fk(q_{t+1})
+\end{equation*}
+
 
 \subsection{Reward Function}
 
-The reward function is a vital component of the RL formulation as it aims to mathematically capture the desired behavior of the robot. It follows a simple pattern: positive rewards are used to reinforce desired actions or trajectories. This reinforcement helps shape the agent's policy, encouraging it to explore and exploit actions that maximize the cumulative reward over time. On the other hand negative rewards are employed to discourage unsuccessful or unintended behavior. Achieving a balance between the reward function and episode termination is crucial. While you don't want the agent to remain stuck indefinitely, it is also important to penalize states where the agent may become trapped. This encourages the agent to explore alternative options and avoid undesired states, striking a balance between exploration and exploitation. Throughout the thesis the reward function is refered to as $R: \mathcal{S} \to \mathcal{R}$ which maps a state of the state space to an element of all possible rewards $R \subseteq \mathbb{R}$.
+The reward function $R: \mathcal{A} \times \mathcal{S} \to \mathbb{R}$ as in \eqref{eqn:Rewardfunction} for the conducted experiments and this environment aims to minimize the distance between the current end-effector position $p_{\text{current}, t}$ and the current target position $p_{\text{target}, t}$. The current end-effector position is calculated by the forward-kinematics function on state-angles $q_t$ plus action $a_t$. The target position is sampled at the beginning of an episode and stays constant throughout the episode until completion or time limit is reached. 
+
+\begin{equation}\label{eqn:Rewardfunction}
+    R(s_t, a_t) = ||\text{forward kinematics}(s_{t, (4, \ldots, N + 4)}  + a_t), s_{t, (0 ,1)}||_2
+\end{equation}
 
 \section{Dataset Creation}
 
@@ -83,5 +105,38 @@ Plots
     Runtime complexity wrt. number of joints
     expert actions with 2 joints for demonstrating that the actions of the action space cover only a very limited subset of possible actions. Why Two -> because we can just draw a heatmap in two dimensions
 
+\section{Latent Criterion}
 
-\sectioon
+In this section I will cover the employed loss functions to train the latent models. 
+
+\todo{KL div}
+
+\textbf{Imitation Loss}. The imitation loss is a criterion to minimize the mean squared error between a given label $y$, in this case an action from an expert which results in $y \in \mathbb{R}^N$ and the predicted action $\hat{x} \in \mathbb{R}^N$. It is defined as in \eqref{eqn:Imitation-Loss}.
+
+\begin{equation}[p]\label{eqn:Imitation-Loss}
+    \begin{split}
+        \mathcal{L}_\text{Imitation}: \mathbb{R}^N \times \mathbb{R}^N & \to \mathbb{R} \\
+        y, \hat{x} & \mapsto \frac{1}{N}\sum_{i = 0}^{N-1} (y_i - \hat{x}_i)^2 
+    \end{split}
+\end{equation}
+
+
+\textbf{Distance Loss}. This loss function minimizes the distance between a desired position in 2D space as label $p_\text{target}$ and the action outcome of a state action combination. The state information needed for this criterion are only the current robot arm angles $q$. Like before the action is referred to as $\hat{x}$. \todo{wirte forward kinematics algorithm}
+
+\begin{equation}[p]\label{eqn:Distance-Loss}
+    \mathcal{L}_\text{Distance}(p_\text{target}, \hat{x}, q) = ||p_\text{target} - \text{forward kinematics}(q + \hat{x})||_2
+\end{equation}
+
+\textbf{Inverse kinematics Loss}. This criterion as in \eqref{eqn:IK-Loss}is the result of merging distance loss and imitation loss is one loss function as a weighted sum of those two components with weights $w_\text{Imitation}, w_\text{Distance} \in \mathbb{R}$. In the implementation the loss function can be configured to work also a pure distance loss function without providing any expert action.
+
+\begin{equation}\label{eqn:IK-Loss}
+    \mathcal{L}_\text{IK}(y, p_\text{target}, \hat{x}, q) = w_\text{Imitation} \cdot \mathcal{L}_\text{Imitation}(y, \hat{x}) + w_\text{Distance} \cdot \mathcal{L}_\text{Distance}(p_\text{target}, \hat{x}, q)
+\end{equation}
+
+\section{Learning Variational Autoencoder}
+
+\subsection{}
+
+\section{Learning conditional Variational Autoencoder}
+
+

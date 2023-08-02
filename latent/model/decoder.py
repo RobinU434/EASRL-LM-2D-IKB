@@ -8,13 +8,13 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
        
         self.linear = nn.Sequential(
-            nn.Linear(latent_dim, 512),
+            nn.Linear(latent_dim, 256),
             nn.ReLU(),
-            nn.Linear(512, 512),
+            nn.Linear(256, 256),
             nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.ELU(),
-            nn.Linear(512, output_dim),
+            # nn.Linear(512, 512),
+            # nn.ELU(),
+            nn.Linear(256, output_dim),
         )
 
     def forward(self, z):

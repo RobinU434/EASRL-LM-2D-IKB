@@ -43,6 +43,7 @@ class Trainer(ABC):
         test_metrics: Metrics
 
         for epoch_idx in range(self._n_epochs):
+            self.epoch_idx = epoch_idx
             train_metrics = self._run_model(data=self._train_data, train=True)
 
             if epoch_idx % self._val_interval == 0:

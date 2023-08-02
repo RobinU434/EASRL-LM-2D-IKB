@@ -95,7 +95,7 @@ class VAETrainer(Trainer):
             if self._criterion._target_mode == TargetMode.ACTION:
                 # y is expected to be the target action we want to encode
                 y = y + current_angles
-            loss = self._criterion(y=y, x_hat=action, mu=mu, log_std=log_std)
+            loss = self._criterion(y=y, x_hat=action, mu=mu, log_std=log_std, epoch=self.epoch_idx)
 
             if train:
                 self._model.train(loss)

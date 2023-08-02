@@ -86,6 +86,7 @@ class VAEProcess(LatentProcess):
             **loss_config,
             target_mode=self._train_data.dataset.target_mode,
             device=self._device,
+            max_epochs=self._config["n_epochs"],
         )
 
         return loss_func

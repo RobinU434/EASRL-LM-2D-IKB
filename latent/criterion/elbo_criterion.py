@@ -88,6 +88,7 @@ class InvKinELBO(ELBO):
 
     def __init__(
         self,
+        max_epochs: int,
         kl_loss_weight: float = 1,
         reconstruction_loss_weight: float = 1,
         imitation_loss_weight: float = 1,
@@ -113,6 +114,8 @@ class InvKinELBO(ELBO):
             device=self._device
         )
 
+        self._max_epochs = max_epochs
+
         if self._reconstruction_loss_weight == 0:
             logging.warning("reconstruction loss is disabled")
         if self._kl_loss_weight == 0:
@@ -126,7 +129,7 @@ class InvKinELBO(ELBO):
         self.kl_loss = kl_divergence(mu, log_std)
         return self.kl_loss
 
-    def __call__(self, y: Tensor, x_hat: Tensor, mu: Tensor, log_std: Tensor) -> Tensor:
+    def __call__(self, y: Tensor, x_hat: Tensor, mu: Tensor, log_std: Tensor, epoch: int) -> Tensor:
         """computes inverse kinematics loss on autoencoder. Final loss is a weighted sum of
         - distance_loss
         - imitation_loss
@@ -143,9 +146,15 @@ class InvKinELBO(ELBO):
         Returns:
             torch.Tensor: weighted sum
         """
+        # linear annealing of kl loss weight
+        if epoch >= 100:
+            kl_loss_weight = (1 - epoch / self._max_epochs) * self._kl_loss_weight
+        else:
+            kl_loss_weight = 0.
+
         self.loss = self._reconstruction_loss_weight * self._reconstruction_loss_func(
             y, x_hat
-        ) + self._kl_loss_weight * self._kl_loss_func(mu, log_std)
+        ) + kl_loss_weight * self._kl_loss_func(mu, log_std)
         return self.loss
 
     def __str__(self) -> str:

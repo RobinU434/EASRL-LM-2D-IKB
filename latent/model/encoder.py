@@ -5,14 +5,15 @@ class VariationalEncoder(nn.Module):
         super(VariationalEncoder, self).__init__()
         
         self.linear = nn.Sequential(
-            nn.Linear(input_dim, 512),
-            nn.Linear(512, 512),
+            nn.Linear(input_dim, 256),
             nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.ReLU()
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            # nn.Linear(256, 256),
+            # nn.ReLU()
         )
-        self.linear_mu = nn.Linear(512, latent_dims)
-        self.linear_std = nn.Linear(512, latent_dims)
+        self.linear_mu = nn.Linear(256, latent_dims)
+        self.linear_std = nn.Linear(256, latent_dims)
 
     def forward(self, x):
         x = self.linear(x)

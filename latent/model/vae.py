@@ -83,12 +83,11 @@ class VariationalAutoencoder(NeuralNetwork):
 
         # sample the latent space
         sigma = torch.exp(log_std)
-        sigma = torch.ones_like(sigma) * math.exp(-40)
         z = mu + sigma * self._N.sample(mu.shape)
 
         # enhance latent space
         z = torch.cat([z, c_dec], dim=1)
-        z = Variable(z, requires_grad=True)
+        # z = Variable(z, requires_grad=True)
         # store for logging the gradient
         self.z = z
 
@@ -106,9 +105,9 @@ class VariationalAutoencoder(NeuralNetwork):
         loss.backward()
 
         # log gradient from latent space
-        if self._store_history:
-            z_grad = self.z.grad.cpu()
-            self._z_grad_history = torch.cat([self._z_grad_history, z_grad], dim=0)
+        # if self._store_history:
+        #     z_grad = self.z.grad.cpu()
+        #     self._z_grad_history = torch.cat([self._z_grad_history, z_grad], dim=0)
 
         self._optimizer.step()
 

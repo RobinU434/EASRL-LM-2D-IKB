@@ -6,7 +6,7 @@ import logging
 
 from argparse import ArgumentParser, Namespace
 from gym.wrappers import RescaleAction
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.writer import SummaryWriter
 from algorithms.ddpg.ddpg import DDPG
 
 from envs.plane_robot_env import PlaneRobotEnv

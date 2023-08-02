@@ -30,4 +30,4 @@ super_actor:
   enabled: True
   device: "cuda:6"
   learning_mode: 0
-  checkpoint_dir: "results/supervised/gaussian_target/PointDistanceLoss"
+  checkpoint_dir: "results/supervised/activeLearn/IKLoss"

@@ -257,7 +257,14 @@ class PlaneRobotEnv(gym.Env):
     @property
     def num_steps(self):
         return self._step_counter
-        
+
+    @property
+    def target_position(self):
+        return self._target_position
+    
+    @property
+    def n_joints(self):
+        return self._robot_arm.n_joints
 
 if __name__ == "__main__":
     env = PlaneRobotEnv(4, 1)

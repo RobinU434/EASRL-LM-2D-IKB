@@ -84,7 +84,7 @@ class IKLoss:
         imitation_loss_weight: float = 1,
         distance_loss_weight: float = 1,
         regularizer_weight: float = 1,
-        target_mode: Literal[YMode] = YMode.UNDEFINED,
+        target_mode: YMode = YMode.UNDEFINED,
     ):
         self.imitation_loss_weight = imitation_loss_weight
         self.distance_loss_weight = distance_loss_weight
@@ -112,13 +112,17 @@ class IKLoss:
                     "distance loss weight and imitation loss weight is 0, therefor it is not possible to create any gradient"
                 )
 
-        elif self.target_mode == YMode.POSITION:
+        elif (
+            self.target_mode == YMode.POSITION
+            or self.target_mode == YMode.INTERMEDIATE_POSITION
+            or self.target_mode == YMode.FINAL_POSITION
+        ):
             logging.warning(
                 f"Only DistanceLoss is enabled ImitationLoss is disabled. The corresponding weight {self.imitation_loss_weight} will not be taken into account"
             )
             self.imitation_loss_func = lambda *x: torch.zeros(1)
-            # self.distance_loss_func = EuclidianDistance()
-            self.distance_loss_func = torch.nn.HuberLoss()
+            self.distance_loss_func = EuclidianDistance()
+            # self.distance_loss_func = torch.nn.HuberLoss()
 
             if self.distance_loss_weight == 0:
                 logging.error(
@@ -144,7 +148,11 @@ class IKLoss:
         """
         self.imitation_loss = self.imitation_loss_func(y, x_hat)
         predicted_end_effector = forward_kinematics(x_hat)[:, -1]
-        if self.target_mode == YMode.POSITION:
+        if (
+            self.target_mode == YMode.POSITION
+            or self.target_mode == YMode.INTERMEDIATE_POSITION
+            or self.target_mode == YMode.FINAL_POSITION
+        ):
             self.distance_loss = self.distance_loss_func(
                 y.cpu(), predicted_end_effector
             )
@@ -160,6 +168,7 @@ class IKLoss:
             self.imitation_loss_weight * self.imitation_loss
             + self.distance_loss_weight * self.distance_loss
         )
+        
         return self.loss
 
     def __str__(self) -> str:
@@ -178,12 +187,13 @@ def angle_diff(a: torch.Tensor, b: torch.Tensor):
     return (dif + torch.pi) % (2 * torch.pi) - torch.pi
 
 
-def get_loss_func(loss_func_name: str, device: str, y_mode: int = YMode.UNDEFINED):
+def get_loss_func(loss_func_name: str, device: str, y_mode: YMode = YMode.UNDEFINED):
     loss_func_names = [
         "ImitationLoss",
         "DistanceLoss",
         "MergeLoss",
         "PointDistanceLoss",
+        "IKLoss",
     ]
 
     if loss_func_name == "ImitationLoss":
@@ -211,6 +221,5 @@ def get_loss_func(loss_func_name: str, device: str, y_mode: int = YMode.UNDEFINE
             loss_func_name,
         )
 
-    # print("Use: ", type(loss_func).__name__)
     print(loss_func)
     return loss_func

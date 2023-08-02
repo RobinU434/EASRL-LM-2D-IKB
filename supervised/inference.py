@@ -15,8 +15,10 @@ from supervised.data import get_action_radius
 from supervised.model import Regressor, build_model
 from supervised.utils import forward_kinematics
 from vae.utils.post_processing import PostProcessor
+from supervised.train import build_state, run_greedy
 
 matplotlib.rcParams["figure.dpi"] = 300
+
 
 def setup_parser(parser: ArgumentParser) -> ArgumentParser:
     parser.add_argument(
@@ -47,10 +49,7 @@ def load_config(checkpoint_folder: str) -> dict:
 def load_model(config: dict, checkpoint_path: str) -> Regressor:
     # build basic model
     model = build_model(
-        feature_source=config["feature_source"],
-        num_joints=config["num_joints"],
-        learning_rate=config["learning_rate"],
-        post_processor_config=config["post_processor"],
+        **config
     )
 
     checkpoint = torch.load(checkpoint_path)
@@ -136,75 +135,61 @@ def inference(model: Regressor, num_samples: int, device: str, config: dict):
         bins = 50
     for idx, joint_actions in enumerate(actions.T):
         ax.hist(
-            joint_actions, bins=bins, alpha=1 / np.sqrt(model.output_dim), label=idx
+            joint_actions,
+            bins=bins,
+            alpha=1 / np.sqrt(model.output_dim),
+            label=str(idx),
         )
     fig.legend()
     fig.savefig("results/supervised_action_distribution.png")
 
 
-def greedy_inference(model: Regressor, num_steps: int, device: str, plot_arms: bool = False):
+def greedy_inference(
+    model: Regressor, num_steps: int, device: str, plot_arms: bool = False
+):
+    print(f"perfom a maximum number of {num_steps}")
     # sample target
-    target = torch.from_numpy(sample_target(model.output_dim)).unsqueeze(dim=0)
+    target = torch.from_numpy(sample_target(model.output_dim, 1)).unsqueeze(dim=0)
+    target = torch.tensor([[-5, 5]])
+    print("target position: ", target.squeeze().tolist())
 
     # sample start config
     state_angles = torch.randn(model.output_dim) * 2 * np.pi
     state_angles = state_angles.unsqueeze(dim=0)
-    state_angles = torch.zeros_like(state_angles)
+    # state_angles = torch.zeros_like(state_angles)
     current_position = forward_kinematics(state_angles)[:, -1]
 
-    max_length = 0.4
-    direction = target - current_position
-    norm = torch.linalg.norm(direction, 2)
-    scaling = 1 if norm < max_length else max_length / norm
-    direction = scaling * direction
-
+    # build init state -> target position is not important because it will be replaced
+    state = (
+        torch.cat([torch.zeros(1, 2), current_position, state_angles], dim=1).to(device).float()
+    )
     eps = 0.1  # parameter which controls the loop break condition
-    dists = [torch.linalg.norm(target - current_position).item()]
-    arms = [forward_kinematics(state_angles.clone())]
-    end_effectors = [current_position.clone()]
-    step_idx = 0
-    while step_idx < num_steps:
-        state = (
-            torch.cat([direction, current_position, state_angles], dim=1)
-            .to(device)
-            .float()
-        )
+    metrics = run_greedy(
+        model=model,
+        target_pos=target.to(device),
+        init_state=state,
+        step_length=model.action_radius,
+        max_steps=num_steps,
+        eps=eps,
+        device=device,
+    )
 
-        state = state.unsqueeze(dim=0)
-        action = model.forward(state)
-
-        state_angles = state_angles + action[0].cpu()
-        current_position = forward_kinematics(state_angles)[:, -1]
-
-        direction = target - current_position
-        norm = torch.linalg.norm(direction, 2)
-        scaling = 1 if norm < max_length else max_length / norm
-        direction *= scaling
-
-        # calculate metrics
-        distance = torch.linalg.norm(current_position - target)
-        dists.append(distance.item())
-        arms.append(forward_kinematics(state_angles))
-        end_effectors.append(current_position.clone())
-        if distance <= eps:
-            break
-        step_idx += 1
-
-    end_effectors = torch.stack(end_effectors).squeeze().detach().numpy()
     # plot results
     fig, axs = plt.subplots(2, 1)
     axs[0].add_patch(Circle((0, 0), model.output_dim, fill=False))
     axs[0].scatter(target[0, 0], target[0, 1], c="g", s=2, label="target", zorder=1)
     axs[0].scatter(
-        end_effectors[0, 0], end_effectors[0, 1], c="b", s=2, label="start", zorder=1
+        metrics["trajectory"][0, 0],
+        metrics["trajectory"][0, 1],
+        c="b",
+        s=2,
+        label="start",
+        zorder=1,
     )
+    axs[0].plot(metrics["trajectory"][:, 0], metrics["trajectory"][:, 1], c="r")
 
-    axs[0].plot(end_effectors[:, 0], end_effectors[:, 1], c="r")
-
-    # plot arms
-    arms = torch.stack(arms).detach().squeeze().numpy()
     if plot_arms:
-        for position_sequence in arms[0::model.output_dim]:
+        for position_sequence in metrics["arms"][0 :: model.output_dim]:
             axs[0].plot(
                 position_sequence[:, 0],
                 position_sequence[:, 1],
@@ -216,12 +201,25 @@ def greedy_inference(model: Regressor, num_steps: int, device: str, plot_arms: b
     axs[1].grid()
     axs[1].set_xlabel("step")
     axs[1].set_ylabel("distance to target")
-    axs[1].plot(dists)
-    print(min(dists))
+    dist_to_target = np.linalg.norm(metrics["trajectory"] - target.numpy(), axis=1)
+    diff = np.diff(metrics["trajectory"], axis=0)
+    step_sizes = np.linalg.norm(diff, axis=1)
+    axs[1].plot(step_sizes)
+
+    axs[0].legend()
+    
+    print(f"needed: {len(dist_to_target)} steps")
+    print(f"distance: min={min(dist_to_target):.4f}, mean={np.mean(dist_to_target):.4f}")
+
+    print(f"average step length: {step_sizes.mean():.4f} trained on: {model.action_radius}")
 
     fig.savefig("results/supervised_greedy_inference.png")
 
-    return target[0], step_idx
+    return target[0], dist_to_target
+
+
+def multiple_greedy_runs():
+    pass
 
 
 if __name__ == "__main__":
@@ -239,4 +237,4 @@ if __name__ == "__main__":
     model = load_model(config, args.checkpoint).to(args.device)
 
     # inference(model, args.num_samples, args.device, config)
-    greedy_inference(model, args.num_samples, args.device, True)
+    greedy_inference(model, args.num_samples, args.device, False)

@@ -1,7 +1,7 @@
 from vae.model.decoder import Decoder
 from vae.model.encoder import Encoder
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.writer import SummaryWriter
 import torch
 from torch.autograd import Variable
 

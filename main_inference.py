@@ -32,6 +32,19 @@ def load_config(config_path: str) -> dict:
     config["config_path"] = config_path
     return config
 
+def get_length(trajectories: List[np.ndarray]) -> np.ndarray:
+    lengths = []
+    for trajectory in trajectories:
+        lengths.append(len(trajectory))
+    return np.array(lengths)
+
+
+def get_distances(trajectories: List[np.ndarray], target_positions: np.ndarray) -> List[np.ndarray]:
+    distances = []
+    for trajectory, target_position in zip(trajectories, target_positions):
+        distances.append(np.linalg.norm(trajectory[:, -1, :] - target_position, axis=1))
+    return distances
+
 
 def main(sac_config: dict, model_path: str):
     # path for loading potentially latent actor
@@ -77,30 +90,33 @@ def main(sac_config: dict, model_path: str):
     )
 
     sac.load_checkpoint(model_path)
-    target_positions = sample_target(1).numpy() * sac_config["n_joints"]
+    target_positions = sample_target(20).numpy() * sac_config["n_joints"]
+    target_positions = np.array([[0, 1]])
     print(target_positions)
-    # target_positions = np.array([[0, 1]])
     trajectories = sac.inference(target_positions)
-    distances = np.linalg.norm(trajectories[0, :, -1, :] - target_positions, axis=1)
+    
+    lengths = get_length(trajectories)
+    print(np.mean(lengths))
+    
+    distances = get_distances(trajectories, target_positions)
+    print(f"distance: {np.concatenate(distances).mean():.2f}, normalized: {(np.concatenate(distances).mean() / 2 / env.n_joints):.4f}")
 
     fig, axs = plt.subplots(2, 1)
     axs[0].set_xlim([-sac_config["n_joints"], sac_config["n_joints"]])
     axs[0].set_ylim([-sac_config["n_joints"], sac_config["n_joints"]])
     axs[0].axis("equal")
     axs[0].add_patch(plt.Circle((0, 0), sac_config["n_joints"], fill=False))
-    for trajectory in trajectories[0]:
-        axs[0].plot(
-            trajectory[:, 0], trajectory[:, 1], color="orange", marker=".", alpha=2 / 5
-        )
+    # for trajectory in trajectories[0]:
+    #     axs[0].plot(
+    #         trajectory[:, 0], trajectory[:, 1], color="orange", marker=".", alpha=2 / 5
+    #     )
 
-    axs[0].plot(trajectories[0, :, -1, 0], trajectories[0, :, -1, 1])
+    axs[0].plot(trajectories[0][:, -1, 0], trajectories[0][:, -1, 1])
     axs[0].plot(target_positions[0, 0], target_positions[0, 1], color="r", marker=".")
 
-    axs[1].set_ylim([-0.5, max(distances) + 0.5])
+    axs[1].set_ylim([-0.5, max(distances[0]) + 0.5])
     axs[1].grid()
-    axs[1].plot(distances)
-
-    print(distances.mean())
+    axs[1].plot(distances[0])
 
     fig.savefig("results/sac_inference.png")
 

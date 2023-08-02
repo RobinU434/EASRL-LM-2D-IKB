@@ -1,5 +1,8 @@
+import logging
+import os
 from typing import Tuple
 
+import psutil
 import torch
 from torch import Tensor
 
@@ -45,3 +48,42 @@ def forward_kinematics(angles: torch.Tensor) -> torch.Tensor:
         positions[:, idx + 1] = new_pos
 
     return positions
+
+
+def profile_runtime(func):
+    def inner(*args, **kwargs):
+        import time
+
+        logging.info(f"started {func.__name__}")
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        time = time.perf_counter() - start
+        logging.info(f"needed {time:.4f} ms to run {func.__name__}")
+
+        return result
+
+    return inner
+
+
+# inner psutil function
+def process_memory():
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    return mem_info.rss
+
+
+# decorator function
+def profile_memory(func):
+    def wrapper(*args, **kwargs):
+        mem_before = process_memory()
+        result = func(*args, **kwargs)
+        mem_after = process_memory()
+        logging.info(
+            "{}:consumed memory: {:,}".format(
+                func.__name__, mem_before, mem_after, mem_after - mem_before
+            )
+        )
+
+        return result
+
+    return wrapper

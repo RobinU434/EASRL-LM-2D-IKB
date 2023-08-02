@@ -1,13 +1,14 @@
 #  0
 
 import math
-from typing import Tuple, Union
+from typing import Any, Tuple, Union
 import torch
 import numpy as np
 import torch.nn as nn
 
 from torch.autograd import Variable
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.writer import SummaryWriter
+from latent.metrics.vae_metrics import VAEIKMetrics, VAEMetrics
 
 from vae.model.decoder import Decoder
 from vae.model.encoder import VariationalEncoder
@@ -94,6 +95,9 @@ class VariationalAutoencoder(nn.Module):
             self.decoder_history = torch.cat([self.decoder_history, x_hat.detach().flatten().cpu()])
 
         return x_hat, mu, log_std
+    
+    def predict(self, *args, **kwargs) -> Any:
+        return self.forward(*args, **kwargs)
 
     def train(self, loss):
         self.optimizer.zero_grad()
@@ -138,15 +142,15 @@ class VariationalAutoencoder(nn.Module):
 
             self.logger.add_image("vae/z_grad", z_grad_abs, epoch_idx)
 
-    def store(self, path: str, epoch_idx: int, metrics: Union[np.ndarray, dict]):
+    def store(self, path: str, epoch_idx: int, metrics: VAEIKMetrics):
         torch.save({
                 'epoch': epoch_idx,
                 'model_state_dict': self.state_dict(),
                 'optimizer_state_dict': self.optimizer.state_dict(),
-                'reconstruction_loss': metrics["reconstruction_loss"].mean(),
-                'kl_loss': metrics["kl_loss"].mean(),
-                'distance_loss': metrics["distance_loss"].mean(),
-                'imitation_loss': metrics["imitation_loss"].mean(),
+                'reconstruction_loss': metrics.reconstruction_loss.mean(),
+                'kl_loss': metrics.kl_loss.mean(),
+                'distance_loss': metrics.distance_loss.mean(),
+                'imitation_loss': metrics.imitation_loss.mean(),
             }, path)
 
 
@@ -158,7 +162,7 @@ class VariationalAutoencoder(nn.Module):
         self.z_grad_history = torch.tensor([])
 
 
-def build_model(config: dict, input_dim: int, conditional_info_dim: int, logger: SummaryWriter,):  
+def build_model(config: dict, input_dim: int, conditional_info_dim: Tuple[int, int], logger: SummaryWriter,):  
     autoencoder = VariationalAutoencoder(
         input_dim=input_dim,
         latent_dim=config["latent_dim"],

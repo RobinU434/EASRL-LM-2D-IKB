@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any, Literal, Tuple
 import torch
 import logging
 
@@ -155,7 +155,7 @@ class IKLoss:
             reconstruction_loss_weight: float = 1,
             imitation_loss_weight: float = 1,
             distance_loss_weight: float = 1, 
-            target_mode: int = YMode.UNDEFINED,
+            target_mode: Literal[YMode] = YMode.UNDEFINED,
             device: str = "cpu") -> None:
 
         self.kl_loss_weight = kl_loss_weight
@@ -228,10 +228,26 @@ class IKLoss:
 
     def __call__(
             self,
-            y: Tuple[torch.Tensor, torch.Tensor],
+            y: torch.Tensor,
             x_hat: torch.Tensor,
             mu: torch.Tensor,
             log_std: torch.Tensor) -> torch.Tensor:
+        """computes inverse kinematics loss on autoencoder. Final loss is a weighted sum of
+        - distance_loss
+        - imitation_loss
+        - kl_divergence
+
+        Function stores all intermediate values in their own variables
+
+        Args:
+            y (torch.Tensor): target. Is either an target action (self.target_mode == YMode.ACTION) or a position (self.target_mode == YMode.POSITION)
+            x_hat (torch.Tensor): predicted action from the model + state_angles
+            mu (torch.Tensor): partial output from encoder for latent sampling
+            log_std (torch.Tensor): partial output from encoder for latent sampling
+
+        Returns:
+            torch.Tensor: weighted sum
+        """
         self.loss = self.reconstruction_loss_weight * self.reconstruction_loss(y, x_hat) + \
             self.kl_loss_weight * self.kl_divergence(mu, log_std)
         return self.loss

@@ -4,3 +4,4 @@ pandas
 progress
 tensorboard
 gym
+matplotlib

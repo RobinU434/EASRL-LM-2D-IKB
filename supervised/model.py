@@ -24,11 +24,15 @@ class Regressor(nn.Module):
         output_dim: int,
         learning_rate: float,
         post_processor: PostProcessor,
+        action_radius: float = 0,  # 0 -> arm will be trained move without distance restriction. value > 0 -> trained move restriction around start position
+        **kwargs
     ) -> None:
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.learning_rate = learning_rate
+        
+        self.action_radius = action_radius
 
         self.model = nn.Sequential(
             nn.Linear(input_dim, 256),
@@ -72,15 +76,16 @@ def build_model(
     num_joints: int,
     learning_rate: float,
     post_processor_config: Dict,
+    **kwargs
 ) -> Regressor:
     model = None
     post_processor = PostProcessor(**post_processor_config)
     if feature_source == "state" or feature_source == "gaussian_target":
         logging.info("use 'state' as feature source")
-        model = Regressor(4 + num_joints, num_joints, learning_rate, post_processor)
+        model = Regressor(4 + num_joints, num_joints, learning_rate, post_processor, **kwargs)
     elif feature_source == "targets":
         logging.info("use 'targets' as feature source")
-        model = Regressor(2, num_joints, learning_rate, post_processor)
+        model = Regressor(2, num_joints, learning_rate, post_processor, **kwargs)
     else:
         logging.error(
             f"feature source has to be either 'targets' or 'state', you chose: {feature_source}"

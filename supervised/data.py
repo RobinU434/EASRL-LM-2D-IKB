@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Tuple
+from typing import Any, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader, Dataset
 
 from envs.robots.ccd import IK
 from supervised.utils import forward_kinematics
-from vae.utils.extract_angles_and_position import split_state_information
 from vae.data.data_set import YMode
+from vae.utils.extract_angles_and_position import split_state_information
 
 
 class ActionTargetDataset(Dataset):
@@ -112,31 +112,70 @@ class ActionStateDataset(Dataset):
 
 
 class TargetGaussianDataset(Dataset):
-    def __init__(self, state_file, std) -> None:
+    def __init__(
+        self,
+        state_file: Union[str, np.ndarray, torch.Tensor],
+        std: float,
+        target_mode: YMode = YMode.UNDEFINED,
+    ) -> None:
         super().__init__()
-        self.state_csv = pd.read_csv(state_file)
-        self.action_csv = None
 
-        self.y_mode = YMode.POSITION
+        self.target_mode = YMode.POSITION
+        self.target_mode = target_mode
+
+        self.final_targets = torch.empty(1)
+        self.intermediate_targets = torch.empty(1)
+        self.start_positions = torch.empty(1)
+        self.state_angles = torch.empty(1)
+        self.actions = torch.empty(1)
 
         self.std = std if std is not None else 0
-        if self.std > 0:
-            logging.info("start action constraining")
-            self.state_csv = self.preprocess_targets(truncation=np.sqrt(2))
-            logging.info("done action constraining")
-        logging.info("finished setting up conditional action target dataset")
+        if isinstance(state_file, (np.ndarray, torch.Tensor)):
+            self.set_data_attributes(state_file)
+        elif isinstance(state_file, str):
+            state_csv = pd.read_csv(state_file)
+            self.set_data_attributes(state_csv.to_numpy()[:, 1:])
+        else:
+            raise ValueError(
+                "you have to pass in either a np.ndarray with shape: (num_points, (1 + 2 + 2 + num_joints), last dimension: index, target pos, current_pos, state_angles"
+            )
 
-        if self.y_mode == YMode.ACTION:
+        if self._target_mode == YMode.ACTION:
             logging.info("create action file")
-            self.action_csv = self.generate_actions()
+            self.actions = self.generate_actions()
             logging.info("done creating action file")
 
-    def preprocess_targets(self, truncation: float = 0):
-        index = np.array(range(len(self.state_csv)))
-        index = np.expand_dims(index, axis=1)
-        target_positions, current_positions, state_angles = split_state_information(
-            self.state_csv.to_numpy().copy()[:, 1:]
-        )
+    def set_data_attributes(
+        self, data: Union[np.ndarray, torch.Tensor], truncation: float = 0
+    ) -> None:
+        """sets attributes like:
+        - final_targets  wrt. global frame
+        - intermediate_targets wrt. global frame
+        - start_positions  wrt. global frame
+        - state_angles
+
+        Args:
+            data (np.ndarray): data array consists of final_targets, start_positions, state_angles. Shape: (num_points, 4 + num_joints)
+            truncation (float): If you want to approx. truncate the distribution around the origin. Defaults set to 0 -> No truncation
+        """
+        if isinstance(data, np.ndarray):
+            data = torch.from_numpy(data)
+
+        target_pos, current_pos, state_angels = split_state_information(data)
+        self.final_targets = target_pos
+        self.start_positions = current_pos
+        self.state_angles = state_angels
+
+        if self.std > 0:
+            logging.info("start action constraining")
+            self.intermediate_targets = self.preprocess_targets(data, truncation)
+            logging.info("done action constraining")
+        else:
+            self.intermediate_targets = target_pos
+
+    # TODO: make this function based on
+    def preprocess_targets(self, data: np.ndarray, truncation: float = 0) -> torch.Tensor:
+        target_positions, current_positions, _ = split_state_information(data)
 
         radius_noise = np.random.normal(0, self.std, (len(current_positions)))
 
@@ -163,72 +202,101 @@ class TargetGaussianDataset(Dataset):
             target_dists, 2, axis=1
         )
 
-        target_positions = current_positions + np.where(
+        intermediate_targets = current_positions + np.where(
             target_dists < radius_noise, target_vector, target_noise
         )
-        state = np.concatenate(
-            [index, target_positions, current_positions, state_angles], axis=1
-        )
-        state_df = pd.DataFrame(state)
-        return state_df
 
-    def generate_actions(self):
-        index = np.array(range(len(self.state_csv)))
-        index = np.expand_dims(index, axis=1)
-        target_position, _, state_angles = split_state_information(
-            self.state_csv.to_numpy().copy()[:, 1:]
-        )
+        return intermediate_targets
 
-        action_array = np.zeros_like(state_angles)
+    def generate_actions(self) -> torch.Tensor:
+        action_array = np.zeros_like(self.state_angles.numpy())
         bar = Bar("get actions for targets", max=len(self))
         for state_idx in range(len(self)):
             new_target = np.zeros(3)
-            new_target[0:2] = target_position[state_idx]
+            new_target[0:2] = self.final_targets[state_idx].numpy()
             # solve IK for this new position
             label_angles, _, _, _ = IK(
                 new_target,
-                np.rad2deg(state_angles[state_idx]).copy(),
-                np.ones_like(state_angles[state_idx]),
+                np.rad2deg(self.state_angles[state_idx].numpy()).copy(),
+                np.ones_like(self.state_angles[state_idx].numpy()),
                 err_min=0.001,
             )
             label_angles = np.deg2rad(label_angles)
-            label_angles = np.cumsum(label_angles) - state_angles[state_idx]
+            label_angles = (
+                np.cumsum(label_angles) - self.state_angles[state_idx].numpy()
+            )
             action_array[state_idx] = label_angles
             bar.next()
         bar.finish()
 
-        action_df = pd.DataFrame(np.concatenate([index, action_array], axis=1))
-        return action_df
+        actions = torch.from_numpy(action_array)
+        return actions
 
     def __len__(self):
-        return len(self.state_csv)
+        return len(self.final_targets)
 
-    def __getitem__(self, idx):
-        state = torch.tensor(
-            self.state_csv.iloc[idx, 1:].to_numpy()
-        ).float()  # we work in a two dimensional space
-        state = state.unsqueeze(dim=0)
-        target_position, current_position, current_angles = split_state_information(
-            state
-        )
-
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         x = torch.cat(
-            [target_position - current_position, current_position, current_angles],
-            dim=1,
-        ).squeeze()
+            [
+                self.intermediate_targets[idx] - self.start_positions[idx],
+                self.start_positions[idx],
+                self.state_angles[idx],
+            ]
+        ).float()
+
         x = Variable(x, requires_grad=True)
 
-        if self.y_mode == YMode.ACTION:
-            y = torch.tensor(self.action_csv.iloc[idx, 1:].to_numpy()).float()
-        elif self.y_mode == YMode.POSITION:
-            y = target_position.squeeze()
+        # TODO: move this chunk of if to a pre-build y selection function
+        if self._target_mode == YMode.ACTION:
+            y = torch.tensor(self.actions[idx]).float()
+        elif self._target_mode == YMode.INTERMEDIATE_POSITION:
+            y = self.intermediate_targets[idx].float()
+        elif self._target_mode == YMode.FINAL_POSITION:
+            y = self.final_targets[idx].float()
+        elif self._target_mode == YMode.POSITION:
+            logging.warning(
+                "No positional behavior defined. Resume to fall back solution -> final target"
+            )
+            y = self.final_targets[idx].float()
+        else:
+            modes = YMode._member_names_
+            modes.remove("UNDEFINED")
+            raise ValueError(
+                f"No appropriate target mode behavior defined take one of {modes}"
+            )
 
         return x, y
 
+    @property
+    def target_mode(self) -> YMode:
+        return self._target_mode
+    
+    @target_mode.setter
+    def target_mode(self, value: YMode):
+        if not isinstance(value, YMode):
+            logging.warning(
+                f"no change in target_mode because of value error. Demanded: {type(YMode)}, given: {type(value)}"
+            )
+            logging.info(f"target_mode remains at {self._target_mode}")
+            return
+        if value == YMode.UNDEFINED:
+            logging.warning("value == YMode.UNDEFINED is not allowed")
+            logging.info(f"target_mode remains at {self._target_mode}")
+            return
+        self._target_mode = value
+
+    @property
+    def states(self) -> torch.Tensor:
+        states = torch.cat([self.final_targets, self.intermediate_targets, self.start_positions, self.state_angles], dim=1)
+        return states
+    
 
 def get_datasets(
     feature_source: str, num_joints: int, batch_size: int, action_radius: float
 ) -> Tuple[DataLoader, DataLoader]:
+    train_dataloader = None
+    val_dataloader = None
+
     action_radius = get_action_radius(action_radius, num_joints)
     if feature_source == "state":
         train_data = ActionStateDataset(
@@ -259,13 +327,16 @@ def get_datasets(
         train_data = TargetGaussianDataset(
             state_file=f"./datasets/{num_joints}/train/state_IK_random_start.csv",
             std=action_radius,
+            target_mode=YMode.INTERMEDIATE_POSITION
         )
         train_dataloader = DataLoader(train_data, batch_size=batch_size)
         val_data = TargetGaussianDataset(
             state_file=f"./datasets/{num_joints}/val/state_IK_random_start.csv",
             std=action_radius,
+            target_mode=YMode.INTERMEDIATE_POSITION
         )
         val_dataloader = DataLoader(val_data, batch_size=batch_size)
+        return train_dataloader, val_dataloader
 
     else:
         logging.error(

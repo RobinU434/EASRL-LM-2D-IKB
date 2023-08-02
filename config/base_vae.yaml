@@ -11,7 +11,7 @@ loss_func:  # only IK Loss is available
   imitation_loss_weight: 0
 batch_size: 2096
 shuffle_data: False
-epochs: 801
+n_epochs: 801
 val_interval: 5
 learning_rate: 0.0012
 post_processor:

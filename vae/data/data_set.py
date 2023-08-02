@@ -18,6 +18,8 @@ class YMode(Enum):
     UNDEFINED = 0
     ACTION = 1
     POSITION = 2
+    INTERMEDIATE_POSITION = 2.1
+    FINAL_POSITION = 2.2
 
 
 class VAEDataset(Dataset):
@@ -30,7 +32,7 @@ class VAEDataset(Dataset):
     def __init__(self) -> None:
         super().__init__()
 
-        self.y_mode = YMode.UNDEFINED
+        self.target_mode = YMode.UNDEFINED
 
     def __len__(self):
         raise NotImplementedError
@@ -68,6 +70,24 @@ class VAEDataset(Dataset):
         """
         x, _, _, _ = self[0]
         return len(x)
+    
+    @property
+    def target_mode(self) -> YMode:
+        return self._target_mode
+
+    @target_mode.setter
+    def target_mode(self, value: YMode):
+        if not isinstance(value, YMode):
+            logging.warning(
+                f"no change in target_mode because of value error. Demanded: {type(YMode)}, given: {type(value)}"
+            )
+            logging.info(f"target_mode remains at {self._target_mode}")
+            return
+        if value == YMode.UNDEFINED:
+            logging.warning("value == YMode.UNDEFINED is not allowed")
+            logging.info(f"target_mode remains at {self._target_mode}")
+            return
+        self._target_mode = value
 
 
 class ActionDataset(VAEDataset):
@@ -80,7 +100,7 @@ class ActionDataset(VAEDataset):
         super().__init__()
         self.csv = pd.read_csv(annotations_file)
 
-        self.y_mode = YMode.ACTION
+        self.target_mode = YMode.ACTION
 
     def __len__(self):
         return len(self.csv)
@@ -113,7 +133,7 @@ class ActionTargetDatasetV1(VAEDataset):
         self.action_csv = pd.read_csv(action_file)
         self.target_csv = pd.read_csv(target_file)
 
-        self.y_mode = YMode.ACTION
+        self.target_mode = YMode.ACTION
 
     def __len__(self):
         return len(self.action_csv)
@@ -148,7 +168,7 @@ class ActionTargetDatasetV2(VAEDataset):
         self.action_csv = pd.read_csv(action_file)
         self.target_csv = pd.read_csv(target_file)
 
-        self.y_mode = YMode.ACTION
+        self.target_mode = YMode.ACTION
 
     def __len__(self):
         return len(self.action_csv)
@@ -176,12 +196,14 @@ class ConditionalActionTargetDataset(VAEDataset):
     In this version we concatenate the action with the target position and feed it in the VAE
     """
 
-    def __init__(self, action_file, target_file, action_constrain_radius: float = None):  # TODO: remove None and replace with 0
+    def __init__(
+        self, action_file, target_file, action_constrain_radius: float = None
+    ):  # TODO: remove None and replace with 0
         super().__init__()
         self.action_csv = pd.read_csv(action_file)
         self.state_csv = pd.read_csv(target_file)
 
-        self.y_mode = YMode.ACTION
+        self.target_mode = YMode.ACTION
 
         self.action_constrain_radius = action_constrain_radius
         if action_constrain_radius is not None:
@@ -262,7 +284,7 @@ class TargetGaussianDataset(VAEDataset):
         self.state_csv = pd.read_csv(state_file)
         self.action_csv = None
 
-        self.y_mode = YMode.POSITION  # can be flipped between ACTION and POSITION
+        self.target_mode = YMode.POSITION  # can be flipped between ACTION and POSITION
 
         self.std = std
         if self.std > 0:
@@ -271,11 +293,11 @@ class TargetGaussianDataset(VAEDataset):
             logging.info("done action preprocessing")
         logging.info("finished setting up conditional target dataset")
 
-        if self.y_mode == YMode.ACTION:
+        if self.target_mode == YMode.ACTION:
             logging.info("create action file")
             self.action_csv = self.generate_actions()
             logging.info("done creating action file")
-        elif self.y_mode == YMode.POSITION:
+        elif self.target_mode == YMode.POSITION:
             logging.info("no action calculation needed")
         else:
             logging.warning("no assignment to x from dataset -> default empty tensor")
@@ -360,10 +382,10 @@ class TargetGaussianDataset(VAEDataset):
         )
 
         x = torch.tensor([])
-        if self.y_mode == YMode.ACTION and self.action_csv is not None:
+        if self.target_mode == YMode.ACTION and self.action_csv is not None:
             action = torch.tensor(self.action_csv.iloc[idx, 1:].to_numpy()).float()
             x = action.squeeze()
-        elif self.y_mode == YMode.POSITION:
+        elif self.target_mode == YMode.POSITION:
             x = (target_position - current_position).squeeze()
 
         c_enc = torch.cat([current_position, current_angles], dim=1).squeeze()

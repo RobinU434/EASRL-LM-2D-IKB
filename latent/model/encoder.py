@@ -6,6 +6,7 @@ class VariationalEncoder(nn.Module):
         
         self.linear = nn.Sequential(
             nn.Linear(input_dim, 512),
+            nn.ReLU(),
             nn.Linear(512, 512),
             nn.ReLU(),
             nn.Linear(512, 512),

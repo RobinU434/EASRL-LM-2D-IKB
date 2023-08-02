@@ -62,7 +62,7 @@ class VariationalAutoencoder(NeuralNetwork):
             print("architecture")
             s = f"{input_dim} + {self._conditional_info_dim[0]} -> [Encoder] -> {latent_dim} + {conditional_info_dim[1]} -> [Decoder] -> {output_dim}"
             if self._post_processor.enabled:
-                s += f" -> [PostProcessor (tanh) + [{self._post_processor.min_action, self._post_processor.min_action}]]"
+                s += f" -> [PostProcessor (tanh) + [{self._post_processor.min_action, self._post_processor.max_action}]]"
             print(s)
 
     def forward(
@@ -84,7 +84,7 @@ class VariationalAutoencoder(NeuralNetwork):
         # sample the latent space
         sigma = torch.exp(log_std)
         sigma = torch.ones_like(sigma) * math.exp(-40)
-        z = mu + sigma * self._N.sample(mu.shape)
+        z = mu # + sigma * self._N.sample(mu.shape)
 
         # enhance latent space
         z = torch.cat([z, c_dec], dim=1)

@@ -73,7 +73,7 @@ class IKLoss(Criterion):
         Args:
             y (torch.Tensor): is either a position in 2D space (y_mode == 2) or an angle (y_Mode == 1) with which we
                 can compute also an imitation loss
-            x_hat (torch.Tensor): action from the network and its postprocessor
+            x_hat (torch.Tensor): action from the network and its post-processor
 
         Returns:
             torch.Tensor: tensor with only one element -> the loss

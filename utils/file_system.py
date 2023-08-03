@@ -1,4 +1,7 @@
 from typing import Any, Dict
+import pandas as pd
+from torch import Tensor
+import torch
 
 import yaml
 
@@ -27,3 +30,15 @@ def write_yaml(path: str, content: Dict[str, Any]):
     """
     with open(path, "w") as file:
             yaml.dump(content, file)
+
+
+def load_csv(path: str) -> Tensor:
+    """loads csv file and converts content into tensor
+
+    Args:
+        path (str): csv file at path
+
+    Returns:
+        Tensor: file content as tensor
+    """
+    return torch.from_numpy(pd.read_csv(path).to_numpy())

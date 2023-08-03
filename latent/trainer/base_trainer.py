@@ -49,8 +49,7 @@ class Trainer(ABC):
                 val_metrics = self._run_model(data=self._val_data)
 
                 self._model.save(
-                    path=self._results_path
-                    + f"/model_{epoch_idx}_val_loss_{val_metrics.loss.mean().item():.4f}.pt",
+                    path=self._results_path,
                     epoch_idx=epoch_idx,
                     metrics=val_metrics,
                 )

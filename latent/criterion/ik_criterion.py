@@ -4,7 +4,7 @@ import torch
 from latent.criterion.base_criterion import Criterion
 from latent.criterion.distance_criterion import EuclideanDistance
 from latent.criterion.imitation_criterion import ImitationLoss
-from latent.data.utils import TargetMode
+from latent.datasets.utils import TargetMode
 from utils.kinematics import forward_kinematics
 
 

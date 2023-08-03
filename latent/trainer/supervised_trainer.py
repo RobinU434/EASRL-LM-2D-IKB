@@ -6,7 +6,7 @@ from torch.utils.tensorboard.writer import SummaryWriter
 
 from latent.criterion.base_criterion import Criterion
 from latent.criterion.ik_criterion import IKLoss
-from latent.data.utils import split_state_information
+from latent.datasets.utils import split_state_information
 from latent.metrics.base_metrics import Metrics
 from latent.model.base_model import NeuralNetwork
 from latent.trainer.base_trainer import Trainer

@@ -1,17 +1,16 @@
 #  0
 
 import math
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 import torch
 import numpy as np
 import torch.nn as nn
 
 from torch.autograd import Variable
 from torch.utils.tensorboard.writer import SummaryWriter
-from latent.metrics.vae_metrics import VAEIKMetrics
-from latent.model.base_model import LearningModule, NeuralNetwork
+from latent.metrics.vae_metrics import VAEInvKinMetrics
+from latent.model.base_model import FeedForwardNetwork, LearningModule, NeuralNetwork
 
-from latent.model.decoder import Decoder
 from latent.model.encoder import VariationalEncoder
 from latent.model.utils.post_processor import PostProcessor
 from logger.base_logger import Logger
@@ -23,6 +22,8 @@ class VariationalAutoencoder(NeuralNetwork):
         input_dim: int,
         latent_dim: int,
         output_dim: int,
+        encoder_config: Dict[str, Any],
+        decoder_config: Dict[str, Any],
         conditional_info_dim: Tuple[int, int] = (0, 0),
         post_processor: PostProcessor = PostProcessor(False),
         learning_rate: float = 1e-3,
@@ -31,15 +32,25 @@ class VariationalAutoencoder(NeuralNetwork):
         verbose: bool = False,
     ):
         super().__init__(
-            input_dim=input_dim, output_dim=output_dim, learning_rate=learning_rate,
+            input_dim=input_dim,
+            output_dim=output_dim,
+            learning_rate=learning_rate,
         )
         self._conditional_info_dim = conditional_info_dim
         self._latent_dim = latent_dim
-        
+
         self._encoder = VariationalEncoder(
-            input_dim + self._conditional_info_dim[0], latent_dim
+            input_dim=self._input_dim + self._conditional_info_dim[0],
+            output_dim=self._latent_dim,
+            learning_rate=self._learning_rate,
+            **encoder_config,
         )
-        self._decoder = Decoder(latent_dim + self._conditional_info_dim[1], output_dim)
+        self._decoder = FeedForwardNetwork(
+            input_dim=latent_dim + self._conditional_info_dim[1],
+            output_dim=output_dim,
+            learning_rate=self._learning_rate,
+            **decoder_config,
+        )
 
         self._optimizer = torch.optim.Adam(self.parameters(), lr=self._learning_rate)
 
@@ -57,7 +68,7 @@ class VariationalAutoencoder(NeuralNetwork):
         self._z_grad_history = torch.tensor([])
 
         self._learning_rate = learning_rate
-        
+
         if verbose:
             print("architecture")
             s = f"{input_dim} + {self._conditional_info_dim[0]} -> [Encoder] -> {latent_dim} + {conditional_info_dim[1]} -> [Decoder] -> {output_dim}"
@@ -65,10 +76,12 @@ class VariationalAutoencoder(NeuralNetwork):
                 s += f" -> [PostProcessor (tanh) + [{self._post_processor.min_action, self._post_processor.max_action}]]"
             print(s)
 
+        self.to(device)
+
     def forward(
         self, x: torch.Tensor, c_enc: torch.Tensor, c_dec: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """performs forward pass into model and through the postprocessor
+        """performs forward pass into model and through the post-processor
 
         Args:
             x (torch.Tensor): input for encoder
@@ -76,19 +89,19 @@ class VariationalAutoencoder(NeuralNetwork):
             c_dec (torch.Tensor): conditional information for decoder
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: (output after CVAE and postprocessor (x_hat), mu from encoder, log_str from encoder)
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: (output after CVAE and post-processor (x_hat), mu from encoder, log_str from encoder)
         """
         x_con = torch.cat([x, c_enc], dim=1)
         mu, log_std = self._encoder(x_con)  # output dim (batch_size, latent_space)
 
         # sample the latent space
         sigma = torch.exp(log_std)
-        sigma = torch.ones_like(sigma) * math.exp(-40)
-        z = mu # + sigma * self._N.sample(mu.shape)
+        # sigma = torch.ones_like(sigma) * math.exp(-40)
+        z = mu  # + sigma * self._N.sample(mu.shape)
 
         # enhance latent space
         z = torch.cat([z, c_dec], dim=1)
-        z = Variable(z, requires_grad=True)
+        # z = Variable(z, requires_grad=True)
         # store for logging the gradient
         self.z = z
 
@@ -104,15 +117,11 @@ class VariationalAutoencoder(NeuralNetwork):
     def train(self, loss):
         self._optimizer.zero_grad()
         loss.backward()
-
-        # log gradient from latent space
-        if self._store_history:
-            z_grad = self.z.grad.cpu()
-            self._z_grad_history = torch.cat([self._z_grad_history, z_grad], dim=0)
-
         self._optimizer.step()
 
-    def log_internals(self, logger: List[Union[SummaryWriter, Logger]], epoch_idx) -> None:
+    def log_internals(
+        self, logger: List[Union[SummaryWriter, Logger]], epoch_idx
+    ) -> None:
         if logger is None:
             return
         for single_logger in logger:
@@ -150,7 +159,8 @@ class VariationalAutoencoder(NeuralNetwork):
 
         logger.add_image("vae/z_grad", z_grad_abs, epoch_idx)
 
-    def save(self, path: str, epoch_idx: int, metrics: VAEIKMetrics):
+    def save(self, path: str, epoch_idx: int, metrics: VAEInvKinMetrics):
+        path = self._create_save_path(path, epoch_idx, metrics)
         torch.save(
             {
                 "epoch": epoch_idx,

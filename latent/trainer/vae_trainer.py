@@ -5,10 +5,10 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 from latent.criterion.base_criterion import Criterion
 from latent.criterion.elbo_criterion import ELBO, InvKinELBO
-from latent.data.vae_dataset import VAEDataset
-from latent.data.utils import TargetMode
+from latent.datasets.vae_dataset import VAEDataset
+from latent.datasets.utils import TargetMode
 from latent.metrics.base_metrics import Metrics
-from latent.metrics.vae_metrics import VAEIKMetrics, VAEMetrics
+from latent.metrics.vae_metrics import VAEInvKinMetrics, VAEMetrics
 from latent.model.vae import VariationalAutoencoder
 from latent.trainer.base_trainer import Trainer
 from logger.base_logger import Logger
@@ -44,7 +44,7 @@ class VAETrainer(Trainer):
         self._criterion: InvKinELBO
         self._model: VariationalAutoencoder
 
-    def _run_model(self, data: DataLoader, train: bool = False) -> VAEIKMetrics:
+    def _run_model(self, data: DataLoader, train: bool = False) -> VAEInvKinMetrics:
         """runs the given autoencoder on the given dataset
 
         Args:
@@ -90,7 +90,7 @@ class VAETrainer(Trainer):
             )  # out shape: (batch_size, number of joints)
 
             # TODO: it is a bit hacky and has to be adapted for other datasets where the current angles are not inside c_dec
-            current_angles = c_dec[:, -self._model.output_dim :]
+            current_angles = c_dec[:, -self._model._output_dim :]
             action = x_hat + current_angles
             if self._criterion._target_mode == TargetMode.ACTION:
                 # y is expected to be the target action we want to encode
@@ -116,10 +116,10 @@ class VAETrainer(Trainer):
         # make structured array
         log_metrics_array = np.stack(log_metrics_array)
         log_metrics_dict = dict(zip(log_metrics_names, log_metrics_array.T))
-        log_metrics = VAEIKMetrics.build_from_dict(log_metrics_dict)
+        log_metrics = VAEInvKinMetrics.build_from_dict(log_metrics_dict)
         return log_metrics
 
-    def _print_status(self, entity: str, metrics: VAEIKMetrics) -> None:
+    def _print_status(self, entity: str, metrics: VAEInvKinMetrics) -> None:
         print(
             f"{entity}: loss: {metrics.reconstruction_loss.mean()} kl_div: {metrics.kl_loss.mean()}"
         )

@@ -12,11 +12,8 @@ from torch.utils.data import DataLoader
 from envs.robots.ccd import IK
 from latent.criterion.base_criterion import Criterion
 from latent.criterion.ik_criterion import IKLoss
-from latent.data.supervised_dataset import (ActionStateDataset,
-                                            ActionTargetDataset,
-                                            TargetGaussianDataset)
-from latent.data.utils import TargetMode
-from latent.model.supervised_model import Regressor
+from latent.datasets.utils import TargetMode
+from latent.model.feed_forward import Regressor
 from latent.model.utils.post_processor import PostProcessor
 from latent.process.latent_process import LatentProcess
 from latent.trainer.base_trainer import Trainer
@@ -37,7 +34,7 @@ class SupervisedProcess(LatentProcess):
 
     def feed_forward_inference(self) -> None:
         targets = np.repeat(
-            np.expand_dims(sample_target(self._model.output_dim, 1), axis=0),
+            np.expand_dims(sample_target(self._model._output_dim, 1), axis=0),
             self._sample_size,
             axis=0,
         )
@@ -45,7 +42,7 @@ class SupervisedProcess(LatentProcess):
 
         # sample start position
         start_positions = np.zeros((self._sample_size, 3))
-        start_position = sample_target(self._model.output_dim, 1)
+        start_position = sample_target(self._model._output_dim, 1)
         start_position = np.expand_dims(start_position, axis=0)
         noise = np.random.normal(
             np.zeros(2), np.ones(2) * 0.05, (self._sample_size, 2)
@@ -53,8 +50,8 @@ class SupervisedProcess(LatentProcess):
         start_positions[:, 0:2] = start_position + noise
 
         # solve IK for start positions
-        state_angles = np.zeros((self._sample_size, self._model.output_dim))
-        link = np.ones(self._model.output_dim)
+        state_angles = np.zeros((self._sample_size, self._model._output_dim))
+        link = np.ones(self._model._output_dim)
         bar = Bar("solve IK for state config", max=self._sample_size)
         for idx in range(self._sample_size):
             state_action, _, _, _ = IK(
@@ -89,12 +86,12 @@ class SupervisedProcess(LatentProcess):
         # plot
         fig = plt.figure()
         ax = fig.add_subplot()
-        ax.add_patch(Circle((0, 0), self._model.output_dim, fill=False))
+        ax.add_patch(Circle((0, 0), self._model._output_dim, fill=False))
         if self._config["action_radius"] != 0:
             ax.add_patch(
                 Circle(
                     start_position[0],
-                    get_action_radius(self._config["action_radius"], self._model.output_dim),
+                    get_action_radius(self._config["action_radius"], self._model._output_dim),
                     fill=False,
                 )
             )
@@ -114,7 +111,7 @@ class SupervisedProcess(LatentProcess):
             ax.hist(
                 joint_actions,
                 bins=bins,
-                alpha=1 / np.sqrt(self._model.output_dim),
+                alpha=1 / np.sqrt(self._model._output_dim),
                 label=str(idx),
             )
         fig.legend()
@@ -122,77 +119,6 @@ class SupervisedProcess(LatentProcess):
 
     def greedy_inference(self) -> None:
         pass
-
-    def _load_datasets(self) -> Tuple[DataLoader, DataLoader, DataLoader]:
-        num_joints: int = self._config["num_joints"]
-        feature_source: str = self._config["feature_source"]
-        batch_size: int = self._config["batch_size"]
-        action_radius: float = self._config["action_radius"]
-
-        if feature_source == "state":
-            train_data = ActionStateDataset(
-                action_file=f"./datasets/{num_joints}/train/actions_IK_random_start.csv",
-                state_file=f"./datasets/{num_joints}/train/state_IK_random_start.csv",
-                action_constrain_radius=action_radius,
-            )
-            train_dataloader = DataLoader(train_data, batch_size=batch_size)
-            val_data = ActionStateDataset(
-                action_file=f"./datasets/{num_joints}/val/actions_IK_random_start.csv",
-                state_file=f"./datasets/{num_joints}/val/state_IK_random_start.csv",
-                action_constrain_radius=action_radius,
-            )
-            val_dataloader = DataLoader(val_data, batch_size=batch_size)
-            test_data = ActionStateDataset(
-                action_file=f"./datasets/{num_joints}/test/actions_IK_random_start.csv",
-                state_file=f"./datasets/{num_joints}/test/state_IK_random_start.csv",
-                action_constrain_radius=action_radius,
-            )
-            test_dataloader = DataLoader(test_data, batch_size=batch_size)
-
-        elif feature_source == "targets":
-            train_data = ActionTargetDataset(
-                action_file=f"./datasets/{num_joints}/train/actions_IK_random_start.csv",
-                target_file=f"./datasets/{num_joints}/train/targets_IK_random_start.csv",
-            )
-            train_dataloader = DataLoader(train_data, batch_size=batch_size)
-            val_data = ActionTargetDataset(
-                action_file=f"./datasets/{num_joints}/val/actions_IK_random_start.csv",
-                target_file=f"./datasets/{num_joints}/val/targets_IK_random_start.csv",
-            )
-            val_dataloader = DataLoader(val_data, batch_size=batch_size)
-            test_data = ActionTargetDataset(
-                action_file=f"./datasets/{num_joints}/test/actions_IK_random_start.csv",
-                target_file=f"./datasets/{num_joints}/test/targets_IK_random_start.csv",
-            )
-            test_dataloader = DataLoader(test_data, batch_size=batch_size)
-
-        elif feature_source == "gaussian_target":
-            train_data = TargetGaussianDataset(
-                state_file=f"./datasets/{num_joints}/train/state_IK_random_start.csv",
-                std=action_radius,
-                target_mode=TargetMode.INTERMEDIATE_POSITION,
-            )
-            train_dataloader = DataLoader(train_data, batch_size=batch_size)
-            val_data = TargetGaussianDataset(
-                state_file=f"./datasets/{num_joints}/val/state_IK_random_start.csv",
-                std=action_radius,
-                target_mode=TargetMode.INTERMEDIATE_POSITION,
-            )
-            val_dataloader = DataLoader(val_data, batch_size=batch_size)
-            test_data = TargetGaussianDataset(
-                state_file=f"./datasets/{num_joints}/test/state_IK_random_start.csv",
-                std=action_radius,
-                target_mode=TargetMode.INTERMEDIATE_POSITION,
-            )
-            test_dataloader = DataLoader(test_data, batch_size=batch_size)
-
-        else:
-            logging.error(
-                f"feature source has to be either 'targets' or 'state', you chose: {feature_source}"
-            )
-            return None, None, None
-
-        return train_dataloader, val_dataloader, test_dataloader
 
     def _load_criterion(self) -> Criterion:
         loss_config = copy(self._config["loss_func"])

@@ -13,6 +13,6 @@ class VAEMetrics(Metrics):
         self.reconstruction_loss: ndarray
 
 
-class VAEIKMetrics(VAEMetrics, IKMetrics):
+class VAEInvKinMetrics(VAEMetrics, IKMetrics):
     def __init__(self) -> None:
         super().__init__()

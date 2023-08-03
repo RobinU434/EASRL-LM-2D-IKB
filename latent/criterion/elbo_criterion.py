@@ -8,7 +8,7 @@ from latent.criterion.base_criterion import Criterion
 from latent.criterion.distance_criterion import EuclideanDistance
 from latent.criterion.ik_criterion import IKLoss
 from latent.criterion.imitation_criterion import ImitationLoss
-from latent.data.utils import TargetMode
+from latent.datasets.utils import TargetMode
 from supervised.utils import forward_kinematics
 
 

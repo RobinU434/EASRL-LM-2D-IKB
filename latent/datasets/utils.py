@@ -16,8 +16,8 @@ class TargetMode(Enum):
 
 
 def split_state_information(
-    x: Union[Tensor, ndarray]
-) -> Tuple[Union[Tensor, ndarray], Union[Tensor, ndarray], Union[Tensor, ndarray],]:
+    x: Tensor
+) -> Tuple[Tensor, Tensor, Tensor]:
     """the incoming tensor or ndarray must have 2 dimension [batch_size, state]
 
     Args:

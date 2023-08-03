@@ -1,22 +1,20 @@
 num_joints: 2
 n_epochs: 3001
-batch_size: 5000
 val_interval: 5
-feature_source: "gaussian_target"  # choices: "state" "targets" "gaussian_target"
 learning_rate: 0.0015
-action_radius: 0.2
+dataset:
+  type: VAETargetGaussian  # Name of dataset type 
+  mode: "IK_random_start" # "IK_const_start" "IK_random_start" "IK_random_start_constrained" "noise_uniform" "noise_tanh"  const is a dataset created with a constant start position -> one action for one target position, with random -> multiple actions for one target positions are possible
+  batch_size: 2096
+  shuffle: False
+  action_constrain_radius: 0.2  # only available if dataset == conditional_action_target and conditional_target(here it will be used as std around the current position)
+  std: 0.2
+  target_mode: "POSITION"  # either POSITION or ACTION
 loss_func: 
   type: "IKLoss"  # ImitationLoss DistanceLoss MergeLoss PointDistanceLoss
   imitation_loss_weight: 1
   distance_loss_weight: 1
-  
 post_processor_config:
   enabled: True
   min_action: -1 # -3.142  # little offset to make it easier for tanh function
   max_action: 1 # 3.142  # little offset to make it easier for tanh function
-normal_learn:
-  enabled: False
-active_learn:
-  enabled: True
-  mixing_coef: 0.95
-  num_deviation_steps: 1

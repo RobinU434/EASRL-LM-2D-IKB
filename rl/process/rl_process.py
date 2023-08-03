@@ -2,10 +2,10 @@
 
 from typing import Any, Dict
 import gym
-from process.base_process import Process
+from process.learning_process import LearningProcess
 
 
-class RLProcess(Process):
+class RLProcess(LearningProcess):
     def __init__(self, device: str = "cpu", **kwargs) -> None:
         super().__init__(device, **kwargs)
 

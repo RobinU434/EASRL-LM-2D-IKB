@@ -1,11 +1,15 @@
 from abc import ABC, abstractmethod
 import logging
+import random
 import time
 from typing import Any
+import numpy as np
+
+import torch
 
 from utils.file_system import load_yaml, write_yaml
 
-class Process(ABC):
+class LearningProcess(ABC):
     def __init__(
         self,
         device: str = "cpu",
@@ -21,12 +25,16 @@ class Process(ABC):
         self._device = device
         """str: on which device should you run the process. cpu, cuda: 0, ..."""
         self._save_dir = self._build_save_dir(self._model_entity, **kwargs)
-        """str: path to directory where all metrics and files are stored during the process. Has rough structure of 'results/<model_entity>/<subdir>/<time_stamp>"""
+        """str: path to directory where all metrics and files are stored during the process. Has rough structure of 'results/<model_entity>/<subdir>/<x>_<time_stamp>"""
         self._checkpoint: str = self._extract_from_kwargs("checkpoint", **kwargs)
         """str: Variable contains path to checkpoint if provided. Else: '' """
         self._sample_size: int = self._extract_from_kwargs("sample_size", **kwargs)
         """int: parameter stores sample size for inference step"""
 
+        # set seed
+        self._random_seed = self._get_random_seed(**kwargs)
+        self._set_random_seed(self._random_seed)
+        
         self._initialized = False
 
     @abstractmethod
@@ -79,6 +87,26 @@ class Process(ABC):
             config_path = "/".join(kwargs["checkpoint"].split("/")[:-1]) + "/config.yaml"
             return config_path
         return self._base_config_path
+
+
+    def _get_random_seed(self, **kwargs) -> int:
+        random_seed = self._extract_from_kwargs("random_seed", **kwargs)
+        if random_seed is None:
+            random_seed = int(time.time())
+        return random_seed
+
+    @staticmethod
+    def _set_random_seed(random_seed: int):
+        """sets random seed inside random number generators
+
+        Args:
+            random_seed (int):
+
+        """
+        torch.manual_seed(random_seed)
+        np.random.seed(random_seed)
+        random.seed(random_seed)
+
     
     @staticmethod
     def _extract_from_kwargs(key: str, **kwargs) -> Any:

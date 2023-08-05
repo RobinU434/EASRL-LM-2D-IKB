@@ -1,17 +1,17 @@
-num_joints: 2
+n_joints: 2
 n_epochs: 801
 learning_rate: 0.0015
 val_interval: 5
 model:
-  latent_dim: 2
+  latent_dim: 16
   encoder:
-    architecture: [128]
+    architecture: [256, 256]
     activation_function: "ReLU"
   decoder:
-    architecture: [128, 128]
+    architecture: [256, 256]
     activation_function: "ReLU"
 loss_func:  # only IK Loss is available
-  kl_loss_weight: 0
+  kl_loss_weight: 0.001
   reconstruction_loss_weight: 1
   distance_loss_weight: 1
   imitation_loss_weight: 0

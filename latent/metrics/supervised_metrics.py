@@ -1,7 +1,8 @@
 
 
 from numpy import ndarray
-from latent.metrics.base_metrics import IKMetrics, Metrics
+from latent.metrics.ik_metrics import IKMetrics
+from utils.metrics import Metrics
 
 
 

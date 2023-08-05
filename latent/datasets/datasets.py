@@ -221,15 +221,15 @@ class TargetGaussianDataset(LatentDataset):
         """generates actions for target positions from self._states
 
         Returns:
-            Tensor: actions. Shape (num_samples, num_joints)
+            Tensor: actions. Shape (num_samples, n_joints)
         """
         targets, _, state_angles = split_state_information(self._states)
 
         state_angles_deg = torch.rad2deg(state_angles.clone())
         joint_segments = torch.ones_like(state_angles_deg)
 
-        num_joints = state_angles.size()[1]
-        action_array = np.zeros((len(self), num_joints))
+        n_joints = state_angles.size()[1]
+        action_array = np.zeros((len(self), n_joints))
         bar = Bar("get actions for targets", max=len(self))
         for state_idx in range(len(self)):
             target = torch.zeros(3)

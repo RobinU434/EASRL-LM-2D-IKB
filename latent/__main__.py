@@ -33,7 +33,7 @@ def execute_commands(args: Dict[str, Any], process: LatentProcess):
     elif args["command"] == "print-config":
         process.print_config()
     elif args["command"] == "print-model":
-        process.build()
+        process.build(no_logger=True)
         process.print_model()
 
 

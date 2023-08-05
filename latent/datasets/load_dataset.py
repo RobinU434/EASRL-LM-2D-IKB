@@ -22,7 +22,7 @@ def load_data(
         Type[SupervisedStateActionDataset],
         Type[SupervisedTargetGaussianDataset],
     ],
-    num_joints: int,
+    n_joints: int,
     data_entity: str, # [train, val, test]
     **data_args
 ):
@@ -30,15 +30,15 @@ def load_data(
 
     Args:
         type (Union[ Type[VAEActionDataset], Type[VAEStateActionDataset], Type[VAETargetGaussianDataset], Type[SupervisedStateActionDataset], Type[SupervisedTargetGaussianDataset], ]): _description_
-        num_joints (int): _description_
+        n_joints (int): _description_
         data_entity (str): _description_
 
     Returns:
         _type_: _description_
     """
     data_args["target_mode"] = getattr(TargetMode, data_args["target_mode"])
-    action_file = f"data/{num_joints}/{data_entity}/actions_{data_args['mode']}.csv"
-    state_file = f"data/{num_joints}/{data_entity}/states_{data_args['mode']}.csv"
+    action_file = f"data/{n_joints}/{data_entity}/actions_{data_args['mode']}.csv"
+    state_file = f"data/{n_joints}/{data_entity}/states_{data_args['mode']}.csv"
     dataset = type.from_files(action_file=action_file, state_file=state_file, **data_args)
 
     batch_size = data_args["batch_size"]

@@ -4,19 +4,17 @@ import math
 from typing import Any, Dict, List, Tuple, Union
 import torch
 import numpy as np
-import torch.nn as nn
 
-from torch.autograd import Variable
 from torch.utils.tensorboard.writer import SummaryWriter
 from latent.metrics.vae_metrics import VAEInvKinMetrics
-from latent.model.base_model import FeedForwardNetwork, LearningModule, NeuralNetwork
+from latent.model.base_model import FeedForwardNetwork, NeuralNetwork
 
 from latent.model.encoder import VariationalEncoder
 from latent.model.utils.post_processor import PostProcessor
 from logger.base_logger import Logger
 
 
-class VariationalAutoencoder(NeuralNetwork):
+class VAE(NeuralNetwork):
     def __init__(
         self,
         input_dim: int,
@@ -101,16 +99,14 @@ class VariationalAutoencoder(NeuralNetwork):
 
         # enhance latent space
         z = torch.cat([z, c_dec], dim=1)
-        # z = Variable(z, requires_grad=True)
-        # store for logging the gradient
         self.z = z
 
         decoder_out = self._decoder.forward(z)
         x_hat = self._post_processor(decoder_out)
-        if self._store_history:
-            self._decoder_history = torch.cat(
-                [self._decoder_history, x_hat.detach().flatten().cpu()]
-            )
+        # if self._store_history:
+        #     self._decoder_history = torch.cat(
+        #         [self._decoder_history, x_hat.detach().flatten().cpu()]
+        #     )
 
         return x_hat, mu, log_std
 

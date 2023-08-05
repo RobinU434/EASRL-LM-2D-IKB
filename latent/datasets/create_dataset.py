@@ -102,9 +102,9 @@ def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "consta
     df_targets = DataFrame(targets)
     df_state = DataFrame(state)
 
-    df_actions.to_csv(f"datasets/{n_joints}/{entity}/actions_{start_mode}.csv", index=False)
-    df_targets.to_csv(f"datasets/{n_joints}/{entity}/targets_{start_mode}.csv", index=False)
-    df_state.to_csv(f"datasets/{n_joints}/{entity}/state_{start_mode}.csv", index=False)
+    df_actions.to_csv(f"data/{n_joints}/{entity}/actions_{start_mode}.csv", index=False)
+    df_targets.to_csv(f"data/{n_joints}/{entity}/targets_{start_mode}.csv", index=False)
+    df_state.to_csv(f"data/{n_joints}/{entity}/states_{start_mode}.csv", index=False)
     
 
 def create_relative_dataset(n_joints: int, n: int = 10_000, mode: str = "relative_uniform", entity: str = "train"):

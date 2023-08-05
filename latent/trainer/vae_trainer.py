@@ -9,7 +9,7 @@ from latent.datasets.vae_dataset import VAEDataset
 from latent.datasets.utils import TargetMode
 from latent.metrics.base_metrics import Metrics
 from latent.metrics.vae_metrics import VAEInvKinMetrics, VAEMetrics
-from latent.model.vae import VariationalAutoencoder
+from latent.model.vae import VAE
 from latent.trainer.base_trainer import Trainer
 from logger.base_logger import Logger
 
@@ -17,7 +17,7 @@ from logger.base_logger import Logger
 class VAETrainer(Trainer):
     def __init__(
         self,
-        model: VariationalAutoencoder,
+        model: VAE,
         train_data: DataLoader,
         val_data: DataLoader,
         test_data: DataLoader,
@@ -42,7 +42,7 @@ class VAETrainer(Trainer):
         )
 
         self._criterion: InvKinELBO
-        self._model: VariationalAutoencoder
+        self._model: VAE
 
     def _run_model(self, data: DataLoader, train: bool = False) -> VAEInvKinMetrics:
         """runs the given autoencoder on the given dataset
@@ -75,7 +75,7 @@ class VAETrainer(Trainer):
             "reconstruction_loss",
             "kl_loss",
             "loss",
-            "std",
+            "log_std",
             "imitation_loss",
             "distance_loss",
         ]
@@ -121,5 +121,5 @@ class VAETrainer(Trainer):
 
     def _print_status(self, entity: str, metrics: VAEInvKinMetrics) -> None:
         print(
-            f"{entity}: loss: {metrics.reconstruction_loss.mean()} kl_div: {metrics.kl_loss.mean()}"
+            f"{entity}: loss: {metrics.reconstruction_loss.mean():.5f} kl_div: {metrics.kl_loss.mean():.5f}"
         )

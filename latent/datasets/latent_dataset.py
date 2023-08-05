@@ -16,9 +16,9 @@ class LatentDataset(Dataset, ABC):
 
         self._target_mode = target_mode
         self._actions: Tensor
-        """Tensor: with all actions which are leading from state to target inside, Shape: (num_actions, num_joints)"""
+        """Tensor: with all actions which are leading from state to target inside, Shape: (num_actions, n_joints)"""
         self._states: Tensor
-        """Tensor: with all states inside. Shape: (num_actions, 4 + num_joints)"""
+        """Tensor: with all states inside. Shape: (num_actions, 4 + n_joints)"""
 
     @abstractmethod
     def __len__(self):

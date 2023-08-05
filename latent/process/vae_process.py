@@ -1,19 +1,14 @@
 from argparse import ArgumentParser
 from copy import copy
-import json
-import time
-from typing import Any, Callable, Tuple
 
 from latent.criterion.elbo_criterion import ELBO, InvKinELBO
 from latent.datasets.vae_dataset import VAEDataset
 from latent.model.utils.post_processor import PostProcessor
-from latent.model.vae import VariationalAutoencoder
+from latent.model.vae import VAE
 from latent.process.latent_process import LatentProcess
 from latent.trainer.base_trainer import Trainer
 from latent.trainer.vae_trainer import VAETrainer
-from process.learning_process import LearningProcess
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard.writer import SummaryWriter
 
 
 class VAEProcess(LatentProcess):
@@ -22,7 +17,7 @@ class VAEProcess(LatentProcess):
         super().__init__(**kwargs)
         
         self._criterion: ELBO
-        self._model: VariationalAutoencoder
+        self._model: VAE
 
         self._train_data: DataLoader[VAEDataset]
         self._val_data: DataLoader[VAEDataset]
@@ -52,12 +47,12 @@ class VAEProcess(LatentProcess):
 
         return loss_func
 
-    def _build_model(self) -> VariationalAutoencoder:
+    def _build_model(self) -> VAE:
         model_config = copy(self._config["model"])
-        autoencoder = VariationalAutoencoder(
+        autoencoder = VAE(
             input_dim=self._train_data.dataset.input_dim,
             latent_dim=model_config["latent_dim"],
-            output_dim=self._config["num_joints"],
+            output_dim=self._config["n_joints"],
             conditional_info_dim=self._train_data.dataset.conditional_dim,
             encoder_config=copy(model_config["encoder"]),
             decoder_config=copy(model_config["decoder"]),
@@ -74,12 +69,12 @@ class VAEProcess(LatentProcess):
 
         return autoencoder
 
-    def _build_model_from_config(self) -> VariationalAutoencoder:
+    def _build_model_from_config(self) -> VAE:
         model_config = copy(self._config)
-        autoencoder = VariationalAutoencoder(
+        autoencoder = VAE(
             input_dim=model_config["input_dim"],
             latent_dim=model_config["latent_dim"],
-            output_dim=self._config["num_joints"],
+            output_dim=self._config["n_joints"],
             conditional_info_dim=self._config["conditional_dim"],
             encoder_config=copy(model_config["encoder"]),
             decoder_config=copy(model_config["decoder"]),

@@ -10,7 +10,7 @@ from latent.datasets.datasets import (
 )
 from latent.datasets.latent_dataset import LatentDataset
 
-from latent.datasets.utils import TargetMode
+from latent.datasets.utils import TargetMode, split_state_information
 
 
 class VAEDataset(LatentDataset, ABC):
@@ -77,11 +77,13 @@ class VAEStateActionDataset(StateActionDataset, VAEDataset):
         super().__init__(actions, states, target_mode, action_constrain_radius)
 
     def __getitem__(self, idx: int):
-        x = self._states[idx, :2]
+        target, current_position, state_angles = split_state_information(self._states)
+        
+        x = target[idx]
 
         c_enc = self._states[idx, 2:]
-        c_dec = self._states[idx, 2:]
-
+        c_dec = self._states[idx, 2:]   
+        print(self._states[idx])
         y = self._acquire_target_func(idx)
 
         return x, c_enc, c_dec, y
@@ -103,7 +105,6 @@ class VAETargetGaussianDataset(TargetGaussianDataset, VAEDataset):
 
         c_enc = self._states[idx, 2:]
         c_dec = self._states[idx, 2:]
-
         y = self._acquire_target_func(idx)
 
         return x, c_enc, c_dec, y

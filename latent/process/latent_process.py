@@ -44,7 +44,7 @@ class LatentProcess(LearningProcess):
         """prints model"""
         print(self._model)
 
-    def build(self):
+    def build(self, no_logger: bool = False):
         """builds core component of process:
 
         - loads datasets
@@ -52,9 +52,16 @@ class LatentProcess(LearningProcess):
         - build logger
         - build trainer
         - load criterion
-        """
-        self._logger = self._build_logger()
 
+        Args:
+            no_logger (bool): prevents build of logger
+        """
+        if no_logger:
+            self._logger = []
+        else:
+            self._logger = self._build_logger()
+        
+        print(self._logger)
         self._train_data: DataLoader[LatentDataset]
         self._val_data: DataLoader[LatentDataset]
         self._test_data: DataLoader[LatentDataset]
@@ -128,17 +135,17 @@ class LatentProcess(LearningProcess):
         dataset_config = copy(self._config["dataset"])
         dataset_config["type"] = getattr(datasets, dataset_config["type"])
         self._train_data = load_data(
-            num_joints=self._config["num_joints"],
+            n_joints=self._config["n_joints"],
             data_entity="train",
             **dataset_config,
         )
         self._val_data = load_data(
-            num_joints=self._config["num_joints"],
+            n_joints=self._config["n_joints"],
             data_entity="val",
             **dataset_config,
         )
         self._test_data = load_data(
-            num_joints=self._config["num_joints"],
+            n_joints=self._config["n_joints"],
             data_entity="test",
             **dataset_config,
         )

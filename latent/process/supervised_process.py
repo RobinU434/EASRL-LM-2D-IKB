@@ -18,7 +18,7 @@ from latent.model.utils.post_processor import PostProcessor
 from latent.process.latent_process import LatentProcess
 from latent.trainer.base_trainer import Trainer
 from latent.trainer.supervised_trainer import SupervisedTrainer
-from utils.kinematics import forward_kinematics
+from utils.kinematics.kinematics import forward_kinematics
 from utils.sampling import sample_target
 
 
@@ -132,15 +132,15 @@ class SupervisedProcess(LatentProcess):
     def _build_model(self) -> Regressor:
         post_processor = PostProcessor(**copy(self._config["post_processor_config"]))
         feature_source = self._config["feature_source"]
-        num_joints = self._config["num_joints"]
+        n_joints = self._config["n_joints"]
         learning_rate = self._config["learning_rate"]
         action_radius = self._config["action_radius"]
 
         if feature_source == "state" or feature_source == "gaussian_target":
             logging.info("use 'state' as feature source")
             model = Regressor(
-                4 + num_joints,
-                num_joints,
+                4 + n_joints,
+                n_joints,
                 learning_rate,
                 post_processor,
                 action_radius,
@@ -148,7 +148,7 @@ class SupervisedProcess(LatentProcess):
         elif feature_source == "targets":
             logging.info("use 'targets' as feature source")
             model = Regressor(
-                2, num_joints, learning_rate, post_processor, action_radius
+                2, n_joints, learning_rate, post_processor, action_radius
             )
         else:
             logging.error(

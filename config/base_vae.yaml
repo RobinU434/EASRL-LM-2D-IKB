@@ -1,4 +1,4 @@
-n_joints: 2
+n_joints: 15
 n_epochs: 801
 learning_rate: 0.0015
 val_interval: 5

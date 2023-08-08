@@ -20,9 +20,17 @@ class Actor(FeedForwardNetwork):
         architecture: List[int],
         activation_function: str,
         learning_rate: float,
+        device: str = "cpu",
+        **kwargs,
     ) -> None:
         super().__init__(
-            input_dim, output_dim, architecture, activation_function, learning_rate
+            input_dim,
+            output_dim,
+            architecture,
+            activation_function,
+            learning_rate,
+            device,
+            **kwargs,
         )
         # add input layers
         self._linear_mu = nn.Linear(architecture[-1], output_dim)

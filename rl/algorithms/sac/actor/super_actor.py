@@ -1,4 +1,5 @@
 import glob
+import numpy as np
 import yaml
 import torch
 import logging
@@ -6,11 +7,17 @@ import logging
 from torch import Tensor
 from torch.utils.data import DataLoader
 import torch.nn as nn
+from latent.datasets.utils import split_state_information
+from latent.model.regressor import Regressor
+from latent.model.utils.post_processor import PostProcessor
 
 from rl.algorithms.sac.actor.base_actor import Actor
 from rl.algorithms.sac.actor.utils import TrainMode
 
-from typing import Any, List, Tuple, Literal
+from typing import Any, List, Tuple, Literal, Union
+
+from utils.model.neural_network import NeuralNetwork
+
 
 def load_checkpoint(checkpoint_path: str):
     checkpoint = torch.load(checkpoint_path)
@@ -39,7 +46,7 @@ def extract_loss(path: str) -> float:
 
 
 def load_best_checkpoint(
-    vae_results_dir: str, output_dim: int
+    supervised_results_dir: str, output_dim: int
 ) -> Tuple[str, Any, dict]:
     """_summary_
 
@@ -50,9 +57,9 @@ def load_best_checkpoint(
     Returns:
         Tuple[str, Any, dict]: checkpoint file name, checkpoint, config dict from model
     """
-    paths = glob.glob(vae_results_dir + f"/{output_dim}_*/*.pt")
+    paths = glob.glob(supervised_results_dir + f"/{output_dim}_*/*.pt")
     if len(paths) == 0:
-        logging.error(
+        raise ValueError(
             f"there is not supervised model trained with output_dim dim: {output_dim}"
         )
     losses = map(extract_loss, paths)
@@ -64,95 +71,52 @@ def load_best_checkpoint(
     return file_name, load_checkpoint(path), config
 
 
-class SuperActor(nn.Module):
+class SuperActor(NeuralNetwork):
     def __init__(
         self,
-        device,
         input_dim: int,
         output_dim: int,
         learning_rate: float,
+        device: str = "cpu",
         architecture: List[int] = [128, 128],
-        super_learning_mode: Literal[TrainMode] = TrainMode.STATIC,
-        checkpoint_dir: str = "results/supervised",
-        log_dir: str = "",  # for saving the loaded checkpoint
+        activation_function: str = "ReLU",
+        super_learning_mode: Union[
+            Literal[TrainMode.STATIC], Literal[TrainMode.FINE_TUNING]
+        ] = TrainMode.STATIC,
+        latent_checkpoint_dir: str = "results/supervised",
+        **kwargs,
     ) -> None:
-        super().__init__()
+        super().__init__(input_dim, output_dim, learning_rate, device, **kwargs)
 
-        self.device = device
+        self._latent_checkpoint_dir = latent_checkpoint_dir
+        self._regressor_learning_mode = super_learning_mode
+        self._regressor = self._build_regressor()
 
         self.actor = Actor(
             input_dim=input_dim,
             output_dim=2,  # we want to predict a relative target position in 2D space
             learning_rate=learning_rate,
             architecture=architecture,
+            activation_function=activation_function,
+            device=device
         )
 
-        self.supervised_model = Regressor(
-            input_dim=input_dim,
-            output_dim=output_dim,
-            learning_rate=learning_rate,
-            # important to disable because the is an additional tanh function in policy net
-            post_processor=PostProcessor(enabled=False),
-        ).to(self.device)
-
-        self.super_criterion = IKLoss(0, 1, 0, target_mode=YMode.POSITION)
-
-        self.super_learning_mode = super_learning_mode
-        if self.super_learning_mode == TrainMode.STATIC.value:
-            # load model and perform NO tuning at all
-            file_name, checkpoint, supervised_config = load_best_checkpoint(
-                checkpoint_dir, output_dim
-            )
-            self.supervised_model.load_state_dict(checkpoint["model_state_dict"])
-            self.supervised_config = supervised_config
-            self.supervised_model.save(
-                log_dir + "/" + file_name,
-                checkpoint["epoch"],
-                {"loss": checkpoint["loss"]},
-            )
-
-        elif self.super_learning_mode == TrainMode.FINE_TUNING.value:
-            # load model and perform fine tuning on that checkpoint
-            file_name, checkpoint, supervised_config = load_best_checkpoint(
-                checkpoint_dir, output_dim
-            )
-            self.supervised_model.load_state_dict(checkpoint["model_state_dict"])
-            self.supervised_config = supervised_config
-            self.supervised_model.save(
-                log_dir + "/" + file_name,
-                checkpoint["epoch"],
-                {"loss": checkpoint["loss"]},
-            )
-
-        elif self.super_learning_mode == TrainMode.FROM_SCRATCH.value:
-            # load NO checkpoint and train the supervised learning model on the fly
-            raise NotImplementedError
-        else:
-            raise ValueError(
-                f"You picked the wrong super_learning status: {self.super_learning_mode}"
-            )
-
-    def forward(self, x: Tensor):
-        mu, std = self.actor.forward(x)
-
-        return mu, std
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
+        action, log_prob = self.actor.forward(x)
+        _, current_position, state_angles = split_state_information(x)
+        latent = torch.cat([action,  current_position, state_angles], dim=1)
+        regressor_action = self._regressor.forward(latent)
+        return regressor_action, log_prob
 
     def train(self, loss: Tensor):
         self.actor.train(loss)
 
-    def train_supervised(self, data: DataLoader, train_iterations: int):
-        loss = []
-        for _ in range(train_iterations):
-            metrics = run_model(
-                self.supervised_model,
-                data,
-                self.super_criterion,
-                train=True,
-                device=self.device,
-            )
-            loss.append(metrics["loss"])
-
-        return np.mean(loss)
+    def _build_regressor(self) -> Regressor:
+        _, regressor_checkpoint, regressor_config = load_best_checkpoint(self._latent_checkpoint_dir, self._output_dim)
+        regressor_config["post_processor"]["enabled"] = False
+        regressor = Regressor.from_config(regressor_config)
+        regressor.load_state_dict(regressor_checkpoint["model_state_dict"])
+        return regressor
     
     @property
     def optimizer(self):

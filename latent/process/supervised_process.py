@@ -49,32 +49,17 @@ class SupervisedProcess(LatentProcess):
 
     def _build_model(self) -> Regressor:
         post_processor = PostProcessor(**copy(self._config["post_processor_config"]))
-        feature_source = self._config["feature_source"]
         n_joints = self._config["n_joints"]
-        learning_rate = self._config["learning_rate"]
-        action_radius = self._config["action_radius"]
+        
+        regressor = Regressor(
+            input_dim=4 + n_joints,
+            output_dim=n_joints,
+            post_processor=post_processor,
+            device=self._device,
+            **self._config["model"]
+        )
 
-        if feature_source == "state" or feature_source == "gaussian_target":
-            logging.info("use 'state' as feature source")
-            model = Regressor(
-                4 + n_joints,
-                n_joints,
-                learning_rate,
-                post_processor,
-                action_radius,
-            )
-        elif feature_source == "targets":
-            logging.info("use 'targets' as feature source")
-            model = Regressor(
-                2, n_joints, learning_rate, post_processor, action_radius
-            )
-        else:
-            logging.error(
-                f"feature source has to be either 'targets' or 'state', you chose: {feature_source}"
-            )
-            raise NotImplementedError
-
-        return model.to(self._device)
+        return regressor.to(self._device)
 
     def _build_model_from_config(self) -> Regressor:
         """in this function we rely only on information provided by the config file

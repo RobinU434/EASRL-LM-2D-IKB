@@ -19,8 +19,6 @@ from rl.algorithms.sac.actor.multi_actor import Actor, InformedMultiAgent, Multi
 from rl.algorithms.sac.actor.super_actor import SuperActor
 from utils.metrics import Metrics
 from utils.model.neural_network import NeuralNetwork
-from supervised.utils import split_state_information
-
 
 class PolicyNet(NeuralNetwork):
     def __init__(

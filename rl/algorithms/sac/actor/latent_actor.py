@@ -3,15 +3,19 @@ import yaml
 import torch
 import logging
 import torch.nn as nn
+import torch.optim as optim
 
-from typing import List
+from typing import Any, Dict, List, Literal, Tuple, Union
 from torch.utils.data import DataLoader
+from torch import Tensor
+from latent.datasets.utils import split_state_information
 
-from algorithms.sac.actor.base_actor import Actor, TrainMode
-from vae.data.data_set import YMode
-from vae.train import run_model
-from vae.utils.loss import IKLoss, VAELoss
-from vae.model.vae import VariationalAutoencoder
+from rl.algorithms.sac.actor.base_actor import Actor
+from rl.algorithms.sac.actor.utils import TrainMode
+from utils.file_system import load_yaml
+from utils.metrics import Metrics
+from utils.model.neural_network import NeuralNetwork
+from latent.model.vae import VAE
 from vae.utils.post_processing import PostProcessor
 
 
@@ -37,10 +41,25 @@ def extract_loss(path: str):
     return loss
 
 
-def load_best_checkpoint(vae_results_dir: str, output_dim: int, latent_dim: int):
+def load_best_checkpoint(
+    vae_results_dir: str, output_dim: int, latent_dim: int
+) -> Tuple[str, Tensor, Dict[str, Any]]:
+    """searches for model with least error according to naming schema
+
+    Args:
+        vae_results_dir (str): where to look for the lowest loss
+        output_dim (int): number of joints
+        latent_dim (int): how many values in the latent space
+
+    Returns:
+        Tuple[str, Tensor, Dict[str, Any]]:
+         - path to checkpoint
+         - loaded checkpoint
+         - config of loaded model
+    """
     paths = glob.glob(vae_results_dir + f"/{output_dim}_{latent_dim}*/*.pt")
     if len(paths) == 0:
-        logging.error(
+        raise ValueError(
             f"there is not VAE trained output dim: {output_dim} and latent dim: {latent_dim}"
         )
     losses = map(extract_loss, paths)
@@ -52,102 +71,41 @@ def load_best_checkpoint(vae_results_dir: str, output_dim: int, latent_dim: int)
     return file_name, load_checkpoint(path), config
 
 
-class LatentActor(nn.Module):
+class LatentActor(NeuralNetwork):
     def __init__(
         self,
-        device,
         input_dim: int,
         latent_dim: int,
         output_dim: int,
         learning_rate: float,
-        conditional_info_dim: int = 0,
         architecture: List[int] = [128, 128],
-        kl_loss_weight: float = 1,
-        reconstruction_loss_weight: float = 1,
-        vae_learning_mode: int = TrainMode.STATIC,
-        checkpoint_dir: str = "results/vae",
-        log_dir: str = "",
+        activation_function: str = "ReLU",
+        vae_learning_mode: Union[
+            Literal[TrainMode.STATIC], Literal[TrainMode.FINE_TUNING]
+        ] = TrainMode.STATIC,
+        latent_checkpoint_dir: str = "results/vae",
+        device: str = "cpu",
+        **kwargs,
     ) -> None:
-        super().__init__()
+        super().__init__(input_dim, output_dim, learning_rate, device,**kwargs)
 
-        self.device = device
+        self._device = device
 
-        self.actor = Actor(
+        self._vae_learning_mode = vae_learning_mode
+        self._latent_dim = latent_dim
+        self._latent_checkpoint_dir = latent_checkpoint_dir
+        self._vae = self._build_vae()
+
+        self._actor = Actor(
             input_dim=input_dim,
-            output_dim=latent_dim,
+            output_dim=self._vae.latent_dim,
             learning_rate=learning_rate,
             architecture=architecture,
+            activation_function=activation_function,
         )
 
-        self.vae_learning_mode = vae_learning_mode
-        self.auto_encoder = VariationalAutoencoder(
-            input_dim=output_dim + conditional_info_dim,
-            latent_dim=latent_dim,
-            output_dim=output_dim,
-            learning_rate=learning_rate,
-            conditional_info_dim=conditional_info_dim,
-            logger=None,
-            post_processor=PostProcessor(
-                enabled=False
-            ),  # needs no post processing because it is used in policy net directly
-            store_history=False,
-            device=self.device,
-            verbose=True,
-        ).to(self.device)
-
-        self.auto_encoder_loss_func = IKLoss(
-            kl_loss_weight=kl_loss_weight,
-            reconstruction_loss_weight=1,
-            imitation_loss_weight=0,
-            distance_loss_weight=1,
-            target_mode=YMode.POSITION,
-            device=self.device,
-        )
-
-        # checkpoint chosen because of the overall performance reconstruction loss + kl loss
-        self.vae_config = None
-        if self.vae_learning_mode == TrainMode.STATIC:
-            # load a model and perform no weight adaptation at all
-            file_name, checkpoint, vae_config = load_best_checkpoint(
-                checkpoint_dir, output_dim, latent_dim
-            )
-            self.auto_encoder.load_state_dict(checkpoint["model_state_dict"])
-            self.vae_config = vae_config
-            self.auto_encoder.store(
-                log_dir + "/" + file_name,
-                checkpoint["epoch"],
-                {
-                    "reconstruction_loss": checkpoint["reconstruction_loss"],
-                    "kl_loss": checkpoint["kl_loss"],
-                    "distance_loss": checkpoint["distance_loss"],
-                    "imitation_loss": checkpoint["imitation_loss"],
-                },
-            )
-            store_vae_config(self.vae_config, log_dir)
-        elif self.vae_learning_mode == TrainMode.FINE_TUNING:
-            # load a model and perform no weight adaptation at all
-            file_name, checkpoint, vae_config = load_best_checkpoint(
-                checkpoint_dir, output_dim, latent_dim
-            )
-            self.auto_encoder.load_state_dict(checkpoint["model_state_dict"])
-            self.vae_config = vae_config
-            self.auto_encoder.store(
-                log_dir + "/" + file_name,
-                checkpoint["epoch"],
-                {
-                    "reconstruction_loss": checkpoint["reconstruction_loss"],
-                    "kl_loss": checkpoint["kl_loss"],
-                    "distance_loss": checkpoint["distance_loss"],
-                    "imitation_loss": checkpoint["imitation_loss"],
-                },
-            )
-        elif self.vae_learning_mode == TrainMode.FROM_SCRATCH:
-            pass
-        else:
-            raise ValueError("You picked the wrong vae_learning status.")
-
-    def forward(self, x):
-        latent_mu, latent_std = self.actor.forward(x)
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
+        action, log_prob = self._actor.forward(x)
         """ideas
         - take just the action from the actor mapped from state space into latent space
         - sample latent x with output from actor = mu, std
@@ -155,29 +113,32 @@ class LatentActor(nn.Module):
         (https://arxiv.org/pdf/1512.07679.pdf)
         - evaluate all actions from a pre defined test set by q which are in the ellipse around mu, axis of the ellipse are defined by std
         """
+        _, current_position, state_angles = split_state_information(x)
+        latent = torch.cat([action,  current_position, state_angles], dim=1)
+        decoder_action = self._vae.decoder.forward(latent)
+        return decoder_action, log_prob
 
-        return latent_mu, latent_std
+    def train(self, loss: torch.Tensor):
+        self._actor.train(loss)
 
-    def train(self, loss):
-        self.actor.train(loss)
-
-    def train_vae(self, data: DataLoader, train_iterations: int):
-        r_loss = []
-        kl_loss = []
-        for i in range(train_iterations):
-            metrics = run_model(
-                autoencoder=self.auto_encoder,
-                data=data,
-                criterion=self.auto_encoder_loss_func,
-                device=self.device,
-                train=True,
-            )
-
-            r_loss.append(metrics["reconstruction_loss"])
-            kl_loss.append(metrics["kl_loss"])
-
-        return r_loss_tensor.mean().item(), kl_loss_tensor.mean().item()
+    def _build_vae(self) -> VAE:
+        _, vae_checkpoint, vae_config = load_best_checkpoint(
+            self._latent_checkpoint_dir, self._output_dim, self._latent_dim
+        )
+        # disable post processor
+        vae_config["post_processor"]["enabled"] = False
+        vae = VAE.from_config(vae_config)
+        vae.load_state_dict(vae_checkpoint["model_state_dict"]) # type: ignore
+        return vae
 
     @property
-    def optimizer(self):
-        return self.actor.optimizer
+    def optimizer(self) -> optim.Optimizer:
+        return self._actor._optimizer
+    
+    @property
+    def hparams(self) -> Dict[str, Union[str, int, float]]:
+        hparams = {"learning_rate": self._learning_rate}
+        return hparams # type: ignore
+    
+    def save(self, path: str, metrics: Metrics = ..., epoch_idx: int = 0):
+        return self._actor.save(path, metrics, epoch_idx)

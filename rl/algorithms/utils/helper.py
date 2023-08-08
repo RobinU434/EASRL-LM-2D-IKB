@@ -1,10 +1,10 @@
-from typing import Iterable
+from typing import Iterable, List
 
 import numpy as np
 import torch
 
 
-def get_space_size(shape: Iterable) -> int:
+def get_space_size(shape: List[int]) -> int:
     if len(shape) == 1:
         return shape[0]
     else:

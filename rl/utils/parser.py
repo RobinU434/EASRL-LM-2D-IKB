@@ -38,6 +38,11 @@ def setup_algorithm_subparser(subparser: _SubParsersAction, algorithm) -> None:
     inference_parser: ArgumentParser = subparser.add_parser("inference", help="Execute ", formatter_class=ArgumentDefaultsHelpFormatter)
     add_inference_arguments(inference_parser)
 
+    print_config_parser: ArgumentParser = subparser.add_parser("print-config", help="Print config for the algorithm you want to train")
+
+    print_model_parser: ArgumentParser = subparser.add_parser("print-model", help="Print architecture of networks inside SAC")
+
+
 
 def setup_rl_parser(parser: ArgumentParser) -> ArgumentParser:
     parser = add_base_args(parser)

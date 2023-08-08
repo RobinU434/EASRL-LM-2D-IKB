@@ -1,54 +1,96 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
 from enum import Enum
-
 from typing import List
 
-class TrainMode(Enum):
-    STATIC = 0  # no training is permitted
-    FINE_TUNING = 1  # load a model and perform fine tuning
-    FROM_SCRATCH = 2
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.nn import Sequential
+from torch.distributions import Normal, constraints
+from utils.metrics import Metrics
+
+from utils.model.neural_network import FeedForwardNetwork
 
 
-class Actor(nn.Module):
-    def __init__(self, input_dim, output_dim, learning_rate, architecture: List[int] = [128, 128]) -> None:
-        super().__init__()
-        
+class Actor(FeedForwardNetwork):
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: int,
+        architecture: List[int],
+        activation_function: str,
+        learning_rate: float,
+    ) -> None:
+        super().__init__(
+            input_dim, output_dim, architecture, activation_function, learning_rate
+        )
         # add input layers
+        self._linear_mu = nn.Linear(architecture[-1], output_dim)
+        self._linear_std = nn.Linear(architecture[-1], output_dim)
+
+        self._optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+
+    def _create_linear_unit(self, architecture: List[int]) -> Sequential:
         layers = [
-            nn.Linear(input_dim, architecture[0]),
-            nn.ReLU(),
+            nn.Linear(self._input_dim, int(architecture[0])),
+            self._activation_function_type(),
         ]
-        
         # add hidden layers
         for idx in range(len(architecture) - 1):
-            layers.extend([
-                nn.Linear(architecture[idx], architecture[idx + 1]),
-                nn.ReLU(),
+            layers.extend(
+                [
+                    nn.Linear(int(architecture[idx]), int(architecture[idx + 1])),
+                    self._activation_function_type(),
                 ]
             )
-        self.linear = nn.Sequential(*layers)
-
-        self.linear_mu = nn.Linear(architecture[-1], output_dim)
-        self.linear_std = nn.Linear(architecture[-1], output_dim)
-
-        self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        # output layer
+        sequence = nn.Sequential(*layers)
+        return sequence
 
     def forward(self, x):
-        x = self.linear(x)
-        mu = self.linear_mu(x)
-        std = F.softplus(self.linear_std(x))
-        return mu, std
+        x = self._linear(x)
+        mu = self._linear_mu(x)
+        std = F.softplus(self._linear_std(x))
+
+        dist = Normal(
+            mu, std + 1e-28, validate_args={"scale": constraints.greater_than_eq}
+        )
+        # dist = self.action_sampling_func(mu, std, self.action_sampling_mode, self.covariance_decay)
+        action = dist.rsample()
+        log_prob = dist.log_prob(action)
+        # sum log prob TODO: Does this still hold with dependent log probabilities?
+        log_prob = log_prob.sum(dim=1)
+        # independence assumption between individual probabilities
+        # log(p(a1, a2)) = log(p(a1) * p(a2)) = log(p(a1)) + log(p(a2))
+
+        return mu, log_prob
 
     def train(self, loss):
-        self.optimizer.zero_grad()
+        self._optimizer.zero_grad()
         loss.backward()
-        # grad_tensor = torch.tensor([])
-        # for param in self.parameters():
-        #     grad_tensor = torch.cat([grad_tensor, param.grad.flatten()])
-        # print("____")
-        # print(loss)
-        # print(grad_tensor.mean())
-        self.optimizer.step()
+        self._optimizer.step()
+
+    def save(self, path: str, metrics: Metrics = ..., epoch_idx: int = 0):
+        path = self._create_save_path(path, epoch_idx, metrics)
+        torch.save(
+            {
+                "epoch": epoch_idx,
+                "model_state_dict": self.state_dict(),
+                "optimizer_state_dict": self._optimizer.state_dict(),
+            },
+            path,
+        )
+
+    def _create_save_path(
+        self, path: str, epoch_idx: int, metrics: Metrics = ...
+    ) -> str:
+        path += f"/{type(self).__name__}_{epoch_idx}"
+        if "reward" in vars(metrics).keys():
+            path += f"reward_{metrics.reward.mean().item():.4f}.pt"  # type: ignore
+        else:
+            path += ".pt"
+        return path
+
+    @property
+    def optimizer(self) -> optim.Optimizer:
+        return self._optimizer

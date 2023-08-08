@@ -7,16 +7,10 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 import torch.nn as nn
 
-from algorithms.sac.actor.base_actor import Actor, TrainMode
-from supervised.loss import IKLoss
-from supervised.model import Regressor
+from rl.algorithms.sac.actor.base_actor import Actor
+from rl.algorithms.sac.actor.utils import TrainMode
 
 from typing import Any, List, Tuple, Literal
-from supervised.train import run_model
-from vae.data.data_set import YMode
-
-from vae.utils.post_processing import PostProcessor
-
 
 def load_checkpoint(checkpoint_path: str):
     checkpoint = torch.load(checkpoint_path)
@@ -162,4 +156,4 @@ class SuperActor(nn.Module):
     
     @property
     def optimizer(self):
-        return self.actor.optimizer
+        return self.actor._optimizer

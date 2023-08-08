@@ -1,7 +1,8 @@
+from typing import Any, Dict, Tuple, Union
 import torch
 
 from torch import nn
-from torch import optim
+from torch import optim, Tensor
 
 import torch.nn.functional as F
 import numpy as np
@@ -9,122 +10,81 @@ import numpy as np
 from torch.distributions import Normal
 from torch.distributions import constraints
 
-from algorithms.common.distributions import get_distribution
-from algorithms.sac.actor.latent_actor import LatentActor
-from algorithms.sac.actor.super_actor import SuperActor
+from rl.algorithms.common.distributions import get_distribution
+from rl.algorithms.sac.actor.latent_actor import LatentActor
 
-from algorithms.sac.actor.multi_actor import Actor, InformedMultiAgent, MultiAgent
-from algorithms.sac.actor.super_actor import SuperActor
+# from rl.algorithms.sac.actor.super_actor import SuperActor
+
+from rl.algorithms.sac.actor.multi_actor import Actor, InformedMultiAgent, MultiAgent
+from rl.algorithms.sac.actor.super_actor import SuperActor
+from utils.metrics import Metrics
+from utils.model.neural_network import NeuralNetwork
 from supervised.utils import split_state_information
 
 
-class PolicyNet(nn.Module):
+class PolicyNet(NeuralNetwork):
     def __init__(
         self,
-        actor_config: dict,
-        learning_rate,
-        input_dim,
-        output_dim,
-        init_alpha,
-        lr_alpha,
-        observation_space_dim: int,
-        action_sampling_mode: str = "independent",
-        covariance_decay: float = 0.5,
+        input_dim: int,
+        output_dim: int,
+        learning_rate: float,
+        actor_config: Dict[str, Any],
+        init_alpha: float,
+        lr_alpha: float,
         action_magnitude: float = 1,
-    ):
-        super(PolicyNet, self).__init__()
-        if actor_config["type"] == Actor:
-            self.actor = Actor(
-                input_dim=input_dim, output_dim=output_dim, learning_rate=learning_rate
-            )
-        elif actor_config["type"] == LatentActor:
-            self.actor = LatentActor(
-                device=actor_config["device"],
-                input_dim=input_dim,
-                latent_dim=actor_config["latent_dim"],
-                output_dim=output_dim,
-                learning_rate=learning_rate,
-                conditional_info_dim=observation_space_dim,
-                vae_learning_mode=actor_config["learning_mode"],
-                checkpoint_dir=actor_config["checkpoint_dir"],
-                log_dir=actor_config["log_dir"],
-            )
-        elif actor_config["type"] == SuperActor:
-            self.actor = SuperActor(
-                device=actor_config["device"],
-                input_dim=input_dim,
-                output_dim=output_dim,
-                learning_rate=learning_rate,
-                super_learning_mode=actor_config["learning_mode"],
-                checkpoint_dir=actor_config["checkpoint_dir"],
-                log_dir=actor_config["log_dir"],
-            )
+        device: str = "cpu",
+        **kwargs,
+    ) -> None:
+        super().__init__(input_dim, output_dim, learning_rate, device)
 
-        # self.actor = InformedMultiAgent(input_size, output_size, learning_rate, 2)
-        # self.actor = MultiAgent(input_size, output_size, learning_rate, 2)
-        # self.actor = LatentActor(input_size, 5, output_size, learning_rate, kl_weight=0.01, vae_learning=True)
-        # self.actor = LatentActor(input_size, 5, output_size, learning_rate, enhanced_latent_dim=2, vae_learning=True)
+        if actor_config["type"] == Actor.__name__:
+            self.actor = Actor(
+                input_dim=input_dim,
+                output_dim=output_dim,
+                **actor_config,
+            )
+        elif actor_config["type"] == LatentActor.__name__:
+            self.actor = LatentActor(
+                input_dim=input_dim,
+                output_dim=output_dim,
+                device=device,
+                **actor_config,
+            )
+        # elif actor_config["type"] == SuperActor.__name__:
+        #     self.actor = SuperActor(
+        #         device=actor_config["device"],
+        #         input_dim=input_dim,
+        #         output_dim=output_dim,
+        #         learning_rate=learning_rate,
+        #         super_learning_mode=actor_config["learning_mode"],
+        #         checkpoint_dir=actor_config["checkpoint_dir"],
+        #         log_dir=actor_config["log_dir"],
+        #     )
+        else:
+            raise NotImplementedError(
+                f"requested actor {actor_config['type']} is not implemented."
+            )
+        self.actor.to(self._device)
 
         self.log_alpha = torch.tensor(np.log(init_alpha))
         self.log_alpha.requires_grad = True
-        self.log_alpha_optimizer = optim.Adam([self.log_alpha], lr=lr_alpha)
+        self._learning_rate_alpha = lr_alpha
+        self.log_alpha_optimizer = optim.Adam(
+            [self.log_alpha], lr=self._learning_rate_alpha
+        )
 
         self.action_magnitude = action_magnitude
 
-        self.covariance_decay = covariance_decay
-        self.action_sampling_mode = action_sampling_mode
-        self.action_sampling_func = get_distribution
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
         """_summary_
 
         Args:
-            x (torch.Tensor): shape = (batch_size, input_size)
+            x (Tensor): shape = (batch_size, input_size)
 
         Returns:
-            Tuple(torch.tensor):
+            Tuple(tensor):
         """
-        mu, std = self.actor.forward(x)
-        
-        dist = Normal(
-            mu, std + 1e-28, validate_args={"scale": constraints.greater_than_eq}
-        )
-        # dist = self.action_sampling_func(mu, std, self.action_sampling_mode, self.covariance_decay)
-        action = dist.rsample()
-        log_prob = dist.log_prob(action)
-        # sum log prob TODO: Does this still hold with dependent log probabilities?
-        log_prob = log_prob.sum(dim=1)
-        # independence assumption between individual probabilities
-        # log(p(a1, a2)) = log(p(a1) * p(a2)) = log(p(a1)) + log(p(a2))
-
-        if isinstance(self.actor, LatentActor):
-            if self.actor.auto_encoder.conditional_info_dim == 0:
-                action = self.actor.auto_encoder.decoder.forward(action)
-            elif self.actor.auto_encoder.conditional_info_dim == 2:
-                target_pos = x[:, :2].squeeze()
-                latent_input = torch.cat(
-                    [action, target_pos], dim=len(target_pos.size()) - 1
-                )
-                action = self.actor.auto_encoder.decoder.forward(latent_input)
-            elif self.actor.auto_encoder.conditional_info_dim > 2:
-                latent_input = torch.cat([action, x], dim=1).to(self.actor.device)
-                action = self.actor.auto_encoder.decoder.forward(latent_input)
-            # move action to cpu
-            action = action.cpu()
-        elif isinstance(self.actor, SuperActor):
-            normalized_action = torch.tanh(action) / torch.sqrt(torch.tensor([2])) * self.actor.supervised_config["action_radius"]
-            _, current_position, state_angles = split_state_information(x)
-            supervised_input = torch.cat(
-                [normalized_action, current_position, state_angles], dim=1
-            )
-            supervised_input = supervised_input.to(self.actor.device)
-            action = self.actor.supervised_model.forward(supervised_input)
-
-            action = action.cpu()
-
-        # shape action for buffer layout
-        # action = action.squeeze()
-
+        action, log_prob = self.actor.forward(x.to(self._device))
         # real_action = (torch.tanh(action) + 1.0) * torch.pi  # multiply by pi in order to match the action space
         # TODO(RobunU434): add post processor functionality in here
         real_action = torch.tanh(action) * self.action_magnitude - (
@@ -148,7 +108,8 @@ class PolicyNet(nn.Module):
         # TODO: make env easier: at this point make sure there is no exploration only exploitation
         # entropy = - 0.0 # *  log_prob
 
-        q1_val, q2_val = q1(s, a), q2(s, a)
+        q1_val = q1(s.to(self._device), a.to(self._device))
+        q2_val = q2(s.to(self._device), a.to(self._device))
         q1_q2 = torch.cat([q1_val, q2_val], dim=1)
         min_q = torch.min(q1_q2, 1, keepdim=True)[0]
 
@@ -168,5 +129,15 @@ class PolicyNet(nn.Module):
         return entropy, loss, alpha_loss
 
     @property
-    def optimizer(self):
+    def optimizer(self) -> optim.Optimizer:
         return self.actor.optimizer
+
+    @property
+    def hparams(self) -> Dict[str, Union[str, int, float]]:
+        return {
+            "learning_rate": self.actor._learning_rate,  # type: ignore
+            "learning_rate_alpha": self._learning_rate_alpha,
+        }
+
+    def save(self, path: str, metrics: Metrics = ..., epoch_idx: int = 0):
+        self.actor.save(path, metrics, epoch_idx)

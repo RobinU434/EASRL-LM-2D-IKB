@@ -134,10 +134,10 @@ class InformedMultiAgent(nn.Module):
 
         angles = angles % (2 * torch.pi)
         # [x, y]
-        num_arms, num_joints = angles.size()
+        num_arms, n_joints = angles.size()
         pos = torch.zeros((num_arms, 2))
 
-        for angle_idx in range(num_joints):
+        for angle_idx in range(n_joints):
             offset = torch.zeros((num_arms, 2))
             offset[:, 0] = torch.cos(angles[:, angle_idx])
             offset[:, 1] = torch.sin(angles[:, angle_idx])

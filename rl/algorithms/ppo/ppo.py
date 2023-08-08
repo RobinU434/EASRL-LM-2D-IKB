@@ -7,10 +7,10 @@ import torch.nn.functional as F
 from torch.distributions import Normal
 from torch.utils.tensorboard.writer import SummaryWriter
 
-from algorithms.ppo.buffer import RolloutBuffer
-from algorithms.ppo.model import Module
-from algorithms.helper.helper  import get_space_size
-from algorithms.helper.kl_div import kl_divergence_from_weights
+from rl.algorithms.ppo.buffer import RolloutBuffer
+from rl.algorithms.ppo.model import Module
+from rl.algorithms.utils.helper  import get_space_size
+from rl.algorithms.utils.kl_div import kl_divergence_from_weights
 
 from logger.fs_logger import FileSystemLogger
 
@@ -24,8 +24,8 @@ class PPO:
         gamma: float = 0.9,
         lmbda: float = 0.9,
         eps_clip: float = 0.2,
-        K_epoch: float = 10,
-        rollout_len: float = 3,
+        K_epoch: int = 10,
+        rollout_len: int = 3,
         buffer_size: float = 30,
         minibatch_size: float = 32,
         print_interval: float = 20,

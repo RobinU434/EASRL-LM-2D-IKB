@@ -1,8 +1,8 @@
 from typing import Tuple
 import torch
+from torch import Tensor
 
-
-def kl_divergence_from_weights(p, q) -> Tuple[torch.tensor, torch.tensor, float]:
+def kl_divergence_from_weights(p, q) -> Tuple[Tensor, Tensor, float]:
     """function returns kl divergence from two lists of weights fom a model
 
     Args:
@@ -21,4 +21,4 @@ def kl_divergence_from_weights(p, q) -> Tuple[torch.tensor, torch.tensor, float]
     q_dist /= len(q)
     
     # calculate kl_divergence
-    return p_dist, q_dist, torch.sum(p * torch.log(p / q))
+    return p_dist, q_dist, torch.sum(p * torch.log(p / q)).item()

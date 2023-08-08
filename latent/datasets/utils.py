@@ -1,7 +1,6 @@
 from enum import Enum
-from typing import Tuple, Union
+from typing import Tuple
 
-from numpy import ndarray
 from torch import Tensor
 
 
@@ -15,9 +14,7 @@ class TargetMode(Enum):
     FINAL_POSITION = 4
 
 
-def split_state_information(
-    x: Tensor
-) -> Tuple[Tensor, Tensor, Tensor]:
+def split_state_information(x: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
     """the incoming tensor or ndarray must have 2 dimension [batch_size, state]
 
     Args:

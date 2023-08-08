@@ -7,7 +7,7 @@ import numpy as np
 
 from torch.utils.tensorboard.writer import SummaryWriter
 from latent.metrics.vae_metrics import VAEInvKinMetrics
-from latent.model.base_model import FeedForwardNetwork, NeuralNetwork
+from utils.model.neural_network import FeedForwardNetwork, NeuralNetwork
 
 from latent.model.encoder import VariationalEncoder
 from latent.model.utils.post_processor import PostProcessor
@@ -28,22 +28,24 @@ class VAE(NeuralNetwork):
         store_history: bool = False,
         device: str = "cpu",
         verbose: bool = False,
+        **kwargs,
     ):
         super().__init__(
             input_dim=input_dim,
             output_dim=output_dim,
             learning_rate=learning_rate,
+            device=device
         )
         self._conditional_info_dim = conditional_info_dim
-        self._latent_dim = latent_dim
+        self.latent_dim = latent_dim
 
-        self._encoder = VariationalEncoder(
+        self.encoder = VariationalEncoder(
             input_dim=self._input_dim + self._conditional_info_dim[0],
-            output_dim=self._latent_dim,
+            output_dim=self.latent_dim,
             learning_rate=self._learning_rate,
             **encoder_config,
         )
-        self._decoder = FeedForwardNetwork(
+        self.decoder = FeedForwardNetwork(
             input_dim=latent_dim + self._conditional_info_dim[1],
             output_dim=output_dim,
             learning_rate=self._learning_rate,
@@ -74,7 +76,19 @@ class VAE(NeuralNetwork):
                 s += f" -> [PostProcessor (tanh) + [{self._post_processor.min_action, self._post_processor.max_action}]]"
             print(s)
 
-        self.to(device)
+        self.to(self._device)
+
+    @classmethod
+    def from_config(cls, config: Dict[str, Any]) -> "VAE":
+        post_processor = PostProcessor(config.pop("post_processor"))
+        return cls(
+            post_processor=post_processor,
+            encoder_config=config["model"]["encoder"],
+            decoder_config=config["model"]["decoder"],
+            latent_dim=config["model"]["latent_dim"],
+            conditional_info_dim=config["model"]["conditional_info_dim"],
+            **config,
+        )
 
     def forward(
         self, x: torch.Tensor, c_enc: torch.Tensor, c_dec: torch.Tensor
@@ -90,7 +104,7 @@ class VAE(NeuralNetwork):
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: (output after CVAE and post-processor (x_hat), mu from encoder, log_str from encoder)
         """
         x_con = torch.cat([x, c_enc], dim=1)
-        mu, log_std = self._encoder(x_con)  # output dim (batch_size, latent_space)
+        mu, log_std = self.encoder(x_con)  # output dim (batch_size, latent_space)
 
         # sample the latent space
         sigma = torch.exp(log_std)
@@ -101,7 +115,7 @@ class VAE(NeuralNetwork):
         z = torch.cat([z, c_dec], dim=1)
         self.z = z
 
-        decoder_out = self._decoder.forward(z)
+        decoder_out = self.decoder.forward(z)
         x_hat = self._post_processor(decoder_out)
         # if self._store_history:
         #     self._decoder_history = torch.cat(
@@ -136,7 +150,7 @@ class VAE(NeuralNetwork):
     def _log_gradients(self, logger: Union[SummaryWriter, Logger], epoch_idx: int):
         grad_tensor = []
         for param in self.parameters():
-            grad_tensor.append(param.grad.cpu().flatten().numpy())
+            grad_tensor.append(param.grad.cpu().flatten().numpy())  # type: ignore
         grad_tensor = np.concatenate(grad_tensor)
         logger.add_histogram("vae/grad", grad_tensor, epoch_idx)
 
@@ -181,6 +195,6 @@ class VAE(NeuralNetwork):
         hparams = {
             "learning_rate": self._learning_rate,
             "input_dim": self._input_dim,
-            "latent_dim": self._latent_dim,
+            "latent_dim": self.latent_dim,
         }
         return hparams

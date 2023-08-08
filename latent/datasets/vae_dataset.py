@@ -1,21 +1,20 @@
 from abc import ABC, abstractmethod
+from typing import Literal, Tuple
+
 import torch
 from torch import Tensor
 
-from typing import Literal, Tuple
 from latent.datasets.datasets import (
     ActionDataset,
     StateActionDataset,
     TargetGaussianDataset,
 )
 from latent.datasets.latent_dataset import LatentDataset
-
 from latent.datasets.utils import TargetMode, split_state_information
 
 
 class VAEDataset(LatentDataset, ABC):
-    """Interface how to design the get item function and present dimension of conditional dimensions
-    """
+    """Interface how to design the get item function and present dimension of conditional dimensions"""
 
     def __init__(
         self, target_mode: Literal[TargetMode.ACTION, TargetMode.POSITION], **kwargs
@@ -51,7 +50,7 @@ class VAEActionDataset(ActionDataset, VAEDataset):
         self,
         target_mode: Literal[TargetMode.ACTION, TargetMode.POSITION],
         actions: Tensor,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(target_mode, actions, **kwargs)
 
@@ -78,11 +77,11 @@ class VAEStateActionDataset(StateActionDataset, VAEDataset):
 
     def __getitem__(self, idx: int):
         target, current_position, state_angles = split_state_information(self._states)
-        
+
         x = target[idx]
 
         c_enc = self._states[idx, 2:]
-        c_dec = self._states[idx, 2:]   
+        c_dec = self._states[idx, 2:]
         print(self._states[idx])
         y = self._acquire_target_func(idx)
 

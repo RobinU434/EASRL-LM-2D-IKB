@@ -1,19 +1,15 @@
 import logging
-from typing import Callable, Literal, Union
+from typing import Literal, Union
 
-import pandas as pd
 import torch
 import numpy as np
-from numpy import ndarray
 from progress.bar import Bar
 from torch import Tensor
-from torch.utils.data import Dataset
-from envs.robots.ccd import IK
 
 from latent.datasets.latent_dataset import LatentDataset
 from latent.datasets.utils import TargetMode, split_state_information
 from utils.file_system import load_csv
-
+from envs.plane_robot_env.ikrlenv.robots.ccd import ccd
 
 class ActionDataset(LatentDataset):
     """
@@ -105,7 +101,7 @@ class StateActionDataset(LatentDataset):
             new_target = torch.zeros(3)
             new_target[:2] = current_positions[state_idx] + target_vector
             # solve IK for this new position
-            label_angles, _, _, _ = IK(
+            label_angles, _, _, _ = ccd(
                 new_target,
                 torch.rad2deg(state_angles[state_idx]).clone(),
                 torch.ones_like(state_angles[state_idx]),
@@ -235,7 +231,7 @@ class TargetGaussianDataset(LatentDataset):
             target = torch.zeros(3)
             target[:2] = targets[state_idx]
             # solve IK for this new position
-            label_angles, _, _, _ = IK(
+            label_angles, _, _, _ = ccd(
                 target.numpy(),
                 state_angles_deg[state_idx].numpy(),
                 joint_segments[state_idx].numpy(),

@@ -3,9 +3,9 @@ from typing import List, Union
 
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
-from latent.metrics.base_metrics import Metrics
+from utils.metrics import Metrics
 from latent.criterion.base_criterion import Criterion
-from latent.model.base_model import NeuralNetwork
+from utils.model.neural_network import NeuralNetwork
 from logger.base_logger import Logger
 
 
@@ -18,7 +18,7 @@ class Trainer(ABC):
         test_data: DataLoader,
         n_epochs: int,
         criterion: Criterion,
-        logger: List[Union[SummaryWriter, Logger]] = None,
+        logger: List[Union[SummaryWriter, Logger]] = None, # type: ignore
         val_interval: int = 5,
         device: str = "cpu",
         results_path: str = "results",
@@ -57,10 +57,10 @@ class Trainer(ABC):
             if self._logger is not None and epoch_idx % self._val_interval == 0:
                 print(f"============== Epoch: {epoch_idx} ==============")
                 self._print_status("train", train_metrics)
-                self._print_status("val", val_metrics)
+                self._print_status("val", val_metrics)  # type: ignore
 
                 self._log_scalar_metrics("train", train_metrics, epoch_idx)
-                self._log_scalar_metrics("val", val_metrics, epoch_idx)
+                self._log_scalar_metrics("val", val_metrics, epoch_idx)  # type: ignore
 
                 self._model.log_internals(self._logger, epoch_idx)
 

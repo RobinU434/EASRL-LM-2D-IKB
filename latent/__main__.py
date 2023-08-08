@@ -6,7 +6,7 @@ from latent.process.latent_process import LatentProcess
 from latent.process.vae_process import VAEProcess
 
 from latent.utils.parser import setup_latent_parser
-from process.learning_process import LearningProcess
+from utils.learning_process import LearningProcess
 from latent.process.supervised_process import SupervisedProcess
 from utils.logging_level import set_log_level
 

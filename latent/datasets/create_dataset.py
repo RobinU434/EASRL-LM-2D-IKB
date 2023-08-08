@@ -8,8 +8,8 @@ from pandas import DataFrame
 from progress.bar import Bar
 from argparse import ArgumentParser
 
-from envs.robots.robot_arm import RobotArm
-from envs.common.sample_target import sample_target
+from envs.plane_robot_env.ikrlenv.robots.robot_arm import RobotArm
+from envs.plane_robot_env.ikrlenv.utils.sample_target import sample_target
 
 MODE_LIST = ["IK_constant_start", "IK_random_start", "noise_uniform", "noise_tanh", "inference"]
 
@@ -78,12 +78,12 @@ def create_IK_dataset(n_joints: int , n: int = 10_000, start_mode: str = "consta
         target = targets[idx]
         
         # set arm to start position
-        arm.IK(start_target_position[idx])
+        arm.inv_kin(start_target_position[idx])
         state_angles = arm.angles.copy()
         state_position = arm.end_position.copy()
         
         # move arm to target
-        arm.IK(target)
+        arm.inv_kin(target)
 
         actions[idx] = arm.angles - state_angles
         targets[idx, 0:2] = arm.end_position
@@ -118,6 +118,8 @@ def create_relative_dataset(n_joints: int, n: int = 10_000, mode: str = "relativ
 
     elif mode == "noise_tanh":
         data = np.tanh(np.random.normal(0, 1, size))
+    else:
+        raise NotImplementedError(f"{mode} is not implemented to create dataset")
     
     df = DataFrame(data)
     df.to_csv(f"datasets/{n_joints}/{entity}/actions_{mode}.csv")
@@ -141,7 +143,7 @@ def create_dataset(n_joints: int, n: int, mode: str, entity: str):
     elif "noise" in mode:
         return create_relative_dataset(n_joints, n, mode, entity)
     elif mode == "inference":
-        return create_inference_dataset()
+        return create_inference_dataset(n_joints, n)
     else:
         logging.error(f"chose a mode from {MODE_LIST}, instead you chose: {mode}")
 

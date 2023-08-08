@@ -3,12 +3,10 @@ from typing import List, Union
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
-from latent.criterion.base_criterion import Criterion
 from latent.criterion.elbo_criterion import ELBO, InvKinELBO
 from latent.datasets.vae_dataset import VAEDataset
 from latent.datasets.utils import TargetMode
-from latent.metrics.base_metrics import Metrics
-from latent.metrics.vae_metrics import VAEInvKinMetrics, VAEMetrics
+from latent.metrics.vae_metrics import VAEInvKinMetrics
 from latent.model.vae import VAE
 from latent.trainer.base_trainer import Trainer
 from logger.base_logger import Logger
@@ -23,7 +21,7 @@ class VAETrainer(Trainer):
         test_data: DataLoader,
         n_epochs: int,
         criterion: ELBO,
-        logger: List[Union[SummaryWriter, Logger]] = None,
+        logger: List[Union[SummaryWriter, Logger]] = [],
         val_interval: int = 5,
         device: str = "cpu",
         results_path: str = "results",
@@ -116,7 +114,7 @@ class VAETrainer(Trainer):
         # make structured array
         log_metrics_array = np.stack(log_metrics_array)
         log_metrics_dict = dict(zip(log_metrics_names, log_metrics_array.T))
-        log_metrics = VAEInvKinMetrics.build_from_dict(log_metrics_dict)
+        log_metrics = VAEInvKinMetrics.from_dict(log_metrics_dict)
         return log_metrics
 
     def _print_status(self, entity: str, metrics: VAEInvKinMetrics) -> None:

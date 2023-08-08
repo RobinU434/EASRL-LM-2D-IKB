@@ -10,12 +10,12 @@ import latent.datasets as datasets
 from latent.datasets.latent_dataset import LatentDataset
 from latent.criterion.base_criterion import Criterion
 from latent.datasets.load_dataset import load_data
-from latent.model.base_model import NeuralNetwork
+from utils.model.neural_network import NeuralNetwork
 from latent.trainer.base_trainer import Trainer
 from logger.base_logger import Logger
 from logger.fs_logger import FileSystemLogger
 
-from process.learning_process import LearningProcess
+from utils.learning_process import LearningProcess
 
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
@@ -25,7 +25,7 @@ from utils.decorator import not_implemented_warning
 
 class LatentProcess(LearningProcess):
     def __init__(self, **kwargs) -> None:
-        self._base_config_path = f"config/base_{self._model_entity}.yaml"
+        self._base_config_path = f"config/base_{self._model_entity_name}.yaml"
         super().__init__(**kwargs)
         self._train_data: DataLoader[LatentDataset]
         self._val_data: DataLoader[LatentDataset]
@@ -61,7 +61,6 @@ class LatentProcess(LearningProcess):
         else:
             self._logger = self._build_logger()
         
-        print(self._logger)
         self._train_data: DataLoader[LatentDataset]
         self._val_data: DataLoader[LatentDataset]
         self._test_data: DataLoader[LatentDataset]
@@ -89,6 +88,7 @@ class LatentProcess(LearningProcess):
         logging.error(
             "Starting training was not possible because process was not build"
         )
+        
 
     @abstractmethod
     def feed_forward_inference(self) -> None:

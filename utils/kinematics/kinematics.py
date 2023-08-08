@@ -6,15 +6,15 @@ def forward_kinematics(angles: Tensor) -> Tensor:
     """computes forward kinematics for a robot arm with segment length = 1
 
     Args:
-        angles (Tensor): shape (num_arms, num_joints)
+        angles (Tensor): shape (num_arms, n_joints)
 
     Returns:
-        Tensor: individual segment positions in 2D coordinates (num_arms, num_joints + 1, 2)
+        Tensor: individual segment positions in 2D coordinates (num_arms, n_joints + 1, 2)
     """
-    num_arms, num_joints = angles.size()
-    positions = torch.zeros((num_arms, num_joints + 1, 2))
+    num_arms, n_joints = angles.size()
+    positions = torch.zeros((num_arms, n_joints + 1, 2))
 
-    for idx in range(num_joints):
+    for idx in range(n_joints):
         origin = positions[:, idx]
 
         # new position

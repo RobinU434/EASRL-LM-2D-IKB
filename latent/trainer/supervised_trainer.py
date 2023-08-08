@@ -7,8 +7,8 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from latent.criterion.base_criterion import Criterion
 from latent.criterion.ik_criterion import IKLoss
 from latent.datasets.utils import split_state_information
-from latent.metrics.base_metrics import Metrics
-from latent.model.base_model import NeuralNetwork
+from utils.metrics import Metrics
+from utils.model.neural_network import NeuralNetwork
 from latent.trainer.base_trainer import Trainer
 from logger.base_logger import Logger
 
@@ -22,7 +22,7 @@ class SupervisedTrainer(Trainer):
         test_data: DataLoader,
         n_epochs: int,
         criterion: Criterion,
-        logger: List[Union[SummaryWriter, Logger]] = None,
+        logger: List[Union[SummaryWriter, Logger]] = [],
         val_interval: int = 5,
         device: str = "cpu",
         results_path: str = "results",
@@ -67,7 +67,7 @@ class SupervisedTrainer(Trainer):
             )
 
         metrics = np.stack(metrics).T
-        metrics = Metrics.build_from_dict(dict(zip(self._metric_names, metrics)))
+        metrics = Metrics.from_dict(dict(zip(self._metric_names, metrics)))
         return metrics
 
     def _print_status(self, entity: str, metrics: Metrics) -> None:

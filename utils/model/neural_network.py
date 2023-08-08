@@ -1,50 +1,24 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any, Dict, List, Union
 
 import torch
 import torch.nn as nn
-from torch.utils.tensorboard.writer import SummaryWriter
 from torch import Tensor
 
-from latent.metrics.base_metrics import Metrics
-from logger.base_logger import Logger
-
-
-class LearningModule(ABC):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def log_internals(self, logger: List[Union[SummaryWriter, Logger]], epoch_idx: int):
-        """log internal values like a latent distribution from a VAE
-
-        Args:
-            logger (SummaryWriter): logger to write the information into
-            epoch_idx (int): at which epoch to log the metrics
-        """
-        pass
-
-    @abstractmethod
-    def save(self, path: str, epoch_idx: int, metrics: Metrics) -> None:
-        pass
-
-    @property
-    @abstractmethod
-    def hparams(self) -> Dict[str, Union[str, int, float]]:
-        """returns the hyper parameter configuration of a model as a dictionary
-
-        Returns:
-            Dict[str, Union[str, int, float]]: key: hyperparameter name, value: hyperparameter value
-        """
-        pass
+from utils.model.base_model import LearningModule
+from utils.metrics import Metrics
 
 
 class NeuralNetwork(LearningModule, nn.Module):
-    def __init__(self, input_dim: int, output_dim: int, learning_rate: float) -> None:
+    def __init__(
+        self, input_dim: int, output_dim: int, learning_rate: float, device: str = "cpu", **kwargs
+    ) -> None:
         super().__init__()
 
         self._input_dim = input_dim
         self._output_dim = output_dim
         self._learning_rate = learning_rate
+        self._device = device
         self._optimizer: torch.optim.Adam
 
     def train(self, loss: torch.Tensor) -> None:
@@ -56,7 +30,7 @@ class NeuralNetwork(LearningModule, nn.Module):
     def forward(self, *args, **kwargs) -> Any:
         pass
 
-    def save(self, path: str, metrics: Metrics, epoch_idx: int):
+    def save(self, path: str, metrics: Metrics = Metrics(), epoch_idx: int = 0):
         """saves model checkpoint in filesystem
 
         Args:
@@ -65,19 +39,27 @@ class NeuralNetwork(LearningModule, nn.Module):
             epoch_idx (int): at which epoch this model is saved
         """
         path = self._create_save_path(path, epoch_idx, metrics)
+        loss = metrics.loss if "loss" in vars(metrics).keys() else 0  # type: ignore
         torch.save(
             {
                 "epoch": epoch_idx,
                 "model_state_dict": self.state_dict(),
                 "optimizer_state_dict": self._optimizer.state_dict(),
-                "loss": metrics.loss,
+                "loss": loss,
             },
             path,
         )
 
-    def _create_save_path(self, path: str, epoch_idx: int, metrics: Metrics) -> str:
-        return path + f"/{type(self).__name__}_{epoch_idx}_val_loss_{metrics.loss.mean().item():.4f}.pt"
-        
+    def _create_save_path(
+        self, path: str, epoch_idx: int, metrics: Metrics = Metrics()
+    ) -> str:
+        path += f"/{type(self).__name__}_{epoch_idx}"
+        if "loss" in vars(metrics).keys():
+            path += f"val_loss_{metrics.loss.mean().item():.4f}.pt"  # type: ignore
+        else:
+            path += ".pt"
+        return path
+
 
 class FeedForwardNetwork(NeuralNetwork):
     def __init__(
@@ -87,8 +69,10 @@ class FeedForwardNetwork(NeuralNetwork):
         architecture: List[int],
         activation_function: str,
         learning_rate: float,
+        device: str = "cpu",
+        **kwargs,
     ) -> None:
-        super().__init__(input_dim, output_dim, learning_rate)
+        super().__init__(input_dim, output_dim, learning_rate, device)
 
         self._activation_function_type = getattr(nn, activation_function)
         self._linear = self._create_linear_unit(architecture)

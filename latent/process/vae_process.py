@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 class VAEProcess(LatentProcess):
     def __init__(self, **kwargs) -> None:
-        self._model_entity = "vae"
+        self._model_entity_name = "vae"
         super().__init__(**kwargs)
         
         self._criterion: ELBO
@@ -31,7 +31,7 @@ class VAEProcess(LatentProcess):
     
     def greedy_inference(self) -> None:
         return super().greedy_inference()
-
+    
     def _load_criterion(self) -> ELBO:
         """initializes loss function
 
@@ -64,7 +64,7 @@ class VAEProcess(LatentProcess):
         )
 
         # save additional information in config file 
-        self._config["model"]["conditional_info_dim"] = self._train_data.dataset.conditional_dim
+        self._config["model"]["conditional_info_dim"] = list(self._train_data.dataset.conditional_dim)
         self._config["model"]["input_dim"] = autoencoder._input_dim
 
         return autoencoder
@@ -88,7 +88,6 @@ class VAEProcess(LatentProcess):
 
 
     def _build_trainer(self) -> Trainer:
-
         trainer = VAETrainer(
             model=self._model,
             train_data=self._train_data,

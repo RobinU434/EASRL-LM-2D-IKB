@@ -1,7 +1,7 @@
 from typing import List
 import torch.nn as nn
 
-from latent.model.base_model import FeedForwardNetwork, NeuralNetwork
+from utils.model.neural_network import FeedForwardNetwork
 
 
 class VariationalEncoder(FeedForwardNetwork):
@@ -12,6 +12,7 @@ class VariationalEncoder(FeedForwardNetwork):
         architecture: List[int],
         activation_function: str,
         learning_rate: float,
+        **kwargs
     ) -> None:
         super().__init__(
             input_dim, output_dim, architecture, activation_function, learning_rate

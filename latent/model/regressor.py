@@ -2,7 +2,7 @@ from typing import Dict, List, Union
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 from latent.metrics.supervised_metrics import SupervisedIKMetrics
-from latent.model.base_model import NeuralNetwork
+from utils.model.neural_network import NeuralNetwork
 from latent.model.utils.post_processor import PostProcessor
 import torch.nn as nn
 from torch import Tensor
@@ -27,6 +27,7 @@ class Regressor(NeuralNetwork):
         learning_rate: float,
         post_processor: PostProcessor,
         action_radius: float = 0,  # 0 -> arm will be trained move without distance restriction. value > 0 -> trained move restriction around start position
+        device: str = "cpu",
         **kwargs
     ) -> None:
         super().__init__(input_dim, output_dim, learning_rate)

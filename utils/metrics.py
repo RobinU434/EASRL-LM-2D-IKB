@@ -65,7 +65,7 @@ class Metrics:
             except AttributeError:
                 extended_metric = value
             setattr(self, key, extended_metric)
-
+        
     @property
     def num_metrics(self) -> int:
         """number of different metrics

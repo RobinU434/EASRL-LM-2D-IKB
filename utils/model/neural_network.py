@@ -19,7 +19,7 @@ class NeuralNetwork(LearningModule, nn.Module):
         self._output_dim = output_dim
         self._learning_rate = learning_rate
         self._device = device
-        self._optimizer: torch.optim.Adam
+        self._optimizer: torch.optim.Optimizer
 
     def train(self, loss: torch.Tensor) -> None:
         self._optimizer.zero_grad()
@@ -50,10 +50,34 @@ class NeuralNetwork(LearningModule, nn.Module):
             path,
         )
 
+    def load_checkpoint(self, path):
+        """loads checkpoint from filesystem
+
+        Args:
+            path (str): path to checkpoint
+        """
+        checkpoint = torch.load(path)
+        self.load_state_dict(checkpoint["model_state_dict"])
+
+
     def _create_save_path(
         self, path: str, epoch_idx: int, metrics: Metrics = Metrics()
     ) -> str:
-        path += f"/{type(self).__name__}_{epoch_idx}"
+        """creates save path. 
+
+        If epoch idx < 0 -> no epoch in path
+
+        Args:
+            path (str): _description_
+            epoch_idx (int): _description_
+            metrics (Metrics, optional): _description_. Defaults to Metrics().
+
+        Returns:
+            str: _description_
+        """
+        path += f"/{type(self).__name__}_"
+        if epoch_idx >= 0:
+            path += f"{epoch_idx}_"
         if "loss" in vars(metrics).keys():
             path += f"val_loss_{metrics.loss.mean().item():.4f}.pt"  # type: ignore
         else:

@@ -13,11 +13,9 @@ from utils.logging_level import set_log_level
 
 
 def execute_commands(args: Dict[str, Any], process: LatentProcess):
-    print(process._save_dir)
     if args["command"] == "train":
         for i in range(args["num_runs"]):
             print(f"Started {i}th experiment")
-            process = type(process)(**args)
             process.build()
             process.train()
             print(f"Completed {i}th experiment")

@@ -3,6 +3,7 @@ from typing import List, Union
 
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
+from logger.fs_logger import FileSystemLogger
 from utils.metrics import Metrics
 from latent.criterion.base_criterion import Criterion
 from utils.model.neural_network import NeuralNetwork
@@ -68,6 +69,7 @@ class Trainer(ABC):
         test_metrics = self._run_model(data=self._test_data)
         self._log_scalar_metrics("test", test_metrics, self._n_epochs)
         self._print_status("test", test_metrics)
+        self._dump()
 
     def _log_scalar_metrics(self, entity: str, metrics: Metrics, epoch_idx: int) -> None:
         """send the incoming data to the summary writer
@@ -89,6 +91,11 @@ class Trainer(ABC):
         """loggs hparams dict"""
         for logger in self._logger:
             logger.add_hparams(hparam_dict=self._model.hparams, metric_dict={})
+
+    def _dump(self):
+        for logger in self._logger:
+            if isinstance(logger, FileSystemLogger):
+                logger.dump(file_name="results.csv")
 
     @abstractmethod
     def _run_model(self, data: DataLoader, train: bool = False) -> Metrics:

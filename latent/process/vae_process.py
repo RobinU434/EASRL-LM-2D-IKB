@@ -30,7 +30,8 @@ class VAEProcess(LatentProcess):
         return super().feed_forward_inference()
     
     def greedy_inference(self) -> None:
-        return super().greedy_inference()
+        self.load_checkpoint()
+        
     
     def _load_criterion(self) -> ELBO:
         """initializes loss function

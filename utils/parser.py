@@ -44,7 +44,6 @@ def add_general_computing_arguments(parser: ArgumentParser) -> ArgumentParser:
     parser.add_argument(
         "--random-seed",
         type=int,
-        default=int(time.time()),
         help="Sets random seed for torch and numpy random number generator. If no seed was given. The current time stamp will be set as random seed.",
     )
     return parser

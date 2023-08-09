@@ -30,8 +30,7 @@ class LatentProcess(LearningProcess):
         self._train_data: DataLoader[LatentDataset]
         self._val_data: DataLoader[LatentDataset]
         self._test_data: DataLoader[LatentDataset]
-        self._set_data()
-
+        
         self._criterion: Criterion
         self._model: NeuralNetwork
         self._trainer: Trainer
@@ -56,14 +55,13 @@ class LatentProcess(LearningProcess):
         Args:
             no_logger (bool): prevents build of logger
         """
+        self._save_dir = self._build_save_dir_path()
         if no_logger:
             self._logger = []
         else:
             self._logger = self._build_logger()
-        
-        self._train_data: DataLoader[LatentDataset]
-        self._val_data: DataLoader[LatentDataset]
-        self._test_data: DataLoader[LatentDataset]
+
+        self._set_data()
 
         self._criterion = self._load_criterion()
         self._model = self._build_model()
@@ -73,30 +71,32 @@ class LatentProcess(LearningProcess):
         self._config["input_dim"] = self._model._input_dim
         self._config["output_dim"] = self._model._output_dim
 
+        self._set_random_seed(self._random_seed)
         self._initialized = True
+        logging.info("Build model")
 
     def load_checkpoint(self):
-        """loads checkpoint from filesystem and passes the values into state dict of model"""
+        """builds model based on checkpoint config and loads checkpoint from filesystem and passes the values into state dict of model"""
         self._model = self._build_model_from_config()
         checkpoint = torch.load(self._checkpoint)
         self._model.load_state_dict(checkpoint["model_state_dict"])
 
     def train(self, *args, **kwargs) -> None:
+        logging.info("Start training")
         if self._initialized:
             self._init_train()
             self._trainer.fit()
         logging.error(
             "Starting training was not possible because process was not build"
         )
-        
 
     @abstractmethod
     def feed_forward_inference(self) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def greedy_inference(self) -> None:
-        pass
+        raise NotImplementedError
 
     def _init_train(self, *args, **kwargs) -> None:
         """initialized training process. Method to call right before a training process"""
@@ -130,8 +130,7 @@ class LatentProcess(LearningProcess):
         return self._base_config_path
 
     def _set_data(self):
-        """sets internal train_data, val_data and test data
-        """
+        """sets internal train_data, val_data and test data"""
         dataset_config = copy(self._config["dataset"])
         dataset_config["type"] = getattr(datasets, dataset_config["type"])
         self._train_data = load_data(

@@ -6,7 +6,8 @@ import torch
 import argparse
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.rcParams['figure.dpi'] = 300
+
+matplotlib.rcParams["figure.dpi"] = 300
 
 from progress.spinner import Spinner
 from vae.utils.post_processing import PostProcessor
@@ -18,31 +19,28 @@ def setup_parser(parser: argparse.ArgumentParser):
     parser.add_argument(
         "sample_size",
         type=int,
-        help="how many points should be sampled from the latent space"
+        help="how many points should be sampled from the latent space",
+    )
+    parser.add_argument("model_path", help="path to model checkpoint")
+    parser.add_argument(
+        "-fp",
+        "--fixed_position",
+        action="store_true",
+        help="if true -> sample from a fixed position, if false -> sample from different target positions",
     )
     parser.add_argument(
-        "model_path",
-        help="path to model checkpoint"
-        )
-    parser.add_argument(
-        "-fp", "--fixed_position",
+        "-g",
+        "--greedy",
         action="store_true",
-        help="if true -> sample from a fixed position, if false -> sample from different target positions"
+        help="if you set this argument the inference will try to reach a target position choosing greedily from VAE latent space",
     )
     parser.add_argument(
-        "-g", "--greedy",
-        action="store_true",
-        help="if you set this argument the inference will try to reach a target position choosing greedily from VAE latent space"
-    )
-    parser.add_argument(
-        "--show",
-        action="store_true",
-        help="shows the finished plot immediately"
+        "--show", action="store_true", help="shows the finished plot immediately"
     )
     parser.add_argument(
         "--print_config",
-        action='store_true',
-        help='command just prints config and returns'
+        action="store_true",
+        help="command just prints config and returns",
     )
     return parser
 
@@ -58,17 +56,17 @@ def load_model(path: str, config: dict) -> VariationalAutoencoder:
     if config["dataset"] == "action":
         input_dim = config["num_joints"]
         latent_dim = config["latent_dim"]
-        output_dim  = config["num_joints"]
+        output_dim = config["num_joints"]
         enhance_dim = 0
     if config["dataset"] == "action_target_v1":
         input_dim = config["num_joints"]
         latent_dim = config["latent_dim"]
-        output_dim  = config["num_joints"]
+        output_dim = config["num_joints"]
         enhance_dim = 2
     if config["dataset"] == "action_target_v2":
         input_dim = config["num_joints"] + 2
         latent_dim = config["latent_dim"]
-        output_dim  = config["num_joints"]
+        output_dim = config["num_joints"]
         enhance_dim = 0
     if config["dataset"] == "conditional_action_target":
         if config["conditional_info"] == "state":
@@ -78,7 +76,7 @@ def load_model(path: str, config: dict) -> VariationalAutoencoder:
 
         input_dim = config["num_joints"] + conditional_info_dim
         latent_dim = config["latent_dim"]
-        output_dim  = config["num_joints"]
+        output_dim = config["num_joints"]
         enhance_dim = conditional_info_dim
 
     model = VariationalAutoencoder(
@@ -87,9 +85,9 @@ def load_model(path: str, config: dict) -> VariationalAutoencoder:
         output_dim=output_dim,
         learning_rate=config["learning_rate"],
         logger=None,
-        post_processor= PostProcessor(**config["post_processor"]),
+        post_processor=PostProcessor(**config["post_processor"]),
         conditional_info_dim=enhance_dim,
-        verbose=True
+        verbose=True,
     )
 
     checkpoint = torch.load(path)
@@ -98,8 +96,16 @@ def load_model(path: str, config: dict) -> VariationalAutoencoder:
     return model
 
 
-def sample_target(n: int) -> torch.tensor:
-    theta = torch.rand(n) * 2 * torch.pi        
+def sample_target(n: int) -> torch.Tensor:
+    """sample n targets inside radius 1
+
+    Args:
+        n (int): number of targets
+
+    Returns:
+        torch.Tensor: 2D cartesian coordinates of target positions
+    """
+    theta = torch.rand(n) * 2 * torch.pi
     radius = torch.rand(n)
 
     x = torch.cos(theta)
@@ -111,10 +117,7 @@ def sample_target(n: int) -> torch.tensor:
     return coords
 
 
-def sample_latent(
-        n: int,
-        mu: torch.tensor,
-        std: torch.tensor):
+def sample_latent(n: int, mu: torch.tensor, std: torch.tensor):
     normal_distr = torch.distributions.Normal(0, 1)
 
     sampled = mu + std * normal_distr.sample((n, len(mu)))
@@ -141,7 +144,7 @@ def forward_kinematics(angles: torch.tensor) -> torch.tensor:
         new_x = torch.cos(angles[:, idx])
         new_y = torch.sin(angles[:, idx])
         new_pos = torch.stack([new_x, new_y]).T
-        
+
         # translate position
         new_pos += origin
 
@@ -151,18 +154,21 @@ def forward_kinematics(angles: torch.tensor) -> torch.tensor:
 
 
 def greedy_inference(
-        model: VariationalAutoencoder,
-        sample_size: int,
-        plot: bool = False,
-        show: bool = False):
+    model: VariationalAutoencoder,
+    sample_size: int,
+    plot: bool = False,
+    show: bool = False,
+):
     n_epochs = 200
     target = sample_target(1) * model.output_dim
     print("target: ", target[0])
     best_angles = torch.randn((sample_size, model.output_dim)) * 2 * torch.pi
     end_positions = forward_kinematics(best_angles)[:, -1, :]
     print("start: ", end_positions[0])
-    state = torch.cat([target.repeat((sample_size, 1)), end_positions, best_angles], dim=1)
-    
+    state = torch.cat(
+        [target.repeat((sample_size, 1)), end_positions, best_angles], dim=1
+    )
+
     pos_tensor = [end_positions[0, :]]
     dist_tensor = [torch.linalg.norm(target - end_positions[0], dim=1)]
     action_hist = []
@@ -171,7 +177,9 @@ def greedy_inference(
     runtime = 200
     spinner = Spinner("reach goal with VAE and greedy strategy: ")
     for epoch_idx in range(n_epochs):
-        latent_sample = sample_latent(sample_size, torch.zeros(model.latent_dim), torch.ones(model.latent_dim))
+        latent_sample = sample_latent(
+            sample_size, torch.zeros(model.latent_dim), torch.ones(model.latent_dim)
+        )
         latent_input = torch.cat([latent_sample, state], dim=1)
         actions = model.decoder(latent_input).detach()
         actions = model.post_processor(actions)
@@ -191,15 +199,18 @@ def greedy_inference(
         best_end_position = torch.unsqueeze(best_end_position, dim=0)
         best_angles = angles[torch.argmin(dist)]
         best_angles = torch.unsqueeze(best_angles, dim=0)
-        state = torch.cat([target, best_end_position, best_angles], dim=1).repeat((sample_size, 1))
-        
-        if epoch_idx % 8 == 0: spinner.next()
+        state = torch.cat([target, best_end_position, best_angles], dim=1).repeat(
+            (sample_size, 1)
+        )
+
+        if epoch_idx % 8 == 0:
+            spinner.next()
 
         if min_dist <= 0.1:
             runtime = epoch_idx + 1
             break
     spinner.finish()
-    
+
     print("needed: ", runtime, " steps")
     dist_tensor = torch.tensor(dist_tensor)
     pos_tensor = torch.stack(pos_tensor)
@@ -212,9 +223,26 @@ def greedy_inference(
         # axs[0].set_xlim([-model.output_dim, model.output_dim])
         # axs[0].set_ylim([-model.output_dim, model.output_dim])
         axs[0].add_patch(plt.Circle((0, 0), model.output_dim, fill=False))
-        axs[0].plot(pos_tensor[:, 0], pos_tensor[:, 1], color="r", label="trajectory", zorder=-1)
-        axs[0].scatter(target[:, 0], target[:, 1], marker=".", color="g", label="target", zorder=1, s=1.5)
-        axs[0].scatter(pos_tensor[0, 0], pos_tensor[0, 1], marker=".",  color="b", label="start", s=1.5)
+        axs[0].plot(
+            pos_tensor[:, 0], pos_tensor[:, 1], color="r", label="trajectory", zorder=-1
+        )
+        axs[0].scatter(
+            target[:, 0],
+            target[:, 1],
+            marker=".",
+            color="g",
+            label="target",
+            zorder=1,
+            s=1.5,
+        )
+        axs[0].scatter(
+            pos_tensor[0, 0],
+            pos_tensor[0, 1],
+            marker=".",
+            color="b",
+            label="start",
+            s=1.5,
+        )
         axs[0].legend()
 
         axs[1].set_xlabel("step")
@@ -237,9 +265,8 @@ def greedy_inference(
 
 
 def multiple_greedy_runs(
-        model: VariationalAutoencoder,
-        sample_size: int,
-        num_runs: int = 100):
+    model: VariationalAutoencoder, sample_size: int, num_runs: int = 100
+):
     runtimes = torch.tensor([])
     targets = torch.empty((num_runs, 2))
     for k in range(num_runs):
@@ -263,17 +290,20 @@ def multiple_greedy_runs(
 
 
 def absolute_inference(
-        model: VariationalAutoencoder,
-        fixed_position: bool,
-        sample_size: int,
-        num_start_positions: int,
-        show: bool = False,
-        action_constrain_radius: float = 0
-        ):
-    
+    model: VariationalAutoencoder,
+    fixed_position: bool,
+    sample_size: int,
+    num_start_positions: int,
+    show: bool = False,
+    action_constrain_radius: float = 0,
+):
     # TODO: simplify this part
-    latent_sample = sample_latent(sample_size * num_start_positions, torch.zeros(model.latent_dim), torch.ones(model.latent_dim))
-    
+    latent_sample = sample_latent(
+        sample_size * num_start_positions,
+        torch.zeros(model.latent_dim),
+        torch.ones(model.latent_dim),
+    )
+
     if model.conditional_info_dim == 2:
         if fixed_position:
             target = sample_target(1)
@@ -287,17 +317,25 @@ def absolute_inference(
             target = sample_target(1)
             target = target.repeat((sample_size * num_start_positions, 1))
             # state_angles = torch.zeros((sample_size, model.output_dim))
-            state_angles = torch.rand((num_start_positions, model.output_dim)) * 2 * torch.pi
+            state_angles = (
+                torch.rand((num_start_positions, model.output_dim)) * 2 * torch.pi
+            )
             state_angles = state_angles.repeat((sample_size, 1))
             # current_position = torch.tensor([1, 0]).repeat((sample_size, 1))
             current_position = forward_kinematics(state_angles)[:, -1, :]
             print("target position: ", target[0].tolist())
         else:
             target = sample_target(sample_size * num_start_positions)
-            state_angles = torch.rand((sample_size * num_start_positions, model.output_dim)) * 2 * torch.pi
+            state_angles = (
+                torch.rand((sample_size * num_start_positions, model.output_dim))
+                * 2
+                * torch.pi
+            )
             current_position = forward_kinematics(state_angles)[:, -1, :]
         target *= model.output_dim
-        concat_sample = torch.cat([latent_sample, target, current_position, state_angles], dim=1)
+        concat_sample = torch.cat(
+            [latent_sample, target, current_position, state_angles], dim=1
+        )
 
     # robot_arm = RobotArm(model.output_dim)
     # perfect_angles = []
@@ -309,14 +347,16 @@ def absolute_inference(
     #     perfect_angles.append(robot_arm.angles)
     # perfect_angles = np.stack(perfect_angles)
 
-
     print("forward pass")
     decoder_actions = model.decoder(concat_sample).detach()
     actions = model.post_processor(decoder_actions) + state_angles
     pred_positions = forward_kinematics(actions)
     print("done")
 
-    print("mean distance to target: ", torch.linalg.norm(target - pred_positions[:, -1], dim=1).mean().item())
+    print(
+        "mean distance to target: ",
+        torch.linalg.norm(target - pred_positions[:, -1], dim=1).mean().item(),
+    )
 
     fig = plt.figure()
     ax = fig.add_subplot()
@@ -325,11 +365,13 @@ def absolute_inference(
     ax.axis("equal")
     ax.add_patch(plt.Circle((0, 0), model.output_dim, fill=False))
     if action_constrain_radius > 0:
-        ax.add_patch(plt.Circle(current_position[0], action_constrain_radius, fill=False))
+        ax.add_patch(
+            plt.Circle(current_position[0], action_constrain_radius, fill=False)
+        )
 
     # print("plot ik")
     # positions_ik = forward_kinematics(torch.tensor(perfect_angles))
-    # ax.scatter(positions_ik[:, -1, 0], positions_ik[:, -1, 1], color="orange", s=1, label="IK solution") 
+    # ax.scatter(positions_ik[:, -1, 0], positions_ik[:, -1, 1], color="orange", s=1, label="IK solution")
     # print("done")
 
     # plot arms
@@ -339,12 +381,24 @@ def absolute_inference(
     print("done")
 
     print("plot initial positions")
-    ax.scatter(current_position[:, 0], current_position[:, 1], color="b", s=1, label="state_position")
+    ax.scatter(
+        current_position[:, 0],
+        current_position[:, 1],
+        color="b",
+        s=1,
+        label="state_position",
+    )
     print("done")
-    
+
     # plot end positions
     print("scatter end positions")
-    ax.scatter(pred_positions[:, -1, 0], pred_positions[:, -1, 1], color="r", s=1, label="action outcome") 
+    ax.scatter(
+        pred_positions[:, -1, 0],
+        pred_positions[:, -1, 1],
+        color="r",
+        s=1,
+        label="action outcome",
+    )
     print("done")
 
     # plot target position
@@ -364,30 +418,35 @@ def absolute_inference(
         axs[1].scatter(latent_sample, pred_positions[:, -1, 1], s=1)
         y_target = torch.ones_like(latent_sample) * target[0, 1]
         axs[1].plot(latent_sample, y_target, color="orange")
-        
+
         fig.savefig("results/vae_invariance.png")
 
     # plot action distribution
     fig = plt.figure()
     ax = fig.add_subplot()
-    bins = np.linspace(model.post_processor.min_action, model.post_processor.max_action, 100)
+    bins = np.linspace(
+        model.post_processor.min_action, model.post_processor.max_action, 100
+    )
     for joint_idx, joint_actions in enumerate(decoder_actions.T):
-        ax.hist(joint_actions.detach().cpu().numpy(), bins=bins, label=joint_idx, alpha=0.5)
+        ax.hist(
+            joint_actions.detach().cpu().numpy(), bins=bins, label=joint_idx, alpha=0.5
+        )
     fig.savefig("results/vae_action_distribution.png")
     if show:
         plt.show()
 
 
 def relative_inference(
-        model: VariationalAutoencoder,
-        sample_size: int,
-        show: bool = False):
-    latent_sample = sample_latent(sample_size, torch.zeros(model.latent_dim), 10 * torch.ones(model.latent_dim))
+    model: VariationalAutoencoder, sample_size: int, show: bool = False
+):
+    latent_sample = sample_latent(
+        sample_size, torch.zeros(model.latent_dim), 10 * torch.ones(model.latent_dim)
+    )
 
     actions = model.decoder(latent_sample).detach()
 
     fig, axs = plt.subplots(model.output_dim, model.latent_dim)
-    
+
     if model.latent_dim > 1:
         for k in range(model.latent_dim):
             for i in range(model.output_dim):
@@ -401,33 +460,34 @@ def relative_inference(
 
 
 def target_gaussian_inference(
-        model: VariationalAutoencoder,
-        sample_size: int,
-        show: bool = False):
+    model: VariationalAutoencoder, sample_size: int, show: bool = False
+):
     pass
 
 
 def inference(
-        model: VariationalAutoencoder,
-        fixed_position: bool,
-        sample_size: int,
-        config: dict,
-        greedy: bool = False,
-        num_start_positions: int = 1,
-        show: bool = False):
+    model: VariationalAutoencoder,
+    fixed_position: bool,
+    sample_size: int,
+    config: dict,
+    greedy: bool = False,
+    num_start_positions: int = 1,
+    show: bool = False,
+):
     if greedy:
         # multiple_greedy_runs(model, sample_size, num_runs=100, show=show)
         greedy_inference(model, sample_size, plot=True, show=show)
     elif config["dataset_mode"] in ["relative_uniform", "relative_tanh"]:
         relative_inference(model, sample_size, show=show)
-    elif config["dataset_mode"] in ["IK_const_start", "IK_random_start"] :
+    elif config["dataset_mode"] in ["IK_const_start", "IK_random_start"]:
         absolute_inference(
             model,
             fixed_position,
             sample_size,
             num_start_positions,
             show=show,
-            action_constrain_radius=config["action_constrain_radius"])
+            action_constrain_radius=config["action_constrain_radius"],
+        )
     else:
         logging.error("please chose a valid dataset mode")
 
@@ -445,9 +505,8 @@ if __name__ == "__main__":
         print(json.dumps(config, sort_keys=True, indent=4))
         exit()
 
-
     model = load_model(args_dict.pop("model_path"), config)
     args_dict["model"] = model
     args_dict["num_start_positions"] = 1
-    
+
     inference(**args_dict)

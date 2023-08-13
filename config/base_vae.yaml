@@ -1,19 +1,29 @@
-num_joints: 2
-latent_dim: 2
-dataset: "target_gaussian"  # "action" "action_target" "conditional_action_target" "conditional_target"
-dataset_mode: "IK_random_start" # "IK_const_start" "IK_random_start" "IK_random_start_constrained" "noise_uniform" "noise_tanh"  const is a dataset created with a constant start position -> one action for one target position, with random -> multiple actions for one target positions are possible 
-action_constrain_radius: 0.5  # only available if dataset == conditional_action_target and conditional_target(here it will be used as std around the current position)
-conditional_info: "state"  # "state" "targets"
+n_joints: 15
+n_epochs: 801
+learning_rate: 0.0015
+val_interval: 5
+model:
+  latent_dim: 16
+  encoder:
+    architecture: [256, 256]
+    activation_function: "ReLU"
+  decoder:
+    architecture: [256, 256]
+    activation_function: "ReLU"
 loss_func:  # only IK Loss is available
-  kl_loss_weight: 0
+  kl_loss_weight: 0.001
   reconstruction_loss_weight: 1
   distance_loss_weight: 1
   imitation_loss_weight: 0
-batch_size: 2096
-shuffle_data: False
-epochs: 801
-val_interval: 5
-learning_rate: 0.0012
+dataset:
+  type: VAETargetGaussianDataset  # Name of dataset type 
+  mode: "IK_random_start" # "IK_const_start" "IK_random_start" "IK_random_start_constrained" "noise_uniform" "noise_tanh"  const is a dataset created with a constant start position -> one action for one target position, with random -> multiple actions for one target positions are possible
+  batch_size: 2096
+  shuffle: False
+  action_constrain_radius: 0.2  # only available if dataset == conditional_action_target and conditional_target(here it will be used as std around the current position)
+  std: 0.2
+  target_mode: "POSITION"  # either POSITION or ACTION
+  truncation: 0  # for truncated gaussian in TargetGaussianDataset
 post_processor:
   enabled: True
   min_action: -1

@@ -3,7 +3,9 @@ import torch
 from typing import Tuple, Union
 
 
-def split_conditional_info(array: torch.tensor) -> Tuple[torch.tensor, torch.tensor, torch.tensor, torch.tensor]:
+def split_conditional_info(
+    array: torch.tensor,
+) -> Tuple[torch.tensor, torch.tensor, torch.tensor, torch.tensor]:
     """splits the encoder input vector into target_angles and state, where the state is containing: target position, state_position, state_angles
 
     Args:
@@ -13,15 +15,23 @@ def split_conditional_info(array: torch.tensor) -> Tuple[torch.tensor, torch.ten
         Tuple[torch.tensor, torch.tensor, torch.tensor, torch.tensor]: target_angles, target_position, state_position, state_angles
     """
     out_dim = array.size()[1]
-    split_idx = (out_dim - 4) // 2  # assume conditional information contains (target, current_pos, current_angles)
+    split_idx = (
+        out_dim - 4
+    ) // 2  # assume conditional information contains (target, current_pos, current_angles)
     target_angles = array[:, :split_idx]
     state = array[:, split_idx:]
     target_position, state_position, state_angles = split_state_information(state)
-    
+
     return target_angles, target_position, state_position, state_angles
 
 
-def split_state_information(x: Union[torch.Tensor, np.ndarray]) -> Tuple[Union[torch.Tensor, np.ndarray], Union[torch.Tensor, np.ndarray], Union[torch.Tensor, np.ndarray]]:
+def split_state_information(
+    x: Union[torch.Tensor, np.ndarray]
+) -> Tuple[
+    Union[torch.Tensor, np.ndarray],
+    Union[torch.Tensor, np.ndarray],
+    Union[torch.Tensor, np.ndarray],
+]:
     """the incoming tensor or ndarray must have 2 dimension [batch_size, state]
 
     Args:

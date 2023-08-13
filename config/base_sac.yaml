@@ -1,5 +1,3 @@
-task: "ReachGoalTask" # "ImitationTask""
-lr_pi: 0.0005
 lr_q: 0.001
 init_alpha: 0.01
 gamma: 0.98  # has to be zero for imitation learning
@@ -11,23 +9,13 @@ tau: 0.01  # for target network soft update,
 target_entropy: -40.0 # for automated alpha update,
 lr_alpha: 0.001
 n_epochs: 5000
-action_covariance_mode: independent
-action_covariance_decay: 0.5
-action_magnitude: 1 # a value inside the interval (0, pi]
-normal_actor:
-  enabled: False
-latent_actor: 
-  enabled: False
-  device: "cuda:5"
-  latent_dim: 5
-  # you can pick from an enum: 
-  # 0 -> Static (no training),
-  # 1 -> fine tuning (load a checkpoint and continue training), 
-  # 2 -> from scratch (start vae model learning from scratch) 
-  learning_mode: 0  
-  checkpoint_dir: "results/vae/ac05"  # specify 
-super_actor:
-  enabled: True
-  device: "cuda:6"
-  learning_mode: 0
-  checkpoint_dir: "results/supervised/gaussian_target/PointDistanceLoss"
+actor:
+  type: LatentActor  # also possible (SuperActor LatentActor)
+  learning_rate: 0.0005
+  learning_mode: 0  # regulates if we fine tune the model on data from rl agent or not
+  latent_dim: 16
+  latent_checkpoint_dir: "results/vae/test"  # specify directory where to look for a suiting checkpoint directory <num_joints>_<latent_dim>_<time_stamp>
+  architecture: [128, 128]
+  activation_function: ReLU
+
+

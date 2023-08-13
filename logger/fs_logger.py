@@ -1,7 +1,15 @@
-import time 
+import logging
+import time
+from typing import Any, Dict, Union
+from matplotlib.figure import Figure
+from numpy import ndarray 
 from pandas import DataFrame
+from torch import Tensor
 
-class FileSystemLogger:
+from logger.base_logger import Logger
+from utils.decorator import not_implemented_warning
+
+class FileSystemLogger(Logger):
     def __init__(self, path) -> None:
         self._path = path
 
@@ -19,6 +27,22 @@ class FileSystemLogger:
             "time": time.time()
         })
 
+    @not_implemented_warning
+    def add_figure(self, tag: str, figure: Figure, global_step: int):
+        pass
+
+    @not_implemented_warning
+    def add_image(self, tag: str, data: Union[Tensor, ndarray], global_step: int):
+        pass
+
+    @not_implemented_warning
+    def add_histogram(self, tag: str, data: Union[Tensor, ndarray], global_step: int):
+        pass
+
+    @not_implemented_warning
+    def add_hparams(self, hparam_dict: Dict[str, Any], metric_dict: Dict[str, Any]):
+        pass
+    
     def dump(self, file_name: str = "results.csv"):
         df = DataFrame(self._data)
         df.to_csv(self._path + "/" + file_name)

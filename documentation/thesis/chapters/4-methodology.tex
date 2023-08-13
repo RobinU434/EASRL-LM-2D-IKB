@@ -15,7 +15,7 @@ In the VAE approach, a conditional or unconditional generative model is employed
 
 Alternatively, the supervised model approach involves training a supervised learning model, such as a neural network, to directly transform the a defined lower dimensional latent action into the high-dimensional action space. This transformation is learned based on labeled examples of actions and their corresponding latent representations. In the conducted experiments the lower dimensional-action space is just the desired action outcome. By leveraging supervised learning techniques, we aim to find a mapping between state information and desired action outcome to the RL environment action space, allowing RL agent to operate effectively on a higher level within the reduced-dimensional latent action space..
 
-\section{RL Environment}
+\section{RL Environment}\label{sec:RL-Environment}
 
 To apply RL in general you need an environment the agent can send actions to and receives feedback as discussed in \secref{sec:RL-Framework}. As previously introduced the key problem we are targeting is inverse kinematics of a robot arm. This problem turn out to be suitable because:
 \begin{itemize}
@@ -108,8 +108,23 @@ Plots
 \section{Latent Criterion}
 
 In this section I will cover the employed loss functions to train the latent models. 
+As discussed in \secref{sec:VAE} we employ the Evidence Lower Bound as the objective function to train Variational Autoencoder. To fit our problem of inverese kinematics we tried out 3 different reconstruction loss function.
 
+In this section we will explain the tangible KL divergence as well as the individual reconstruction loss functions.
+
+\subsection{Kulback Leiber Divergence}
+
+The Kulllback Leiber divergence first pulbished by Solomon Kullback and Richard Leiber  in 1951 \todo{cite: https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-22/issue-1/On-Information-and-Sufficiency/10.1214/aoms/1177729694.full} is mathematical measure of how a probability distribution $P$ differs from a second distribution $P'$ and is denoted as $D_\text{KL}(P||P')$. Inside the ELBO it functions as a regularization element between the latent distribution $p_\phi(z|x)$ and a target distribution $p(z)$. Throughout this thesis we take the standard normal distribution as the target distribution, $p(z) = \mathcal{N}(0, I)$. Since we implement a parameterized gaussian as the latent distribution due to the nature of continuous input data, $p_\phi(z|x) = \mathcal{N}_\phi(\mu_\phi(x)| \ \Sigma_\phi(x))$. Therefor we can calculate the Kullback Leiber Divergence as:
+\begin{align*}
+    D_\text{KL}( \mathcal{N}_\phi(\mu_\phi(x)| \Sigma_\phi(x))|| \mathcal{N}(0, I)) &= \frac{1}{2} \left(\mu_\phi(x)^T\mu_\phi(x)  + tr\left(\Sigma_\phi(x)\right) - K - \log{|\Sigma_\phi(x)|} \right)\\
+    &= \frac{1}{2} \left(\mu_\phi(x)^T\mu_\phi(x)  + \sum_{i=1}^K\Sigma_\phi(x)_{ii} - K - \log\left(\sum_{i=1}^K\Sigma_\phi(x)_{ii}\right)\right) 
+\end{align*}\todo{employ in code and test diffferent KL divergence} \todo{proof in appendix from https://mr-easy.github.io/2020-04-16-kl-divergence-between-2-gaussian-distributions/}
 \todo{KL div}
+
+\subsection{Reconstruction Loss}
+
+Inside the Evidence Lower Bound objective, the reconstruction loss minimizes the distance between the input data $x$ and the model output $\hat{x}$. In our experiments we employed three different approaches for the reconstruction loss:
+
 
 \textbf{Imitation Loss}. The imitation loss is a criterion to minimize the mean squared error between a given label $y$, in this case an action from an expert which results in $y \in \mathbb{R}^N$ and the predicted action $\hat{x} \in \mathbb{R}^N$. It is defined as in \eqref{eqn:Imitation-Loss}.
 
@@ -127,7 +142,9 @@ In this section I will cover the employed loss functions to train the latent mod
     \mathcal{L}_\text{Distance}(p_\text{target}, \hat{x}, q) = ||p_\text{target} - \text{forward kinematics}(q + \hat{x})||_2
 \end{equation}
 
-\textbf{Inverse kinematics Loss}. This criterion as in \eqref{eqn:IK-Loss}is the result of merging distance loss and imitation loss is one loss function as a weighted sum of those two components with weights $w_\text{Imitation}, w_\text{Distance} \in \mathbb{R}$. In the implementation the loss function can be configured to work also a pure distance loss function without providing any expert action.
+This criterion is also used in a standard supervised learning approach where the model predicts actions based on state information.
+
+\textbf{Inverse kinematics Loss}. This criterion as in \eqref{eqn:IK-Loss} is the result of merging distance loss and imitation loss in one loss function as a weighted sum of those two components with weights $w_\text{Imitation}, w_\text{Distance} \in \mathbb{R}$. Inside the code, the loss function can be configured to work also a pure distance loss function without providing any expert action and make it therefor also applicable to the afore mentioned supervised learning approach. 
 
 \begin{equation}\label{eqn:IK-Loss}
     \mathcal{L}_\text{IK}(y, p_\text{target}, \hat{x}, q) = w_\text{Imitation} \cdot \mathcal{L}_\text{Imitation}(y, \hat{x}) + w_\text{Distance} \cdot \mathcal{L}_\text{Distance}(p_\text{target}, \hat{x}, q)
@@ -139,4 +156,24 @@ In this section I will cover the employed loss functions to train the latent mod
 
 \section{Learning conditional Variational Autoencoder}
 
+
+\section{Software}
+
+In the following section we are going to present the developed software stack to train the latent models as well as the reinforcement learning agent.
+
+\subsection{Inverse kinematics Environment}
+
+As presented previously in \secref{sec:RL-Environment} we tackle the problem of inverse kinematics of a robot arm with $N$ many joints in a two dimensional setting. 
+The implemented environment
+
+\subsection{Latent Module}
+
+The latent module contains every functionality regarding either a Variational Autoencoder or a simple feed forward supervised regression model.
+As a deep learning library we build on pytorch 1.\todo{find out version}. 
+
+You can find out about the functionality either with 
+
+
+
+\subsection{Soft actor critc}
 

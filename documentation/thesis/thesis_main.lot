@@ -4,8 +4,8 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {table}{\numberline {1}{\ignorespaces n is the number of joints, latent dimension is the size of the dimension the action is compressed to, r loss is the test reconstruction loss I used the MSE as the metric for the reconstruction loss, kl loss is the Kullback Leiber diveregence from the standard normal distribution on the test dataset\relax }}{58}{table.caption.26}%
-\contentsline {table}{\numberline {2}{\ignorespaces Hyperparameters for the Soft-Actor-Critic algorithm\relax }}{60}{table.caption.27}%
+\contentsline {table}{\numberline {1}{\ignorespaces n is the number of joints, latent dimension is the size of the dimension the action is compressed to, r loss is the test reconstruction loss I used the MSE as the metric for the reconstruction loss, kl loss is the Kullback Leiber diveregence from the standard normal distribution on the test dataset\relax }}{61}{table.caption.26}%
+\contentsline {table}{\numberline {2}{\ignorespaces Hyperparameters for the Soft-Actor-Critic algorithm\relax }}{62}{table.caption.27}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

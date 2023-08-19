@@ -1,11 +1,11 @@
 n_joints: 15
-n_epochs: 801
-learning_rate: 0.0015
+n_epochs: 5001
+learning_rate: 0.003
 val_interval: 5
 model:
-  latent_dim: 16
+  latent_dim: 4
   encoder:
-    architecture: [256, 256]
+    architecture: [128, 128]
     activation_function: "ReLU"
   decoder:
     architecture: [256, 256]

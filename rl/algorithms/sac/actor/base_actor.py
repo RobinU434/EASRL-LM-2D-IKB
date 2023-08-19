@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.nn import Sequential
 from torch.distributions import Normal, constraints
+from utils.cuda import dict_to_device
 from utils.metrics import Metrics
 
 from utils.model.neural_network import FeedForwardNetwork
@@ -83,11 +84,11 @@ class Actor(FeedForwardNetwork):
         torch.save(
             {
                 "epoch": epoch_idx,
-                "model_state_dict": self.state_dict(),
-                "optimizer_state_dict": self._optimizer.state_dict(),
+                "model_state_dict": dict_to_device(self.state_dict(), "cpu"),
+                "optimizer_state_dict": dict_to_device(self._optimizer.state_dict(), "cpu"),
             },
             path,
-        )
+        )    
 
     def _create_save_path(
         self, path: str, epoch_idx: int, metrics: Metrics = ...
@@ -98,7 +99,7 @@ class Actor(FeedForwardNetwork):
         else:
             path += ".pt"
         return path
-
+    
     @property
     def optimizer(self) -> optim.Optimizer:
         return self._optimizer

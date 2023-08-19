@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, Tuple, Union
 import torch
 
@@ -9,13 +10,13 @@ import numpy as np
 
 from torch.distributions import Normal
 from torch.distributions import constraints
+from algorithms.sac.actor.base_actor import Actor
 
 from rl.algorithms.common.distributions import get_distribution
 from rl.algorithms.sac.actor.latent_actor import LatentActor
 
 # from rl.algorithms.sac.actor.super_actor import SuperActor
 
-from rl.algorithms.sac.actor.multi_actor import Actor, InformedMultiAgent, MultiAgent
 from rl.algorithms.sac.actor.super_actor import SuperActor
 from utils.metrics import Metrics
 from utils.model.neural_network import NeuralNetwork
@@ -63,7 +64,8 @@ class PolicyNet(NeuralNetwork):
                 f"requested actor {actor_config['type']} is not implemented."
             )
         self.actor.to(self._device)
-
+        logging.info(self.actor)
+        
         self.log_alpha = torch.tensor(np.log(init_alpha))
         self.log_alpha.requires_grad = True
         self._learning_rate_alpha = lr_alpha
@@ -128,7 +130,7 @@ class PolicyNet(NeuralNetwork):
 
     @property
     def optimizer(self) -> optim.Optimizer:
-        return self.actor.optimizer
+        return self.actor.optimizer # type: ignore
 
     @property
     def hparams(self) -> Dict[str, Union[str, int, float]]:
@@ -139,3 +141,6 @@ class PolicyNet(NeuralNetwork):
 
     def save(self, path: str, metrics: Metrics = ..., epoch_idx: int = 0):
         self.actor.save(path, metrics, epoch_idx)
+
+    def load_checkpoint(self, path: str):
+        self.actor.load_checkpoint(path)

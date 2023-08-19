@@ -1,9 +1,11 @@
 from abc import abstractmethod
+import logging
 from typing import Any, Dict, List, Union
 
 import torch
 import torch.nn as nn
 from torch import Tensor
+from utils.cuda import dict_to_device
 
 from utils.model.base_model import LearningModule
 from utils.metrics import Metrics
@@ -14,11 +16,12 @@ class NeuralNetwork(LearningModule, nn.Module):
         self, input_dim: int, output_dim: int, learning_rate: float, device: str = "cpu", **kwargs
     ) -> None:
         super().__init__()
-
+        logging.debug(f"Init {type(self).__name__}")
         self._input_dim = input_dim
         self._output_dim = output_dim
         self._learning_rate = learning_rate
         self._device = device
+        logging.debug(f"{self._device=}")
         self._optimizer: torch.optim.Optimizer
 
     def train(self, loss: torch.Tensor) -> None:
@@ -43,8 +46,8 @@ class NeuralNetwork(LearningModule, nn.Module):
         torch.save(
             {
                 "epoch": epoch_idx,
-                "model_state_dict": self.state_dict(),
-                "optimizer_state_dict": self._optimizer.state_dict(),
+                "model_state_dict": dict_to_device(self.state_dict(), "cpu"),
+                "optimizer_state_dict": dict_to_device(self._optimizer.state_dict(), "cpu"),
                 "loss": loss,
             },
             path,

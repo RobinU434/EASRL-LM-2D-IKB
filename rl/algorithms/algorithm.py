@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
+import logging
 from typing import List, Union
 
 from gym import Env
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from logger.base_logger import Logger
+from logger.fs_logger import FileSystemLogger
 
 
 class RLAlgorithm(ABC):
@@ -25,10 +27,11 @@ class RLAlgorithm(ABC):
         **kwargs
     ) -> None:
         super().__init__()
-
+        logging.debug("init RLAlgorithm")
         self._logger = logger
         self._env = env
         self._device = device
+        logging.debug(f"{self._device=}")
         
     @abstractmethod
     def train(self, *args, **kwargs):
@@ -45,3 +48,8 @@ class RLAlgorithm(ABC):
     @abstractmethod
     def print_model(self):
         raise NotImplementedError
+    
+    def _dump(self):
+        for logger in self._logger:
+            if isinstance(logger, FileSystemLogger):
+                logger.dump(file_name="results.csv")

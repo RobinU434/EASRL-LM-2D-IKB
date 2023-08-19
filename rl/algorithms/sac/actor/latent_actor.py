@@ -1,4 +1,6 @@
 import glob
+import logging
+import os
 import yaml
 import torch
 import torch.optim as optim
@@ -9,13 +11,17 @@ from latent.datasets.utils import split_state_information
 
 from rl.algorithms.sac.actor.base_actor import Actor
 from rl.algorithms.sac.actor.utils import TrainMode
+from utils.file_system import write_yaml
 from utils.metrics import Metrics
 from utils.model.neural_network import NeuralNetwork
 from latent.model.vae import VAE
 
 
 def load_checkpoint(checkpoint_path: str):
+    logging.debug(torch.cuda.memory_allocated(6))
     checkpoint = torch.load(checkpoint_path)
+    logging.debug(torch.cuda.memory_allocated(6))
+
     return checkpoint
 
 
@@ -61,6 +67,7 @@ def load_best_checkpoint(
     d = dict(zip(losses, paths))
     path = d[min(d)]
     print(f"use checkpoint for VAE at {path}")
+    logging.debug(torch.cuda.memory_allocated(6))
     file_name = path.split("/")[-1]
     config = load_config("/".join(path.split("/")[:-1] + ["config.yaml"]))
     return file_name, load_checkpoint(path), config
@@ -89,8 +96,11 @@ class LatentActor(NeuralNetwork):
         self._vae_learning_mode = vae_learning_mode
         self._latent_dim = latent_dim
         self._latent_checkpoint_dir = latent_checkpoint_dir
+        self._vae_checkpoint: Tensor
+        self._vae_checkpoint_name: str
+        self._vae_config: Dict[str, Any]
         self._vae = self._build_vae()
-
+        
         self._actor = Actor(
             input_dim=input_dim,
             output_dim=self._vae.latent_dim,
@@ -117,13 +127,14 @@ class LatentActor(NeuralNetwork):
         self._actor.train(loss)
 
     def _build_vae(self) -> VAE:
-        _, vae_checkpoint, vae_config = load_best_checkpoint(
+        checkpoint_path, self._vae_checkpoint, self._vae_config = load_best_checkpoint(
             self._latent_checkpoint_dir, self._output_dim, self._latent_dim
         )
+        self._vae_checkpoint_name = checkpoint_path.split("/")[-1]
         # disable post processor
-        vae_config["post_processor"]["enabled"] = False
-        vae = VAE.from_config(vae_config)
-        vae.load_state_dict(vae_checkpoint["model_state_dict"]) # type: ignore
+        self._vae_config["post_processor"]["enabled"] = False
+        vae = VAE.from_config(self._vae_config)
+        vae.load_state_dict(self._vae_checkpoint["model_state_dict"]) # type: ignore
         return vae
 
     @property
@@ -136,4 +147,26 @@ class LatentActor(NeuralNetwork):
         return hparams # type: ignore
     
     def save(self, path: str, metrics: Metrics = ..., epoch_idx: int = 0):
-        return self._actor.save(path, metrics, epoch_idx)
+        self._actor.save(path, metrics, epoch_idx)
+        path = "/".join(path.split("/")[:-1])
+        vae_path = path + "/" + self._vae_checkpoint_name
+        if not os.path.isfile(vae_path):
+            torch.save(self._vae_checkpoint, vae_path)
+        config_path = path + "/vae_config.yaml"
+        if not os.path.isfile(config_path):
+            write_yaml(config_path, self._vae_config)
+
+    def load_checkpoint(self, path: str):
+        """loads checkpoint from filesystem
+
+        Args:
+            path (str): path to actor checkpoint
+        """ 
+        self._actor.load_checkpoint(path)
+
+        # find vae_path
+        # assume the vae checkpoint is one directory up the tree
+        path = "/".join(path.split("/")[:-2])
+        vae_checkpoint = glob.glob(path + "/VAE*.pt")[0]
+        print(vae_checkpoint)
+        self._vae.load_checkpoint(vae_checkpoint)

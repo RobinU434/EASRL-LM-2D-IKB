@@ -43,7 +43,7 @@ class LatentProcess(LearningProcess):
         """prints model"""
         print(self._model)
 
-    def build(self, no_logger: bool = False):
+    def _build(self, no_logger: bool = False):
         """builds core component of process:
 
         - loads datasets
@@ -55,7 +55,6 @@ class LatentProcess(LearningProcess):
         Args:
             no_logger (bool): prevents build of logger
         """
-        self._save_dir = self._build_save_dir_path()
         if no_logger:
             self._logger = []
         else:
@@ -70,10 +69,6 @@ class LatentProcess(LearningProcess):
         # add additional information to config file
         self._config["input_dim"] = self._model._input_dim
         self._config["output_dim"] = self._model._output_dim
-
-        self._set_random_seed(self._random_seed)
-        self._initialized = True
-        logging.info("Build model")
 
     def load_checkpoint(self):
         """builds model based on checkpoint config and loads checkpoint from filesystem and passes the values into state dict of model"""

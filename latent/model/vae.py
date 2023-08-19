@@ -7,6 +7,7 @@ import numpy as np
 
 from torch.utils.tensorboard.writer import SummaryWriter
 from latent.metrics.vae_metrics import VAEInvKinMetrics
+from utils.cuda import dict_to_device
 from utils.model.neural_network import FeedForwardNetwork, NeuralNetwork
 
 from latent.model.encoder import VariationalEncoder
@@ -174,12 +175,12 @@ class VAE(NeuralNetwork):
         torch.save(
             {
                 "epoch": epoch_idx,
-                "model_state_dict": self.state_dict(),
-                "optimizer_state_dict": self._optimizer.state_dict(),
-                "reconstruction_loss": metrics.reconstruction_loss.mean(),
-                "kl_loss": metrics.kl_loss.mean(),
-                "distance_loss": metrics.distance_loss.mean(),
-                "imitation_loss": metrics.imitation_loss.mean(),
+                "model_state_dict": dict_to_device(self.state_dict(), "cpu"),
+                "optimizer_state_dict": dict_to_device(self._optimizer.state_dict(), "cpu"),
+                "reconstruction_loss": metrics.reconstruction_loss.mean().item(),
+                "kl_loss": metrics.kl_loss.mean().item(),
+                "distance_loss": metrics.distance_loss.mean().item(),
+                "imitation_loss": metrics.imitation_loss.mean().item(),
             },
             path,
         )

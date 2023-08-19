@@ -2,6 +2,8 @@ from typing import Dict, Tuple, Union
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn, optim
+from rl.algorithms.sac.metrics import SACScalarMetrics
+from utils.cuda import dict_to_device
 from utils.metrics import Metrics
 
 from utils.model.neural_network import NeuralNetwork
@@ -53,17 +55,17 @@ class QNet(NeuralNetwork):
     def save(
         self,
         path: str,
-        metrics: Metrics = ...,
+        metrics: SACScalarMetrics = ...,
         epoch_idx: int = 0,
         model_name: str = "",
     ):
         path = self._create_save_path(path, epoch_idx, metrics, model_name)
-        loss = metrics.critic_loss if "critic_loss" in vars(metrics).keys() else 0  # type: ignore
+        loss = metrics.critic_loss.mean().item() if "critic_loss" in vars(metrics).keys() else 0  # type: ignore
         torch.save(
             {
                 "epoch": epoch_idx,
-                "model_state_dict": self.state_dict(),
-                "optimizer_state_dict": self._optimizer.state_dict(),
+                "model_state_dict": dict_to_device(self.state_dict(), "cpu"),
+                "optimizer_state_dict": dict_to_device(self._optimizer.state_dict(), "cpu"),
                 "loss": loss,
             },
             path,

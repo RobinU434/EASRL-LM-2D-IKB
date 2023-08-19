@@ -16,18 +16,18 @@ from numpy import ndarray
 from torch import Tensor
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
-from envs.plane_robot_env.ikrlenv.env.plane_robot_env import PlaneRobotEnv
 
-from rl.algorithms.utils.helper import get_space_size
-from rl.algorithms.utils.plot import kde_end_points, scatter_end_points
-from rl.algorithms.sac.actor.latent_actor import LatentActor
-from rl.algorithms.sac.buffer import BufferDataset, ReplayBuffer
-from rl.algorithms.sac.policy_net import PolicyNet
-from rl.algorithms.sac.q_net import QNet
+from envs.plane_robot_env.ikrlenv.env.plane_robot_env import PlaneRobotEnv
 from logger.base_logger import Logger
 from logger.fs_logger import FileSystemLogger
 from rl.algorithms.algorithm import RLAlgorithm
+from rl.algorithms.sac.actor.latent_actor import LatentActor
+from rl.algorithms.sac.buffer import BufferDataset, ReplayBuffer
 from rl.algorithms.sac.metrics import SACDistributionMetrics, SACScalarMetrics
+from rl.algorithms.sac.policy_net import PolicyNet
+from rl.algorithms.sac.q_net import QNet
+from rl.algorithms.utils.helper import get_space_size
+from rl.algorithms.utils.plot import kde_end_points, scatter_end_points
 from utils.metrics import Metrics
 
 
@@ -138,9 +138,9 @@ class SAC(RLAlgorithm):
         self._q1_target.load_state_dict(self._q1.state_dict().copy())
         self._q2_target.load_state_dict(self._q2.state_dict().copy())
 
+        scalar_metrics = SACScalarMetrics()
+        distribution_metrics = SACDistributionMetrics()
         for epoch_idx in range(self._n_epochs + 1):
-            scalar_metrics = SACScalarMetrics()
-            distribution_metrics = SACDistributionMetrics()
 
             run_scalars, run_distributions = self._run_model()
             scalar_metrics.append(run_scalars)
@@ -182,25 +182,30 @@ class SAC(RLAlgorithm):
                 distribution_metrics = SACDistributionMetrics()
 
         # store metrics in a csv file
-        self._dump(path=self._log_dir)
+        self._dump()
         self._env.close()
 
-    def load_checkpoint(self, path):
-        checkpoint = torch.load(path)
-        self._pi.load_state_dict(checkpoint["pi_model_state_dict"])
-        self._q1.load_state_dict(checkpoint["q1_model_state_dict"])
-        self._q2.load_state_dict(checkpoint["q2_model_state_dict"])
-        self._q1_target.load_state_dict(checkpoint["q1_target_model_state_dict"])
-        self._q2_target.load_state_dict(checkpoint["q2_target_model_state_dict"])
+    def load_checkpoint(self, path: str):
+        """loads checkpoint from file system
 
-    def inference(self, target_positions: np.ndarray) -> List[np.ndarray]:
+        Args:
+            path (str): path to checkpoint directory
+        """
+        epoch_idx = int(path.split("/")[-1]) 
+        self._pi.load_checkpoint(path + f"/Actor_{epoch_idx}.pt")
+        self._q1.load_checkpoint(path + f"/q1_{epoch_idx}.pt")
+        self._q2.load_checkpoint(path + f"/q2_{epoch_idx}.pt")
+        self._q1_target.load_checkpoint(path + f"/q1_target_{epoch_idx}.pt")
+        self._q2_target.load_checkpoint(path + f"/q2_target_{epoch_idx}.pt")
+        
+    def inference(self, target_positions: ndarray) -> List[ndarray]:
         """performs inference in a list of given target positions
 
         Args:
-            target_positions (np.ndarray): shape (num_positions, 2)
+            target_positions (ndarray): shape (num_positions, 2)
 
         Returns:
-            np.ndarray: trajectories from each arm shape: (num_positions, num_iterations, n_joints + 1, 2)
+            ndarray: trajectories from each arm shape: (num_positions, num_iterations, n_joints + 1, 2)
         """
         trajectories = []
         self._env: PlaneRobotEnv
@@ -215,7 +220,7 @@ class SAC(RLAlgorithm):
                 s_input = s_input.unsqueeze(dim=0)
                 a, log_prob = self._pi.forward(s_input)
                 # detach grad from action to apply it to the environment where it is converted into a numpy.ndarray
-                a = a.detach()
+                a = a.cpu().detach()
                 s_prime, r, done, info = self._env.step(a.numpy())
                 trajectory = np.concatenate(
                     [
@@ -356,8 +361,3 @@ class SAC(RLAlgorithm):
         self._q2.save(path, metrics, epoch_idx, model_name="q2")
         self._q1_target.save(path, metrics, epoch_idx, model_name="q1_target")
         self._q2_target.save(path, metrics, epoch_idx, model_name="q2_target")
-
-    def _dump(self, path: str):
-        for logger in self._logger:
-            if isinstance(logger, FileSystemLogger):
-                logger.dump(path + "/results.csv")

@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Union
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 from latent.metrics.supervised_metrics import SupervisedIKMetrics
+from utils.cuda import dict_to_device
 from utils.model.neural_network import FeedForwardNetwork, NeuralNetwork
 from latent.model.utils.post_processor import PostProcessor
 import torch.nn as nn
@@ -64,9 +65,9 @@ class Regressor(FeedForwardNetwork):
         torch.save(
             {
                 "epoch": epoch_idx,
-                "model_state_dict": self.state_dict(),
-                "optimizer_state_dict": self._optimizer.state_dict(),
-                "loss": metrics.loss.mean(),
+                "model_state_dict": dict_to_device(self.state_dict(), "cpu"),
+                "optimizer_state_dict": dict_to_device(self._optimizer.state_dict(), "cpu"),
+                "loss": metrics.loss.mean().item(),
             },
             path,
         )

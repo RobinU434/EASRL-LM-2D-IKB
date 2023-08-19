@@ -13,6 +13,7 @@ from utils.file_system import load_yaml, write_yaml
 class LearningProcess(ABC):
     def __init__(self, device: str = "cpu", **kwargs) -> None:
         super().__init__()
+        logging.debug(f"Init {type(self).__name__}")
         self._model_entity_name: str
         """str: what kind of model you want to train. Value gets used for logging training results, loading config, building save_directory"""
         self._base_config_path: str
@@ -20,6 +21,7 @@ class LearningProcess(ABC):
         self._config = load_yaml(self._get_config_path(**kwargs))
         """Dict[str, Any]: config for model to run process on"""
         self._device = device
+        logging.debug(f"{self._device=}")
         """str: on which device should you run the process. cpu, cuda: 0, ..."""
         self._subdir: str = self._extract_from_kwargs("subdir", **kwargs)
         """str: subdir where to store checkpoints"""
@@ -48,9 +50,18 @@ class LearningProcess(ABC):
         pass
 
     @abstractmethod
-    def build(self, *args, **kwargs) -> None:
+    def _build(self, *args, **kwargs) -> None:
         """builds more complex or memory / computing intense components of Process like a model, datasets, environments"""
         pass
+
+    def build(self, *args, **kwargs) -> None:
+        """builds save dir, sets random seed and calls self._build()
+        """
+        self._save_dir = self._build_save_dir_path()
+        self._set_random_seed(self._random_seed)
+        self._build(*args, **kwargs)
+        self._initialized = True
+        logging.info("Build model")
 
     @abstractmethod
     def load_checkpoint(self, *args, **kwargs) -> None:
@@ -88,6 +99,7 @@ class LearningProcess(ABC):
         else:
             logging.warning("No save directory set")
             save_dir = "."
+        logging.debug(f"{save_dir=}")
         return save_dir
 
     def _get_config_path(self, **kwargs) -> str:
@@ -118,6 +130,7 @@ class LearningProcess(ABC):
         torch.manual_seed(random_seed)
         np.random.seed(random_seed)
         random.seed(random_seed)
+        logging.debug(f"{random_seed=}")
 
     @staticmethod
     def _extract_from_kwargs(key: str, **kwargs) -> Any:

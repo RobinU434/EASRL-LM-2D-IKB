@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any, Literal, Tuple
 import torch
 import logging
 
@@ -20,13 +20,13 @@ def cyclic_mse_loss(x: torch.Tensor, x_hat: torch.Tensor) -> torch.Tensor:
     return mse
 
 
-def mse(diff: torch.tensor):
+def mse(diff: torch.Tensor):
     # mean squared error
     # sum over the number of joints and mean for the batch
     return torch.float_power(diff, 2).mean()
 
 
-def angle_diff(a : torch.Tensor, b: torch.Tensor, kappa: torch.Tensor = torch.pi):
+def angle_diff(a : torch.Tensor, b: torch.Tensor, kappa: float = torch.pi):
         # source: https://stackoverflow.com/questions/1878907/how-can-i-find-the-smallest-difference-between-two-angles-around-a-point
         dif = a - b
         return (dif + kappa) % (2 * kappa) - kappa
@@ -89,10 +89,10 @@ class CyclicVAELoss(VAELoss):
 
         self.kappa = torch.pi
 
-    def angle_diff(self, a: torch.tensor, b: torch.tensor):
+    def angle_diff(self, a: torch.Tensor, b: torch.Tensor):
         return angle_diff(a, b, self.kappa)
 
-    def reconstruction_loss(self, x: torch.tensor, x_hat: torch.tensor):
+    def reconstruction_loss(self, x: torch.Tensor, x_hat: torch.Tensor):
         r_loss = mse(self.angle_diff(x, x_hat))
         self.r_loss = r_loss
         return r_loss      
@@ -155,7 +155,7 @@ class IKLoss:
             reconstruction_loss_weight: float = 1,
             imitation_loss_weight: float = 1,
             distance_loss_weight: float = 1, 
-            target_mode: int = YMode.UNDEFINED,
+            target_mode: Literal[YMode] = YMode.UNDEFINED,
             device: str = "cpu") -> None:
 
         self.kl_loss_weight = kl_loss_weight
@@ -209,6 +209,7 @@ class IKLoss:
         self.imitation_loss = self.imitation_loss_func(y, x_hat)
 
         predicted_position = forward_kinematics(x_hat)[:, -1].to(self.device)
+        target_position = None
         if self.target_mode == YMode.POSITION:
             target_position = y
         elif self.target_mode == YMode.ACTION:
@@ -227,10 +228,26 @@ class IKLoss:
 
     def __call__(
             self,
-            y: Tuple[torch.Tensor, torch.Tensor],
+            y: torch.Tensor,
             x_hat: torch.Tensor,
             mu: torch.Tensor,
             log_std: torch.Tensor) -> torch.Tensor:
+        """computes inverse kinematics loss on autoencoder. Final loss is a weighted sum of
+        - distance_loss
+        - imitation_loss
+        - kl_divergence
+
+        Function stores all intermediate values in their own variables
+
+        Args:
+            y (torch.Tensor): target. Is either an target action (self.target_mode == YMode.ACTION) or a position (self.target_mode == YMode.POSITION)
+            x_hat (torch.Tensor): predicted action from the model + state_angles
+            mu (torch.Tensor): partial output from encoder for latent sampling
+            log_std (torch.Tensor): partial output from encoder for latent sampling
+
+        Returns:
+            torch.Tensor: weighted sum
+        """
         self.loss = self.reconstruction_loss_weight * self.reconstruction_loss(y, x_hat) + \
             self.kl_loss_weight * self.kl_divergence(mu, log_std)
         return self.loss

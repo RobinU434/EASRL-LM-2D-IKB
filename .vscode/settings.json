@@ -1,6 +1,8 @@
 {
     "cSpell.words": [
         "autoencoder",
+        "btutils",
+        "ELBO",
         "linalg",
         "minibatch",
         "ndarray",
@@ -32,5 +34,9 @@
     "peacock.remoteColor": "#215732",
     "python.linting.flake8Enabled": true,
     "python.linting.enabled": false,
-    "python.analysis.typeCheckingMode": "basic"
+    "python.analysis.typeCheckingMode": "basic",
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "python.formatting.provider": "none"
 }

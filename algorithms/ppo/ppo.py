@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 
 from torch.distributions import Normal
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.writer import SummaryWriter
 
 from algorithms.ppo.buffer import RolloutBuffer
 from algorithms.ppo.model import Module

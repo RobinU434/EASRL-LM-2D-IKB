@@ -19,7 +19,7 @@ def scatter_end_points(x_end: np.array, y_end: np.array) -> Figure:
 
     return fig
 
-def kde_end_points(x_end: np.array, y_end: np.array, x_target: np.array, y_target: np.array) -> Figure:
+def kde_end_points(x_end: np.ndarray, y_end: np.ndarray, x_target: np.ndarray, y_target: np.ndarray) -> Figure:
     fig = plt.figure()
     ax = fig.add_subplot()
     

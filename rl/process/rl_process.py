@@ -1,5 +1,6 @@
 import json
 from copy import deepcopy
+import logging
 from typing import Any, Dict, List, Type, Union
 
 import gym
@@ -14,7 +15,15 @@ from logger.fs_logger import FileSystemLogger
 from rl.algorithms.algorithm import RLAlgorithm
 from utils.file_system import load_yaml, write_yaml
 from utils.learning_process import LearningProcess
-from utils.plot import plot_arms, plot_circle, plot_distances, plot_trajectory, scatter
+from utils.plot import (
+    plot_action_distribution,
+    plot_arms,
+    plot_circle,
+    plot_distances,
+    plot_trajectory,
+    scatter,
+)
+from utils.sampling import sample_target
 
 
 class RLProcess(LearningProcess):
@@ -32,7 +41,7 @@ class RLProcess(LearningProcess):
         super().__init__(device, **kwargs)
 
         self._env_type = env_type
-        self._env: Env
+        self._env: PlaneRobotEnv
         self._algorithm: RLAlgorithm
         self._num_runs = self._extract_from_kwargs("num_runs", **kwargs)
 
@@ -44,24 +53,27 @@ class RLProcess(LearningProcess):
     def train(self, *args, **kwargs) -> None:
         return self._algorithm.train(*args, **kwargs)
 
-    def inference(self, checkpoint_dir: str) -> None:
-        self.build(no_logger=True)
-        self.load_checkpoint(checkpoint_dir)
-        target = np.array([[-5, -5]])
+    def _single_inference(self, checkpoint_dir: str):
+        target = sample_target(radius=self._env_config["n_joints"], num_samples=1)[None]
+        target = np.array([[-1, 1]]) * 10
+        print(f"{target = }")
         results = self._algorithm.inference(target)
-        result = results[0]
+        trajectories = results["trajectories"]
+        trajectory = trajectories[0]
         fig, ax = plot_circle(
             origin=np.zeros(2),
             radius=self._env_config["n_joints"],
             color="k",
-            alpha=0.2,
+            alpha=0.1,
         )
         fig, ax = scatter(fig=fig, ax=ax, data=target, label="target", color="b")
         fig, ax = scatter(
-            fig=fig, ax=ax, data=result[[0], -1], label="start", color="g"
+            fig=fig, ax=ax, data=trajectory[[0], -1], label="start", color="g"
         )
-        fig, ax = plot_arms(arms=results, fig=fig, ax=ax, color="orange", alpha=0.4)
-        end_effector_trajectory = result[:, -1]
+        fig, ax = plot_arms(
+            arms=results[0][::40][None], fig=fig, ax=ax, color="orange", alpha=0.4
+        )
+        end_effector_trajectory = trajectory[:, -1]
         fig, ax = plot_trajectory(
             trajectory=end_effector_trajectory,
             fig=fig,
@@ -86,6 +98,33 @@ class RLProcess(LearningProcess):
             path=checkpoint_dir,
         )
 
+    def _multi_inference(self, checkpoint_dir: str, sample_size: int = 2) -> None:
+        target = sample_target(
+            radius=self._env_config["n_joints"], num_samples=sample_size
+        )
+        # target = np.array([[-1, 1]]) * 10
+        results = self._algorithm.inference(target)
+        
+        states = np.concatenate(results["states"], axis=0).squeeze()
+        joint_angles = states[:, 4:]
+        print(f"number of sampled actions: {joint_angles.shape}")
+        plot_action_distribution(
+            title="action correlations",
+            actions=joint_angles,
+            colorbar=True,
+            save=True,
+            path=checkpoint_dir,
+        )
+
+    def inference(self, checkpoint_dir: str, sample_size: int = 1) -> None:
+        self.build(no_logger=True)
+        self.load_checkpoint(checkpoint_dir)
+
+        if sample_size > 1:
+            self._multi_inference(checkpoint_dir, sample_size)
+        else:
+            self._single_inference(checkpoint_dir)
+
     def _build(self, no_logger: bool = False) -> None:
         if no_logger:
             self._logger = []
@@ -94,7 +133,7 @@ class RLProcess(LearningProcess):
                 SummaryWriter(self._save_dir),
                 FileSystemLogger(self._save_dir),
             ]
-        self._env: Env = self._build_env()
+        self._env: PlaneRobotEnv = self._build_env()
         write_yaml(self._save_dir + "/env_config.yaml", self._env_config)
         self._algorithm = self._build_algorithm()
         write_yaml(
@@ -109,7 +148,7 @@ class RLProcess(LearningProcess):
         print(json.dumps(self._algo_config, sort_keys=True, indent=4))
         print(json.dumps(self._env_config, sort_keys=True, indent=4))
 
-    def _build_env(self, *args, **kwargs) -> Env:
+    def _build_env(self, *args, **kwargs) -> PlaneRobotEnv:
         task_config = self._env_config["task"]
         if task_config["type"] == ReachGoalTask.__name__:
             task = ReachGoalTask(
@@ -161,6 +200,7 @@ class RLProcess(LearningProcess):
         base_config_path = f"config/base_{self._model_entity_name.lower()}.yaml"
         if checkpoint is None or len(checkpoint) == 0:
             return load_yaml(base_config_path)
+        checkpoint = checkpoint.rstrip("/")
         config_path = (
             "/".join(checkpoint.split("/")[:-1])
             + f"/{self._model_entity_name.upper()}_config.yaml"

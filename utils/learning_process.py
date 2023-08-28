@@ -27,7 +27,7 @@ class LearningProcess(ABC):
         """str: subdir where to store checkpoints"""
         self._save_dir: str
         """str: path to directory where all metrics and files are stored during the process. Has rough structure of 'results/<model_entity>/<subdir>/<x>_<time_stamp>"""
-        self._checkpoint: str = self._extract_from_kwargs("checkpoint", **kwargs)
+        self._checkpoint: str = self._get_checkpoint_path(**kwargs)
         """str: Variable contains path to checkpoint if provided. Else: '' """
         self._sample_size: int = self._extract_from_kwargs("sample_size", **kwargs)
         """int: parameter stores sample size for inference step"""
@@ -109,13 +109,21 @@ class LearningProcess(ABC):
             str: config path
         """
         if "checkpoint" in kwargs.keys():
-            print("/".join(kwargs["checkpoint"].split("/")[:-1]))
+            checkpoint = kwargs["checkpoint"]
+            checkpoint = checkpoint.rstrip("/")
+            print("/".join(checkpoint.split("/")[:-1]))
             config_path = (
-                "/".join(kwargs["checkpoint"].split("/")[:-1])
+                "/".join(checkpoint.split("/")[:-1])
                 + f"/{self._model_entity_name.upper()}_config.yaml"
             )
             return config_path
         return self._base_config_path
+    
+    def _get_checkpoint_path(self, **kwargs) -> str:
+        checkpoint = self._extract_from_kwargs("checkpoint", **kwargs)
+        if checkpoint is not None:
+            checkpoint = checkpoint.rstrip("/")
+        return checkpoint
 
     @staticmethod
     def _set_random_seed(random_seed: int):

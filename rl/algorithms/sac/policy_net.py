@@ -10,9 +10,9 @@ import numpy as np
 
 from torch.distributions import Normal
 from torch.distributions import constraints
-from algorithms.sac.actor.base_actor import Actor
 
 from rl.algorithms.common.distributions import get_distribution
+from rl.algorithms.sac.actor.base_actor import Actor
 from rl.algorithms.sac.actor.latent_actor import LatentActor
 
 # from rl.algorithms.sac.actor.super_actor import SuperActor

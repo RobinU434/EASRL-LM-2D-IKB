@@ -1,6 +1,6 @@
 import numpy as np
 import logging
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List
 
 from numpy import ndarray
 
@@ -65,7 +65,7 @@ class Metrics:
             except AttributeError:
                 extended_metric = value
             setattr(self, key, extended_metric)
-        
+
     @property
     def num_metrics(self) -> int:
         """number of different metrics
@@ -74,3 +74,43 @@ class Metrics:
             int: number of different metrics
         """
         return len(vars(self))
+
+
+def get_max_len(arrays: List[ndarray]) -> int:
+    lens = [len(array) for array in arrays]
+    return max(lens)
+
+
+def _robust_metric(arrays: List[ndarray], metric: Callable):
+    data = np.zeros((len(arrays), get_max_len(arrays), arrays[0].shape[1])) * np.nan
+    for idx, d in enumerate(arrays):
+        data[idx][: len(d)] = d
+
+    mean = metric(data, axis=0)
+
+    # find nan values
+    mean_nan_index = np.unique(np.argwhere(np.isnan(mean))[:, 0])
+    # correct values
+    for index in mean_nan_index:
+        data_not_nan_index = np.unique(np.argwhere(~np.isnan(data[:, index]))[:, 0])
+        mean[index] = metric(data[:, index][data_not_nan_index], axis=0)
+
+    return mean
+
+
+def robust_mean(arrays: List[ndarray]):
+    """calculate mean over a list of arrays with inhomogeneous shape at axis = 0
+
+    Args:
+        arrays (List[ndarray]): list of arrays with the first axis is inhomogeneous shape. e.g. [(128, 2), (127,2)]
+    """
+    return _robust_metric(arrays, np.mean)
+
+
+def robust_std(arrays: List[ndarray]):
+    """calculate mean over a list of arrays with inhomogeneous shape at axis = 0
+
+    Args:
+        arrays (List[ndarray]): list of arrays with the first axis is inhomogeneous shape. e.g. [(128, 2), (127,2)]
+    """
+    return _robust_metric(arrays, np.std)

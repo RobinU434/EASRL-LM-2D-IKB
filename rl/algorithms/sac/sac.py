@@ -198,7 +198,7 @@ class SAC(RLAlgorithm):
         self._q1_target.load_checkpoint(path + f"/q1_target_{epoch_idx}.pt")
         self._q2_target.load_checkpoint(path + f"/q2_target_{epoch_idx}.pt")
         
-    def inference(self, target_positions: ndarray) -> List[ndarray]:
+    def inference(self, target_positions: ndarray) -> Dict[str, List[ndarray]]:
         """performs inference in a list of given target positions
 
         Args:
@@ -207,11 +207,15 @@ class SAC(RLAlgorithm):
         Returns:
             ndarray: trajectories from each arm shape: (num_positions, num_iterations, n_joints + 1, 2)
         """
+        actions = []
+        states = []
         trajectories = []
         self._env: PlaneRobotEnv
         for target_position in target_positions:
             s = self._env.reset(target_position)
             # .copy because of copy by value
+            trajectory_actions = []
+            trajectory_states = []
             trajectory = np.expand_dims(self._env._robot_arm.positions.copy(), axis=0)
             done = False
             while not done:
@@ -221,6 +225,8 @@ class SAC(RLAlgorithm):
                 a, log_prob = self._pi.forward(s_input)
                 # detach grad from action to apply it to the environment where it is converted into a numpy.ndarray
                 a = a.cpu().detach()
+                trajectory_actions.append(a)
+                trajectory_states.append(s)
                 s_prime, r, done, info = self._env.step(a.numpy())
                 trajectory = np.concatenate(
                     [
@@ -230,9 +236,12 @@ class SAC(RLAlgorithm):
                     axis=0,
                 )
                 s = s_prime
+            
+            actions.append(np.stack(trajectory_actions))
+            states.append(np.stack(trajectory_states))
             trajectories.append(trajectory)
-
-        return trajectories
+        results = {"trajectories": trajectories, "actions": actions, "states": states}
+        return results
 
     def print_model(self):
         print("===================================================")

@@ -33,7 +33,7 @@ def execute_commands(args: Dict[str, Any], process: RLProcess):
     elif args["command"] == "print-config":
         process.print_config()
     elif args["command"] == "inference":
-        process.inference(args["checkpoint"].rstrip("/"))
+        process.inference(args["checkpoint"].rstrip("/"), args["sample_size"])
     else:
         return
 

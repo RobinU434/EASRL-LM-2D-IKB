@@ -57,7 +57,6 @@ Interesting to observe is that all agents are minimizing the distance to the tar
     \caption[SAC baseline inference]{SAC inference. The trajectory is plotted in red. robot arms are drawn in yellow with the little dots as positions of each joint. Target position and start position are scattered in blue and green. The space an end-effector is able to reach is plotted in grey.}
     \label{fig:SAC_baseline_inference_trajectory}
 \end{figure}
-
 \begin{figure}
     \begin{center}
         \subfloat[Distance to target policy from experiment 2\textunderscore 1691621262 at checkpoint 5000 ]{
@@ -87,14 +86,11 @@ Interesting to observe is that all agents are minimizing the distance to the tar
     \caption[SAC baseline inference]{Distance to target for each action outcome. The target is consistent at $[-0.5, 0.5] \cdot N$. The threshold of 0.1 at which an episode is concluded successfully is drawn in red.} 
     \label{fig:SAC_baseline_inference_distance}
 \end{figure}
-
 Another interesting detail to observe is the strategy an agent is following to reach the target position. Instead of moving first closely to a straight line towards the target position the agent is moving its end-effector closely to the outer limit of its reach. As we have seen in section \secref{sec:vanilla_sampling} randomly having an end-effector position far away from the origin is less probable compared to a position close to the origin. 
-
 
 \section{VAE}
 
 In the following section I will present the results of our experiments with the Variational-Autoencoder to encode and decode actions from the environment but also learn to solve inverse kinematics by minimizing the presented distance loss form \eqref{eqn:Distance-Loss}. 
-
 
 \subsection{Gaussian Target dataset}
 
@@ -109,61 +105,78 @@ The idea of the gaussian target dataset is the we want to learn an action which 
 \end{figure}
 
 Coming up are the training results for different latent dimensions but only with the distance loss enabled.\\ Because we only leverage the usage of the distance loss we don't need to encode and decode an action from an inverse kinematics solver, we just need to encode the target position where we want to go plus the conditional information.
+
+In \figref{fig:VAE_latent} we want to have a closer look into the reconstruction loss and kl loss. While increasing the number of joints with $N \in [2, 5, 10, 15]$ we are also increasing the level of complexity the network has to master to come up with  suitable action which leads to a low distance loss. The increasing level of complexity is quite noticeable in both the kl loss and reconstruction loss. If we first look into the kl loss, all curves are generally shaped in the same way. First a drop before rising with a little overshoot and finally approaching the finial value asymptotically. While increasing $N$ we can see that the first local minimum shifts to the right, the upwards slope becomes slacker and the overshoot diminishes. This behavior confirms the the theory of increasing complexity while increasing the number of joints.
+
+We can find another indicator by analyzing the reconstruction loss in \figref{fig:VAE_latent} (a) to (c). For all joints it is very good to see that the learning curves are shaped similar but approaching different final performances. For those experiments of $N \in [2, 5]$ we get a reconstruction loss $< 0.02$ independent of the latent dimension. But if we turn towards $N = 10$ we can clearly see that the latent dimension does make a significant difference between finding a solution, with a latent dimension of four, or failing with a latent dimension of eight.
 \begin{figure}
     \begin{center}
-        \subfloat[mean reconstruction loss over the las 20 epochs]{
-            \includegraphics[width=0.46 \linewidth]{figures/experiments/vae_comparison_latent_8_reconstruction_loss.png}
-            \label{fig:VAE_latent_8/reconstruction}
+        \subfloat[mean reconstruction loss over the las 20 epochs for \textbf{latent dimension = 2}]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/vae_comparison_latent_2_reconstruction_loss.png}
+            \label{fig:VAE_latent/reconstruction_2}
             }
         \hfill
-        \subfloat[mean KL-loss over the las 20 epochs]{
-        \includegraphics[width=0.46 \linewidth]{figures/experiments/vae_comparison_latent_8_kl_loss.png}
-            \label{fig:VAE_latent_8/kl}
-            }
-    \end{center}
-    \caption[VAE validation results, only distance loss and latent = 8]{VAE validation results over different amounts of joints and with a latent dimension of 8. Each experiment was conducted 10 times with different random seeds. The solid curve is the average over those 10 experiments and the color shaded area resembles the standard deviation. Notice that the y axis in bot plots is in log scale.}
-    \label{fig:VAE_latent_8}
-\end{figure}
-
-In \figref{fig:VAE_latent_8} and \figref{fig:VAE_latent_4} we want to have a closer look into the reconstruction loss and kl loss. While increasing the number of joints with $N \in [2, 5, 10, 15]$ we are also increasing the level of complexity the network has to master to come up with  suitable action which leads to a low distance loss. The increasing level of complexity is quite noticeable in both the kl loss and reconstruction loss. If we first look into the kl loss, all curves are generally shaped in the same way. First a drop before rising with a little overshoot and finally approaching the finial value asymptotically. While increasing $N$ we can see that the first local minimum shifts to the right, the upwards slope becomes slacker and the overshoot diminishes. This behavior confirms the the theory of increasing complexity while increasing the number of joints.
-
-We can find another indication by analyzing the reconstruction in \figref{fig:VAE_latent_8/reconstruction} and \figref{fig:VAE_latent_4/reconstruction}. For all joints it is very good to see that the learning curves are shaped similar but approaching different final performances. For those experiments of $N \in [2, 5]$ we get a very low reconstruction loss $< 0.02$ independent of the latent dimension. But if we turn towards $N = 10$ we can clearly see that the latent dimension does make a significant difference. 
-\begin{figure}
-    \begin{center}
-        \subfloat[mean reconstruction loss over the las 20 epochs]{
-            \includegraphics[width=0.46 \linewidth]{figures/experiments/vae_comparison_latent_4_reconstruction_loss.png}
-            \label{fig:VAE_latent_4/reconstruction}
+        \subfloat[mean reconstruction loss over the las 20 epochs for \textbf{latent dimension = 4}]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/vae_comparison_latent_4_reconstruction_loss.png}
+            \label{fig:VAE_latent/reconstruction_4}
             }
         \hfill
-        \subfloat[mean KL-loss over the las 20 epochs]{
-        \includegraphics[width=0.46 \linewidth]{figures/experiments/vae_comparison_latent_4_kl_loss.png}
-            \label{fig:VAE_latent_4/kl}
+        \subfloat[mean reconstruction loss over the las 20 epochs for \textbf{latent dimension = 8}]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/vae_comparison_latent_8_reconstruction_loss.png}
+            \label{fig:VAE_latent/reconstruction_8}
+            }
+        \\
+        \subfloat[mean KL-loss over the las 20 epochs for \textbf{latent dimension = 2}]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/vae_comparison_latent_2_kl_loss.png}
+            \label{fig:VAE_latent/kl_2}
+            }
+        \hfill
+        \subfloat[mean KL-loss over the las 20 epochs for \textbf{latent dimension = 4}]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/vae_comparison_latent_4_kl_loss.png}
+            \label{fig:VAE_latent/kl_4}
+            }
+        \hfill
+        \subfloat[mean KL-loss over the las 20 epochs for \textbf{latent dimension = 8}]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/vae_comparison_latent_8_kl_loss.png}
+            \label{fig:VAE_latent/kl_8}
             }
     \end{center}
     \caption[VAE validation results, only distance loss and latent = 4]{VAE validation results over different amounts of joints and with a latent dimension of 4. Each experiment was conducted 10 times with different random seeds. The solid curve is the average over those 10 experiments and the color shaded area resembles the standard deviation. Notice that the y axis in bot plots is in log scale.}
-    \label{fig:VAE_latent_4}
+    \label{fig:VAE_latent}
 \end{figure}
-
-
 \begin{figure}
     \begin{center}
         \subfloat[$N = 2$]{
-            \includegraphics[width=0.23 \linewidth]{figures/experiments/vae_comparison_latent_4_reconstruction_loss.png}
+            \includegraphics[width=0.23 \linewidth]{figures/experiments/vae_comparison_2_latent_2_4_8_reconstruction_loss.png}
             \label{fig:VAE_latent_comparison_reconstruction_loss/2}
             }
         \hfill
         \subfloat[$N = 5$]{
-        \includegraphics[width=0.23 \linewidth]{figures/experiments/vae_comparison_latent_4_kl_loss.png}
+        \includegraphics[width=0.23 \linewidth]{figures/experiments/vae_comparison_5_latent_2_4_8_reconstruction_loss.png}
             \label{fig:VAE_latent_comparison_reconstruction_loss/5}
             }
+        \hfill
+        \subfloat[$N = 10$]{
+            \includegraphics[width=0.23 \linewidth]{figures/experiments/vae_comparison_10_latent_2_4_8_reconstruction_loss.png}
+            \label{fig:VAE_latent_comparison_reconstruction_loss/10}
+            }
+        \hfill
+        \subfloat[$N = 15$]{
+        \includegraphics[width=0.23 \linewidth]{figures/experiments/vae_comparison_15_latent_2_4_8_reconstruction_loss.png}
+            \label{fig:VAE_latent_comparison_reconstruction_loss/15}
+            }
     \end{center}
-    \caption[VAE validation results, only distance loss and latent = 4]{VAE validation results over different amounts of joints and with a latent dimension of 4. Each experiment was conducted 10 times with different random seeds. The solid curve is the average over those 10 experiments and the color shaded area resembles the standard deviation. Notice that the y axis in bot plots is in log scale.}
-    \label{fig:VAE_latent_4}
+    \caption[VAE latent dimension comparison on reconstruction loss]{Comparison on the VAE latent dimension based on validation results over different amounts of joints. Each experiment was conducted 10 times with different random seeds. The solid curve is the average over those 10 experiments and the color shaded area resembles the standard deviation. Notice that the y axis in bot plots is in log scale. In the legend each label is structured as \texttt{<$N$>\textunderscore<latent dimension>}}
+    \label{fig:VAE_latent_comparison_reconstruction_loss}
 \end{figure}
+
+By observing the individual number of joints in each plot of \figref{fig:VAE_latent_comparison_reconstruction_loss} form (a) to (d) we can observe that the latent dimension does make a difference in the final reconstruction loss performances of the trained models. Starting with two joints there is no significant difference between the latent dimensions of two to eight. Continuing with 5 joints we can observe no significant difference in the finial performance but a slight difference with respect of how fast the models are converging. The experiments on a latent dimension of four and eight are very similar while the standard deviation for a latent dimension equal to two increases around 600 epochs indicating that some experiments have slight troubles to converge. \\
+A significant difference in final performance can be observed with $N = 10$. Here the best performance is returned by experiments with a latent dimension of four closely followed by two. Comparing two and four in \figref{fig:VAE_latent_comparison_reconstruction_loss/10} shows that four is much more stable and faster in learning the problem as two. Last ranked are the experiments for a latent dimension of eight. Those experiments are by far not on the same level as with a latent dimension of two and four. A deeper look into the inference shows that the model fails to come up with an action to reach the given target position.\\
+In \figref{fig:VAE_latent_comparison_reconstruction_loss/15} a performance difference is noticeable with a latent dimension of two as best and eight as worst. But since the best performance of the experiments with a latent dimension of two is on the same level as eight in \figref{fig:VAE_latent_comparison_reconstruction_loss/10} we can conclude that the the VAE fails at $N = 15$ with the present hyperparameter as in \tabref{tab:VAE_Hyperparameters}.
 
 \subsection{Pure Actions}
 
-In every state of the sequential decision making process there are multiple actions available to go from the current state $s_t$ to the next state $s_{t+1}$ where the arm end position is at the goal position. To gain a dataset that contains such actions I sampled the robot arm angles in $s_t$ from a uniform distribution $\mathcal{U}_[0, 2\pi]$ and applied the CCD algorithm to get access to the action that leads from $s_t$ to $s_{t+1}$ with the robot arm end position near the goal state. \\
+In every state of the sequential decision making process there are multiple actions available to go from the current state $s_t$ to the next state $s_{t+1}$ where the arm end position is at the goal position. To gain a dataset that contains such actions I sampled the robot arm angles in $s_t$ from a uniform distribution $\mathcal{U}_{[0, 2\pi)}$ and applied the CCD algorithm to get access to the action that leads from $s_t$ to $s_{t+1}$ with the robot arm end position near the goal state. \\
 
 The results of the training process are shown in \figref{}
 

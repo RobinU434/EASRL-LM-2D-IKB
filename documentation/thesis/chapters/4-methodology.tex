@@ -93,8 +93,7 @@ and the target position with
 
 \begin{align}
     p &= [\cos(\beta), \sin(\beta)] \cdot r \label{eqn:position_sample}\\
-    \beta &\sim \mathcal{U}_{[0, 2\pi)} \nonumber\\
-    r  &\sim \mathcal{U}_{[0, N]} \nonumber
+    \beta &\sim \mathcal{U}_{[0, 2\pi)} \ \ r \sim \mathcal{U}_{[0, N]} \nonumber
 \end{align}
 
 While observing $p_{\text{current}, t}$ in \figref{fig:Uniform_dataset/scatter} we can observe that with an increasing number of joints the scattered dots are forming a two dimensional gaussian distribution around the origin. As we can see in \figref{fig:Uniform_dataset/std} the standard deviation is exponentially decreasing. 
@@ -113,7 +112,6 @@ While observing $p_{\text{current}, t}$ in \figref{fig:Uniform_dataset/scatter} 
     \caption[Uniform dataset properties]{Properties of dataset with actions sampled from a uniform distribution. }
     \label{fig:Uniform_dataset}
 \end{figure}
-
 In our application this makes the vanilla algorithm not suitable because we are not covering the observation space close to the maximum reach of the robot arm with more than 2 joints. 
 
 \subsection{Expert Guidance}
@@ -220,6 +218,7 @@ This criterion is also used in a standard supervised learning approach where the
 
 \section{Learning Variational Autoencoder}
 
+In the setting of how to train a 
 
 \section{Software}
 

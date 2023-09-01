@@ -25,8 +25,6 @@ def execute_commands(args: Dict[str, Any], process: RLProcess):
                 logging.error("run was aborted because of a ValueError")
                 continue
             print(f"Completed {i+1}th experiment")
-        process.build()
-        process.train()
     elif args["command"] == "print-model":
         process.build(no_logger=True)
         process.print_model()

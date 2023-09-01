@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Union
 
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from torch import Tensor
 from utils.cuda import dict_to_device
 
@@ -103,6 +104,8 @@ class FeedForwardNetwork(NeuralNetwork):
 
         self._activation_function_type = getattr(nn, activation_function)
         self._linear = self._create_linear_unit(architecture)
+
+        self._optimizer = optim.Adam(self.parameters(), lr=learning_rate)
 
     def _create_linear_unit(self, architecture: List[int]) -> nn.Sequential:
         """creates a linear unit specified with architecture and self._activation_function_type

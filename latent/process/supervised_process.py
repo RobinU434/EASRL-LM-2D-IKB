@@ -48,7 +48,7 @@ class SupervisedProcess(LatentProcess):
         return criterion
 
     def _build_model(self) -> Regressor:
-        post_processor = PostProcessor(**copy(self._config["post_processor_config"]))
+        post_processor = PostProcessor(**copy(self._config["post_processor"]))
         n_joints = self._config["n_joints"]
         
         regressor = Regressor(
@@ -82,5 +82,5 @@ class SupervisedProcess(LatentProcess):
             device=self._device,
             results_path=self._save_dir,
         )
-
+        
         return trainer

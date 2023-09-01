@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Union
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
@@ -62,6 +63,8 @@ class Regressor(FeedForwardNetwork):
         return out
 
     def save(self, path: str, epoch_idx: int, metrics: SupervisedIKMetrics):
+        path = self._create_save_path(path, epoch_idx, metrics)
+        logging.info("save model at: " + path)
         torch.save(
             {
                 "epoch": epoch_idx,

@@ -2,6 +2,7 @@ from abc import abstractmethod
 from copy import copy
 import json
 import logging
+import sys
 import time
 from typing import List, Tuple, Union
 
@@ -42,6 +43,7 @@ class LatentProcess(LearningProcess):
     def print_model(self) -> None:
         """prints model"""
         print(self._model)
+        print(self._criterion)
 
     def _build(self, no_logger: bool = False):
         """builds core component of process:
@@ -127,7 +129,13 @@ class LatentProcess(LearningProcess):
     def _set_data(self):
         """sets internal train_data, val_data and test data"""
         dataset_config = copy(self._config["dataset"])
-        dataset_config["type"] = getattr(datasets, dataset_config["type"])
+        
+        try:
+            dataset_config["type"] = getattr(datasets, dataset_config["type"])
+        except AttributeError:
+            logging.fatal(f"no dataset class named {dataset_config['type']} found. Available are {list(vars(datasets).keys())}")
+            sys.exit()
+
         self._train_data = load_data(
             n_joints=self._config["n_joints"],
             data_entity="train",
@@ -146,11 +154,12 @@ class LatentProcess(LearningProcess):
 
     @abstractmethod
     def _load_criterion(self) -> Criterion:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def _build_model(self) -> NeuralNetwork:
-        pass
+        raise NotImplementedError
+        
 
     @abstractmethod
     def _build_model_from_config(self) -> NeuralNetwork:
@@ -159,7 +168,8 @@ class LatentProcess(LearningProcess):
         Returns:
             NeuralNetwork: build model
         """
-        pass
+        raise NotImplementedError
+        
 
     @abstractmethod
     def _build_trainer(self) -> Trainer:
@@ -168,4 +178,5 @@ class LatentProcess(LearningProcess):
         Returns:
             Trainer: trainer object which is build
         """
-        pass
+        raise NotImplementedError
+        

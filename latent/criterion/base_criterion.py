@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import logging
 from typing import Any
 
 import torch
@@ -8,6 +9,7 @@ from torch import Tensor
 class Criterion(ABC):
     def __init__(self, device: str = "cpu") -> None:
         super().__init__()
+        logging.debug(f"Init {type(self).__name__}")
         self.loss = torch.inf
         self._device = device
 

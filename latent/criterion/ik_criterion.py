@@ -100,6 +100,7 @@ class IKLoss(Criterion):
             self.imitation_loss_weight * self.imitation_loss
             + self.distance_loss_weight * self.distance_loss
         )
+        print(f"{self.loss=}, {self.imitation_loss=}, {self.distance_loss=}")
         
         return self.loss.to(self._device)
 

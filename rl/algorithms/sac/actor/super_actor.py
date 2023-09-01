@@ -1,4 +1,5 @@
 import glob
+import os
 import numpy as np
 import yaml
 import torch
@@ -7,6 +8,7 @@ import logging
 from torch import Tensor
 from torch.utils.data import DataLoader
 import torch.nn as nn
+import torch.optim as optim
 from latent.datasets.utils import split_state_information
 from latent.model.regressor import Regressor
 from latent.model.utils.post_processor import PostProcessor
@@ -14,7 +16,9 @@ from latent.model.utils.post_processor import PostProcessor
 from rl.algorithms.sac.actor.base_actor import Actor
 from rl.algorithms.sac.actor.utils import TrainMode
 
-from typing import Any, List, Tuple, Literal, Union
+from typing import Any, Dict, List, Tuple, Literal, Union
+from utils.file_system import write_yaml
+from utils.metrics import Metrics
 
 from utils.model.neural_network import NeuralNetwork
 
@@ -68,6 +72,7 @@ def load_best_checkpoint(
     print(f"use checkpoint for supervised at {path}")
     file_name = path.split("/")[-1]
     config = load_config("/".join(path.split("/")[:-1] + ["config.yaml"]))
+    logging.debug(f"Use config at: {config}")
     return file_name, load_checkpoint(path), config
 
 
@@ -77,13 +82,13 @@ class SuperActor(NeuralNetwork):
         input_dim: int,
         output_dim: int,
         learning_rate: float,
-        device: str = "cpu",
         architecture: List[int] = [128, 128],
         activation_function: str = "ReLU",
         super_learning_mode: Union[
             Literal[TrainMode.STATIC], Literal[TrainMode.FINE_TUNING]
         ] = TrainMode.STATIC,
         latent_checkpoint_dir: str = "results/supervised",
+        device: str = "cpu",
         **kwargs,
     ) -> None:
         super().__init__(input_dim, output_dim, learning_rate, device, **kwargs)
@@ -92,7 +97,7 @@ class SuperActor(NeuralNetwork):
         self._regressor_learning_mode = super_learning_mode
         self._regressor = self._build_regressor()
 
-        self.actor = Actor(
+        self._actor = Actor(
             input_dim=input_dim,
             output_dim=2,  # we want to predict a relative target position in 2D space
             learning_rate=learning_rate,
@@ -102,22 +107,54 @@ class SuperActor(NeuralNetwork):
         )
 
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
-        action, log_prob = self.actor.forward(x)
+        action, log_prob = self._actor.forward(x)
         _, current_position, state_angles = split_state_information(x)
         latent = torch.cat([action,  current_position, state_angles], dim=1)
         regressor_action = self._regressor.forward(latent)
         return regressor_action, log_prob
 
     def train(self, loss: Tensor):
-        self.actor.train(loss)
+        self._actor.train(loss)
 
     def _build_regressor(self) -> Regressor:
-        _, regressor_checkpoint, regressor_config = load_best_checkpoint(self._latent_checkpoint_dir, self._output_dim)
-        regressor_config["post_processor"]["enabled"] = False
-        regressor = Regressor.from_config(regressor_config)
-        regressor.load_state_dict(regressor_checkpoint["model_state_dict"])
+        checkpoint_path, self._regressor_checkpoint, self._regressor_config = load_best_checkpoint(self._latent_checkpoint_dir, self._output_dim)
+        self._regressor_checkpoint_name = checkpoint_path.split("/")[-1]
+        self._regressor_config["post_processor"]["enabled"] = False
+        regressor = Regressor.from_config(self._regressor_config)
+        regressor.load_state_dict(self._regressor_checkpoint["model_state_dict"])
         return regressor
+
+    def save(self, path: str, metrics: Metrics = ..., epoch_idx: int = 0):
+        self._actor.save(path, metrics, epoch_idx)
+        path = "/".join(path.split("/")[:-1])
+        regressor_path = path + "/" + self._regressor_checkpoint_name
+        if not os.path.isfile(regressor_path):
+            logging.debug("save regressor checkpoint in save directory of experiment")
+            torch.save(self._regressor_checkpoint, regressor_path)
+        config_path = path + "/regressor_config.yaml"
+        if not os.path.isfile(config_path):
+            write_yaml(config_path, self._regressor_config)
+
+    def load_checkpoint(self, path: str):
+        """loads checkpoint from filesystem
+
+        Args:
+            path (str): path to actor checkpoint
+        """ 
+        self._actor.load_checkpoint(path)
+
+        # find vae_path
+        # assume the vae checkpoint is one directory up the tree
+        path = "/".join(path.split("/")[:-2])
+        regressor_checkpoint = glob.glob(path + "/Regressor_*.pt")[0]
+        logging.debug(f"{regressor_checkpoint}")
+        self._regressor.load_checkpoint(regressor_checkpoint)
     
     @property
-    def optimizer(self):
-        return self.actor._optimizer
+    def optimizer(self) -> optim.Optimizer:
+        return self._actor._optimizer
+    
+    @property
+    def hparams(self) -> Dict[str, Union[str, int, float]]:
+        hparams = {"learning_rate": self._learning_rate}
+        return hparams # type: ignore

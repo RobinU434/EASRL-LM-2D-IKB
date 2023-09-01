@@ -67,7 +67,7 @@ def load_best_checkpoint(
     d = dict(zip(losses, paths))
     path = d[min(d)]
     print(f"use checkpoint for VAE at {path}")
-    logging.debug(torch.cuda.memory_allocated(6))
+    logging.debug(f"{torch.cuda.memory_allocated(6)=}")
     file_name = path.split("/")[-1]
     config = load_config("/".join(path.split("/")[:-1] + ["config.yaml"]))
     return file_name, load_checkpoint(path), config
@@ -90,8 +90,6 @@ class LatentActor(NeuralNetwork):
         **kwargs,
     ) -> None:
         super().__init__(input_dim, output_dim, learning_rate, device,**kwargs)
-
-        self._device = device
 
         self._vae_learning_mode = vae_learning_mode
         self._latent_dim = latent_dim
@@ -137,15 +135,6 @@ class LatentActor(NeuralNetwork):
         vae.load_state_dict(self._vae_checkpoint["model_state_dict"]) # type: ignore
         return vae
 
-    @property
-    def optimizer(self) -> optim.Optimizer:
-        return self._actor._optimizer
-    
-    @property
-    def hparams(self) -> Dict[str, Union[str, int, float]]:
-        hparams = {"learning_rate": self._learning_rate}
-        return hparams # type: ignore
-    
     def save(self, path: str, metrics: Metrics = ..., epoch_idx: int = 0):
         self._actor.save(path, metrics, epoch_idx)
         path = "/".join(path.split("/")[:-1])
@@ -167,6 +156,16 @@ class LatentActor(NeuralNetwork):
         # find vae_path
         # assume the vae checkpoint is one directory up the tree
         path = "/".join(path.split("/")[:-2])
-        vae_checkpoint = glob.glob(path + "/VAE*.pt")[0]
-        print(vae_checkpoint)
+        vae_checkpoint = glob.glob(path + "/VAE_*.pt")[0]
+        logging.debug(f"{vae_checkpoint=}")
         self._vae.load_checkpoint(vae_checkpoint)
+
+    @property
+    def optimizer(self) -> optim.Optimizer:
+        return self._actor._optimizer
+    
+    @property
+    def hparams(self) -> Dict[str, Union[str, int, float]]:
+        hparams = {"learning_rate": self._learning_rate}
+        return hparams # type: ignore
+    

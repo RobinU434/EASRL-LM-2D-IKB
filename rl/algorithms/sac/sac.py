@@ -309,6 +309,7 @@ class SAC(RLAlgorithm):
         entropies: List[ndarray] = []
         actor_losses: List[float] = []
         alpha_losses: List[float] = []
+        alphas: List[float] = []
         for _ in range(self._train_iterations):
             mini_batch = self._memory.sample(self._batch_size)
             td_target = self.calc_target(mini_batch)
@@ -325,6 +326,7 @@ class SAC(RLAlgorithm):
             entropies.append(entropy.cpu().detach().numpy())
             actor_losses.append(actor_loss.item())
             alpha_losses.append(alpha_loss.item())
+            alphas.append(self._pi.alpha)
 
             self._q1.soft_update(self._q1_target, self._tau)
             self._q2.soft_update(self._q2_target, self._tau)
@@ -335,6 +337,7 @@ class SAC(RLAlgorithm):
                 "entropy": np.stack(entropies).mean(axis=1),  # type: ignore
                 "actor_loss": np.array(actor_losses),
                 "alpha_loss": np.array(alpha_losses),
+                "alpha": np.array(alphas)
             }
         )
 

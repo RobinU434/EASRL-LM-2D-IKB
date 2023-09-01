@@ -1,7 +1,6 @@
 {
     "cSpell.words": [
         "autoencoder",
-        "btutils",
         "ELBO",
         "linalg",
         "minibatch",

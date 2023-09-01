@@ -13,19 +13,6 @@ from utils.metrics import robust_mean, robust_std
 import matplotlib.ticker
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-fig, ax = plt.subplots(ncols=1)
-
-mat = np.arange(100).reshape((10, 10))
-cs = ax.imshow(mat, cmap="viridis")
-
-fig.colorbar(
-    cs,
-)
-
-
-plt.tight_layout()
-
-
 def plot2D(plotter: Callable[..., Any]):
     def wrapper(
         title: str = "",

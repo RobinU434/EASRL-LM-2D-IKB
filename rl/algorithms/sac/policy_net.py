@@ -49,16 +49,12 @@ class PolicyNet(NeuralNetwork):
                 device=device,
                 **actor_config,
             )
-        # elif actor_config["type"] == SuperActor.__name__:
-        #     self.actor = SuperActor(
-        #         device=actor_config["device"],
-        #         input_dim=input_dim,
-        #         output_dim=output_dim,
-        #         learning_rate=learning_rate,
-        #         super_learning_mode=actor_config["learning_mode"],
-        #         checkpoint_dir=actor_config["checkpoint_dir"],
-        #         log_dir=actor_config["log_dir"],
-        #     )
+        elif actor_config["type"] == SuperActor.__name__:
+            self.actor = SuperActor(
+                input_dim=input_dim,
+                output_dim=output_dim,
+                **actor_config
+            )
         else:
             raise NotImplementedError(
                 f"requested actor {actor_config['type']} is not implemented."
@@ -128,6 +124,12 @@ class PolicyNet(NeuralNetwork):
 
         return entropy, loss, alpha_loss
 
+    def save(self, path: str, metrics: Metrics = ..., epoch_idx: int = 0):
+        self.actor.save(path, metrics, epoch_idx)
+
+    def load_checkpoint(self, path: str):
+        self.actor.load_checkpoint(path)
+
     @property
     def optimizer(self) -> optim.Optimizer:
         return self.actor.optimizer # type: ignore
@@ -138,9 +140,8 @@ class PolicyNet(NeuralNetwork):
             "learning_rate": self.actor._learning_rate,  # type: ignore
             "learning_rate_alpha": self._learning_rate_alpha,
         }
-
-    def save(self, path: str, metrics: Metrics = ..., epoch_idx: int = 0):
-        self.actor.save(path, metrics, epoch_idx)
-
-    def load_checkpoint(self, path: str):
-        self.actor.load_checkpoint(path)
+    
+    @property
+    def alpha(self) -> float:
+        alpha = self.log_alpha.exp().item()
+        return alpha

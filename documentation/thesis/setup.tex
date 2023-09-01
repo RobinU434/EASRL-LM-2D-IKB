@@ -45,6 +45,7 @@
     \usepackage{amsmath}  % |
     \numberwithin{equation}{chapter}
     \numberwithin{figure}{chapter}
+    \numberwithin{table}{chapter}
     \usepackage{amsthm}   % | math, bmatrix etc
     \usepackage{amsfonts} % |
     \usepackage{calc}  % calculate within LaTeX
@@ -159,6 +160,23 @@
 	\setcounter{extends}{0}
 	\newcounter{drafts}
 	\setcounter{drafts}{0}
+
+	% ------------------- interval -------------------
+    \usepackage{xparse}
+    \NewDocumentCommand{\INTERVALINNARDS}{ m m }{
+        #1 {,} #2
+    }
+    \NewDocumentCommand{\interval}{ s m >{\SplitArgument{1}{,}}m m o }{
+        \IfBooleanTF{#1}{
+            \left#2 \INTERVALINNARDS #3 \right#4
+        }{
+            \IfValueTF{#5}{
+                #5{#2} \INTERVALINNARDS #3 #5{#4}
+            }{
+                #2 \INTERVALINNARDS #3 #4
+            }
+        }
+    }
 
 	% ------------------- marker commands -------------------
     % ToDo command

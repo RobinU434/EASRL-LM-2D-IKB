@@ -98,8 +98,8 @@ One fundamental concept for reinforcement learning algorithms is policy iteratio
 % \include{figures/background/policy-iteration}
 \begin{figure}
     \begin{center}
-        \includegraphics[width=0.5\linewidth]{figures/place_holder.png}
-        \caption[policy iteration concept]{\textbf{schematic drawing of a conditional Variational Autoencoder}}
+        \includegraphics[width=0.5\linewidth]{figures/background/PolicyIterationConcept.png}
+        \caption[policy iteration concept]{policy iteration concept}
         \label{fig:policy-iteration-concept}
     \end{center}
 \end{figure}
@@ -109,8 +109,8 @@ We can also think about this process as a tradeoff between improving the policy 
 % \include{figures/background/policy_iteration_funnel}
 \begin{figure}
     \begin{center}
-        \includegraphics[width=0.5\linewidth]{figures/place_holder.png}
-        \caption[policy iteration funnel. The red arrows are a symbolic policy improvement step which is moving away from a precise value function. The blue arrows are a symbolic policy evaluation step which is moving the current policy further away from a greedy and thus stable policy. Both criterions are moving over time closer together until convergence with the optimal policy $\pi_*$ and the optimal value function $v_*$]{\textbf{schematic drawing of a conditional Variational Autoencoder}}
+        \includegraphics[width=0.5\linewidth]{figures/background/PolicyIterationFunnel.png}
+        \caption[Policy iteration funnel]{Policy iteration funnel. The red arrows are a symbolic policy improvement step which is moving away from a precise value function. The blue arrows are a symbolic policy evaluation step which is moving the current policy further away from a greedy and thus stable policy. Both criterions are moving over time closer together until convergence with the optimal policy $\pi_*$ and the optimal value function $v_*$}
         \label{fig:policy-iteration-concept-funnel}
     \end{center}
 \end{figure}
@@ -258,7 +258,53 @@ The second approach how to treat $\alpha$, proposed by XXX \todo{fill}, adjusts 
 \eqref{eqn:alpha-criterion} resembles an objective for dual gradient descent because we are trying to minimize $\alpha$ but also the expected difference between the policy entropy and a target entropy $\bar{H}$ as a hyperparameter. In practice this can be translated into a positive gradient if the expected difference is positive so the agent is less exploring as should be and into a negative gradient if the difference is negative so the agent is to focused on exploring. Selecting a target entropy is not as delicate as selecting a fixed $\alpha$ because you are able to read from training results if your environment requires a more or less greedy policy. 
 \todo{dual gradient descent chapter. }
 
-\input{figures/background/algo_SAC}
+\begin{algorithm}
+	\caption{Soft Actor Critic}\label{alg:SAC}
+	\begin{algorithmic}
+		\State{} Input: initial policy parameters $\theta$, Q-function parameters $\phi_0$, $\phi_1$, empty replay buffer $\mathcal{D}$
+			\State{} Set target parameters equal to main parameters $\phi_{\text{target}, 0}$ $\leftarrow$ $\phi_0$, $\phi_{\text{target}, 1}$ $\leftarrow$ $\phi_1$ 
+			\For{$i$ in number of epochs}
+			\State{} $s$ $\leftarrow$ reset environment
+			
+			\For{$t$ number of timesteps}
+			\State{} $a$ $\sim$ $\pi_\theta(\cdot | s)$
+			\State{} $s'$, $r$, $d$ $\leftarrow$ execute $a$ in environment
+			\State{} Store $(s, a, r, s', d)$ in replay buffer $\mathcal{D}$
+			\If{$d$ is true}
+			\State{} break and reset environment
+			\EndIf{}
+			\State{} $s$ $\leftarrow$ $s'$
+			\EndFor{}
+			
+			\If{$|\mathcal{D}|$ > minimal buffer size}
+			\For{number of train iterations}
+			\State{} sample minibatch: $(s_\mathcal{B}, a_\mathcal{B}, r_\mathcal{B}, s'_\mathcal{B}, d_\mathcal{B}) = \mathcal{B}$ $\leftarrow$ $\mathcal{D}$ 
+			\State{} compute td target $y$ with $\tilde{a}'_\mathcal{B} \sim \pi_\theta(\cdot|s'_\mathcal{B})$
+			\begin{equation}\label{eqn:td-target-batch}
+				y(r_\mathcal{B}, s'_\mathcal{B}, d_\mathcal{B}) = r + \gamma \cdot d \cdot \left(\min_{i\in\{0, 1\}}\left(Q_{\phi_{\text{target}, i}}(s'_\mathcal{B}, \tilde{a}'_\mathcal{B})\right) - \alpha \cdot \log\left(\pi_\theta(\tilde{a}'_\mathcal{B}|s'_\mathcal{B})\right)\right)
+			\end{equation}
+			\State{} Update Q-functions for parameters $\phi_i$ $i \in \{0, 1\}$ using:
+			\begin{equation}\label{eqn:q-update}
+				\nabla_{\phi_i} \frac{1}{|B|} \sum_{k \in |\mathcal{B}|}\mathcal{L}_\beta\left(y(r_{\mathcal{B}, k}, s'_{\mathcal{B}, k}, d_{\mathcal{B}, k}), Q_{\phi_i}(s_{\mathcal{B}, k}, a_{\mathcal{B}, k})\right)    
+			\end{equation}
+			\State{} Update policy with $\tilde{a}_\mathcal{B} \sim \pi_\theta(\cdot|s_\mathcal{B})$ using:
+			\begin{equation}\label{eqn:policy-update}
+			   \nabla_{\theta} \frac{1}{|\mathcal{B}|}\sum_{k \in |\mathcal{B}|}\min_{i\in\{0, 1\}}Q_{\phi_i}(s_{\mathcal{B}, k}, \tilde{a}_{\mathcal{B}, k}) - \alpha \cdot \log\left(\pi_\theta(\tilde{a}_{\mathcal{B}, k}|s_{\mathcal{B}, k}\right))
+			\end{equation}
+			\State{} Update $\alpha$ with target entropy $H_\text{target}$ and $\tilde{a}_\mathcal{B} \sim \pi_\theta(\cdot|s_\mathcal{B})$ using:
+			\begin{equation*}
+				\nabla_\alpha -\frac{\alpha}{|\mathcal{B}|} \sum_{k \in |\mathcal{B}|} \left(\log\left(\pi_\theta(a'_{\mathcal{B}, k}|s_{\mathcal{B}, k})\right)\ - H_\text{target}\right)
+			\end{equation*}
+			\State{} Update target networks $\phi_{\text{target}, i}$ $i \in \{0, 1\}$ with $\phi_i$ $i \in \{0, 1\}$ using:
+			\begin{equation*}
+				\phi_{\text{target}, i} \leftarrow \rho \phi_{\text{target}, i} + (1 - \rho) \phi_i
+			\end{equation*}
+			\EndFor{}
+			\EndIf{}
+			\EndFor{}
+	\end{algorithmic}
+\end{algorithm}
+
 \todo{rework equations from pseudo code}
 
 \subsection{Advantages}
@@ -327,13 +373,58 @@ Nowadays neural networks are employed over a vast variety of tasks like image re
 Neural networks are a type of machine learning model inspired by the structure and function by the cell type of neurons. It consists like their biological model, of interconnected layers of individual units, called neurons.
 
 The basic architecture of a neural network as in \figref{fig:neural_network_schema/feed-forward-architecture},  includes an input layer (yellow), one or more hidden layers (blue and green), and an output layer (red). The input layer receives the input data, which is then passed through the hidden layers before producing the output. Because the flow of information is only in the forward direction we call this basic architecture a feed forward neural network. The number of nodes in each layer and the connections between them are configured by the architecture of a network.
-
-\input{figures/background/neural_network}
+\begin{figure}
+    \begin{center}
+        \subfloat[schematic drawing of a feed forward neural network]{
+            \includegraphics[width=0.51\linewidth]{figures/background/FeedForwardNetwork.png}
+            \label{fig:neural_network_schema/feed-forward-architecture}
+            }
+        \hfill
+        \subfloat[schematic drawing of a single neuron]{
+            \includegraphics[width=0.35 \linewidth]{figures/background/Neuron.png}
+            \label{fig:neural_network_schema/neuron}
+            } 
+    \end{center}
+    \caption[neural network and neuron schema]{The figure shows the schematic drawing of a feed forward neural network and a neuron}
+    \label{fig:neural_architecture}
+\end{figure}
 
 If we look at each individual neuron as in \figref{fig:neural_network_schema/neuron}, we can observe that each neuron is designed in the same way. First it calculates a weighted sum $z$ of its inputs $x$, the corresponding weights $w$ and bias $b$, before passing it into an activation function $h$ and finally passing the information to the next neuron. The activation function is designed to introduce nonlinearity into the model, allowing it to capture complex relationships between variables. Without a nonlinear activation function the whole network would be a single linear combination of its inputs and weights. Common activation functions include the sigmoid function, the hyperbolic tangent function, and the rectified linear unit (ReLU) function as in \figref{fig:activation_function}
-
-\input{figures/background/activation_function}
-\include{figures/background/network_architectures}
+\begin{figure}
+    \begin{center}
+        \subfloat[Sigmoid]{
+            \includegraphics[width=0.315\linewidth]{figures/background/sigmoid.png}
+            \label{fig:activation_function/sigmoid}
+            }
+        \hfill
+        \subfloat[hyperbolic tangent function]{
+            \includegraphics[width=0.315\linewidth]{figures/background/tanh.png}
+            \label{fig:activation_function/tanh}
+            }
+        \hfill
+        \subfloat[rectified linear unit]{
+            \includegraphics[width=0.315\linewidth]{figures/background/ReLU.png}
+            \label{fig:activation_function/relu}
+            }
+    \end{center}
+    \caption[common activation functions in a neural network]{common activation function for neural networks.}
+    \label{fig:activation_function}
+\end{figure}
+\begin{figure}
+    \begin{center}
+        \subfloat[schematic drawing of convolutional neural network]{
+            \includegraphics[width=0.7\linewidth]{figures/background/ConvNet.png}
+            \label{fig:neural-network-architecture/convolutional-architecture}
+            }
+        \hfill
+        \subfloat[schematic drawing of a recurrent neural network]{
+            \includegraphics[width=0.2\linewidth]{figures/background/RNN.png}
+            \label{fig:neural-network-architecture/recurrent-architecture}
+            } 
+    \end{center}
+    \caption[advanced neural network architectures]{architecture of more advanced neural networks like the convolutional and the recurrent neural network}
+    \label{fig:neural_network-architecture}
+\end{figure}
 
 There are several types of neural network architectures but most of them are based on following types: 
 \begin{itemize}
@@ -347,7 +438,22 @@ There are several types of neural network architectures but most of them are bas
 
 Neural networks are trained using techniques such as backpropagation and stochastic gradient descent as presented in \algoref{alg:SGD}. Backpropagation is an algorithm for calculating the gradient $\hat{g}$ of an optimization criterion with respect to the weights of the network. The gradient can then be used to update the weights and therefor improve the performance of the model with respect to the opimization function. A we can see in \algoref{alg:SGD} stochastic gradient descent minimizes the error presented by the opimization criterion by iteratively adjusting the weights based on randomly selected subsets of the training data. 
 
-\include{figures/background/algo_SGD}
+\begin{algorithm}
+    \caption{Stochastic gradient descent}\label{alg:SGD}
+    \begin{algorithmic}
+        \State{} Input: Learning rate schedule: $\epsilon_1, \epsilon_2, \ldots$. Initial parameter $\theta$
+
+        \State{} $k \leftarrow 1$
+        \While{stopping criterion not met}
+            \State{} Sample a minibatch of $m$ examples from training set $\{x^{(1)}, \ldots, x^{(m)}\}$ with corresponding targets $y^{(i)}$.
+            \State{} Compute gradient estimate:
+            \State{} $\hat{g} \leftarrow \frac{1}{m}\nabla_\theta \sum_i L(f(x^{(i)}; \theta), y^{(i)})$
+            \State{} Apply update:
+            \State{} $\theta \leftarrow \theta - \epsilon_k \hat{g}$
+            \State{} $k \leftarrow k + 1$
+        \EndWhile{}
+\end{algorithmic}
+\end{algorithm} 
 
 Selecting a random subset of training data has a couple of advantages. 
 \begin{itemize}
@@ -357,8 +463,6 @@ Selecting a random subset of training data has a couple of advantages.
 	\item \textbf{Parallel Processing}: Using mini-batches allows parallel processing during training. 
 \end{itemize}
 \todo{find sources}
-
-
 
 \subsection{Applications of Neural Networks}
 
@@ -372,7 +476,6 @@ Neural networks are widely used in real-world applications like in computer visi
 % Describe current research trends in neural networks, such as transfer learning and % reinforcement learning
 % Discuss potential future applications of neural networks, such as personalized medicine and % climate modeling
 % Explain challenges that must be addressed in order for neural networks to continue to advance
-
 
 \section{Variational Autoencoder}
 % In this chapter we want to provide a intuition about Autoencoders 
@@ -401,16 +504,24 @@ Traditional Autoenders have prooven to be successful on a variaty of task like: 
 	\item Incomplete or noisy data: Due to the focus on only reconstructing the input, Autoencoders are not well suited for incomplete or noisy data. One reason could be the lack of disentanglement in the latent space, which means that different dimensions correspond to different underlying features in the input data distribution. 
 	\item Probabilistic Interpretation: Another drawback of the deterministic mapping approach is the lack of probabilistic interpretation capabilities for uncertainty in the learned representation and generated outputs.  
 \end{itemize}
-
-\input{figures/background/AE}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{figures/background/Autoencoder.png}
+    \caption[Autoencoder schematics]{\textbf{schematic drawing of a Autoencoder}}
+    \label{fig:Autoencoder_schematics}
+\end{figure}
 
 \subsection{Variational Autoencoders}\label{sec:VAE}
 
 \todo{ELBO: https://probml.github.io/pml-book/book2.html 779}
 
 A Variational Autoencoder is similar to an Autoencoder but also with some key changes. Similar are the basic setup as a generative unsupervised learning model and the underlying encoder decoder structure. The key difference lays in the in the latent space between the encoder and decoder. Instead of having a fixed deterministic latent space VAEs operate on a probabilistic latent space.
-
-\include{figures/background/VAE}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\linewidth]{figures/background/VAE.png}
+    \caption[Variational Autoencoder schematics]{\textbf{schematic drawing of a Variational Autoencoder}}
+    \label{fig:Variational_Autoencoder_schematics}
+\end{figure}
 
 The encoder network denoted as a approximated parameterized posterior distribution $q_\phi(z|x)$, is a conditional probability distribution in Bayesian inference with the probability of the latent variable $p(z)$ (the prior) and the evidence $p(x)$: 
 
@@ -434,7 +545,13 @@ During training, the VAE aims to maximize the ELBO by iteratively adjusting its 
 
 \subsection{Conditional Variational Autoencoders}
 
-\include{figures/background/CVAE_structure}
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=0.7\linewidth]{figures/background/CVAE.png}
+        \caption[Conditional Variational Autoencoder schematics]{\textbf{schematic drawing of a conditional Variational Autoencoder}}
+        \label{fig:conditional-Variational_Autoencoder_schematics}
+    \end{center}
+\end{figure}
 % Describe the architecture of a CVAE and how it differs from a VAE
 % Explain how CVAEs can be used for supervised learning tasks
 % Describe the role of the conditional input in the encoder and decoder
@@ -534,12 +651,24 @@ Kinematics is the study of motion, specifically the description and analysis of 
 \subsection{Forward kinematics}
 
 Forward kinematics is a concept from robotics that involves determining the position and orientation of an end-effector, like a gripper of a robot arm, based on the joint angles and geometric parameters, like segment length, of the system. It provides a mathematical model for mapping the joint angles to the end-effector position in order to understand the overall configuration and motion of the robot. \eqref{alg:FK} describes a forward kinematics implementation. 
+% \include{figures/background/algo_fk}
 
-\include{figures/background/algo_fk}
+\begin{algorithm}
+    \caption{Forward Kinematics}\label{alg:FK}
+    \begin{algorithmic}
+        \State{} Input: Current joint angles $q$, Segment Length $l$.
+        \State{} Define origin position in 2D space: $p \leftarrow (0, 0)$
+        \For{each $i$ in $[0, \ldots, N - 1]$}
+            \State{} Update position
+            \State{} $p_0 \leftarrow p_0 + \cos(q_i) * l_i$
+            \State{} $p_1 \leftarrow p_1 + \sin(q_i) * l_i$
+        \EndFor{}
+\end{algorithmic}
+\end{algorithm}
 
 Throughout this thesis this function is used with a constant segment length $l = \{1\}^N$ therefor it is referred to as in \eqref{eqn:FK} which maps an angle configuration $q$ into the end-effector position in 2D space.
 
-\begin{equation}[p]\label{eqn:FK}
+\begin{equation}\label{eqn:FK}
 	fk: \mathbb{R}^N \to \mathbb{R}^2
 \end{equation}
 
@@ -574,16 +703,36 @@ Numerous approaches have been proposed to solve the inverse kinematics problem. 
 
 Cyclic Coordinate Descent (CCD) is a popular numerical method for solving inverse kinematics. It is an iterative algorithm that adjusts the joint angles of a robotic system one at a time, from a base joint to the end-effector, in order to align the end-effector with the desired target position.
 
-The algorithm works by iteratively updating the joint angles based on the discrepancy between the current and desired end-effector positions ($p_\text{target}$). At each iteration, CCD focuses on a single joint and adjusts its angle to minimize the positional error. By sequentially updating the joint angles in a cyclic manner, CCD aims to converge towards a solution that satisfies the desired end-effector position.
+\begin{algorithm}
+    \caption{Cyclic Coordinate Descent Pseudo Code}\label{alg:CCD}
+    \begin{algorithmic}
+        \State{} Input: Current joint angles $q$, Desired end-effector position $p_\text{target}$.
+        \While{unitl convergence}
+            \For{each $i$ in $[N-1, \ldots, 0]$}
+                \State{} Calculate vector from current joint position to end-effector position:
+                \State{} $v_\text{current} \leftarrow p_{N-1} - p_i$
 
-\include{figures/background/algo_CCD}
+                \State{} Calculate vector from current joint position to target position:
+                \State{} $v_\text{target} \leftarrow p_\text{target} - p_i$
+
+                \State{} Calculate the necessary rotation to align $v_\text{current}$ with $v_\text{target}$:
+                \State{} $\delta q_i \leftarrow \text{angle\textunderscore between}(v_\text{current}, v_\text{target})$
+
+                \State{} Update joint angle:
+                \State{} $q_i \leftarrow q_i + \delta q_i$
+            \EndFor{}
+        \EndWhile{}
+\end{algorithmic}
+\end{algorithm}
+
+The algorithm works by iteratively updating the joint angles based on the discrepancy between the current and desired end-effector positions ($p_\text{target}$). At each iteration, CCD focuses on a single joint and adjusts its angle to minimize the positional error. By sequentially updating the joint angles in a cyclic manner, CCD aims to converge towards a solution that satisfies the desired end-effector position.
 
 As illustrated in \algoref{alg:CCD} and \figref{fig:background/CCD geometry} in each iteration, CCD calculates the vector from the current joint position $p_i$ with $p_i$ as the position of the $i$th joint with $i \in \{0, \ldots, N-1\}$, to the end-effector position ($v_\text{current}$) and the vector from the current joint position to the target position ($v_\text{target}$). By finding the rotation necessary to align $v_\text{current}$ with $v_\text{target}$, represented as $\delta\phi$, the algorithm updates the joint angle accordingly. This process is repeated for each joint in the kinematic chain until convergence is achieved.
 
-\begin{figure}[ht]
+\begin{figure}
 	\centering
-	\includegraphics[width=0.9\textwidth,]{figures/background/CCD-geometry.png}
-	\caption{CCD geometry}
+	\includegraphics[width=0.4\textwidth,]{figures/background/CCD_geometry.png}
+	\caption[CCD geometry]{CCD geometry: Shown is the geometry of one step in \algoref{alg:CCD}. $p_\text{target}$ is the target position. $p_i$ is the 2D position of each joint. Not that we start with the first joint outside the origin since the base position is fixed to the origin.}
 	\label{fig:background/CCD geometry}
 \end{figure}
 \todo{make own figure}

@@ -7,13 +7,20 @@ experiments on VAE, Supervised and merged pipeline
 
 \section{Research Idea}
 
-The primary research idea of my thesis is to pursue a transformation from the RL environment action space $\mathcal{A}$ into a lower-dimensional latent action space $\mathcal{A}_L$. This latent action space will align with the latent space between the encoder and decoder of a VAE model or the feature space of a feed-forward-neural network. By doing so, we aim to enable RL agents to effectively explore and learn within a more compact and smoothened action representation.
+The primary research idea of my thesis is to pursue a transformation from the RL environment action space $\mathcal{A}$ into a lower-dimensional latent action space $\mathcal{A}_L$. This latent action space will align with the latent space between the encoder and decoder of a VAE model or the feature space of a feed-forward-neural network. By doing so, we aim to enable RL agents to effectively explore and learn within a more compact and smoothened action representation. An schematic drawing can be revisited at \figref{fig:research_idea}
 
 We propose two potential approaches for achieving this reduction in dimensionality: VAEs and supervised models.
 
 In the VAE approach, a conditional or unconditional generative model is employed to learn a latent representation of the action space. By training the VAE on actions from an expert or on state target combinations to emphasis a solution which is independent from an expert, we aim to capture the underlying structure and patterns within the action space from the RL environment. This latent representation can potentially offer a more concise and informative representation of the actions, encourage more efficient learning and exploration for RL agents.
 
-Alternatively, the supervised model approach involves training a supervised learning model, such as a neural network, to directly transform the a defined lower dimensional latent action into the high-dimensional action space. This transformation is learned based on labeled examples of actions and their corresponding latent representations. In the conducted experiments the lower dimensional-action space is just the desired action outcome. By leveraging supervised learning techniques, we aim to find a mapping between state information and desired action outcome to the RL environment action space, allowing RL agent to operate effectively on a higher level within the reduced-dimensional latent action space..
+Alternatively, the supervised model approach involves training a supervised learning model, such as a neural network, to directly transform the a defined lower dimensional latent action into the high-dimensional action space. This transformation is learned based on labeled examples of actions and their corresponding latent representations. In the conducted experiments the lower dimensional-action space is just the desired action outcome. By leveraging supervised learning techniques, we aim to find a mapping between state information and desired action outcome to the RL environment action space, allowing RL agent to operate effectively on a higher level within the reduced-dimensional latent action space.
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\textwidth,]{figures/methodology/SAC+LatentModel.png}
+	\caption[Research idea]{Schematic drawing of how the models would be chained together. The laten model will be replaced by either the decoder of a VAE, a CVAE or a supervised feed forward network. Note that we adapt the additional information $\bar{s_t}$ by the needs of the individual models. }
+	\label{fig:research_idea}
+\end{figure}
+
 
 \section{RL Environment}\label{sec:RL-Environment}
 
@@ -26,6 +33,13 @@ To apply RL in general you need an environment the agent can send actions to and
 
 In this section I'm going to present the a novel RL-Environment for bench-marking the performance of different algorithms to solve inverse kinematics for a robot arm with $N$ many joints and subsequently $N$ many segments with lengths $l \in\mathbb{R}_{>0}^N$ in 2D space. For simplicity reasons $l$ is constant with $l = \{ 1 \}^N$.
 
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.4\textwidth,]{figures/methodology/EnvExample.png}
+	\caption[Plane Robot Environment]{Schematic drawing of the individual state space components.}
+	\label{fig:plane_robot_env}
+\end{figure}
+
 \subsection{State Space}
 
 The state space $\mathcal{S} \subset \mathbb{R}^{4 + N}$ for this environment consists of three main building blocks. 
@@ -33,7 +47,7 @@ The state space $\mathcal{S} \subset \mathbb{R}^{4 + N}$ for this environment co
 \begin{itemize}
     \item \textbf{goal information} $p_{\text{target}, t} \in \mathbb{R}^2$: This vector provides information where to move the end-effector. This position is lies always in for the robot arm, reachable distance. Mathematical speaking: $||p_\text{target}||_2 \leq \sum_{i = 1}^N l_i$ 
     \item \textbf{state position} $p_{\text{current},t} \in \mathbb{R}^2$: This vector contains the current end-effector position in 2D space and should help the agent to understand where the end-effector is placed and how an action has influenced the current end-effector position. Because the current position is attached to the robot arm: $||p_\text{current}||_2 \leq \sum l$.
-    \item \textbf{joint angles} $q_t \in [0, 2\pi)^N$: This vector contains information about the joint angle configuration at time $t$. Note that each joint angles describes the delta angle between the joint direction and a horizontal line from origin in positive x direction.
+    \item \textbf{joint angles} $q_t \in [0, 2\pi^N)$: This vector contains information about the joint angle configuration at time $t$. Note that each joint angles describes the delta angle between the joint direction and a horizontal line from origin in positive x direction.
 \end{itemize}
 A state $s_t \in \mathcal{S}$ at time $t$ has for all $t$ the same composition
 
@@ -70,6 +84,18 @@ The reward function $R: \mathcal{A} \times \mathcal{S} \to \mathbb{R}$ as in \eq
 \begin{equation}\label{eqn:Rewardfunction}
     R(s_t, a_t) = ||FK(s_{t, (4, \ldots, N + 4)}  + a_t), s_{t, (0 ,1)}||_2
 \end{equation}
+
+If you want to normalize the reward function you have to divide $R$ by $N$.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\textwidth,]{figures/methodology/RewardFunction.png}
+	\caption[Reward function]{Normalized Reward function with $q \in [0, 2\pi]^N$ as element of the whole space and $p_\text{target} = [-0.5, 0.5]$. }
+	\label{fig:Reward_function}
+\end{figure}
+
+In \figref{eqn:Rewardfunction} we can see the linear gradient for any current position towards the target position at $[-0.5, 0.5]$.
+
 
 \section{Dataset Creation} \label{sec:Dataset_creation}
 
@@ -112,6 +138,7 @@ While observing $p_{\text{current}, t}$ in \figref{fig:Uniform_dataset/scatter} 
     \caption[Uniform dataset properties]{Properties of dataset with actions sampled from a uniform distribution. }
     \label{fig:Uniform_dataset}
 \end{figure}
+
 In our application this makes the vanilla algorithm not suitable because we are not covering the observation space close to the maximum reach of the robot arm with more than 2 joints. 
 
 \subsection{Expert Guidance}
@@ -216,9 +243,34 @@ This criterion is also used in a standard supervised learning approach where the
     \end{split}
 \end{equation}
 
-\section{Learning Variational Autoencoder}
+\section{Learning the Latent Model}
 
-In the setting of how to train a 
+For the upcoming experiments we settled one setting with one kind of dataset, the TargetGaussian. \\
+The idea behind the gaussian target dataset is to learn an action which moves the end - effector towards a target sampled from a two dimensional gaussian distribution around the end - effector as demonstrated in \figref{fig:TargetGaussian_Schematics}.
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=0.3 \linewidth]{figures/experiments/VAE/TargetGaussian.png}
+    \end{center}
+    \caption[Target Gaussian Schematics]{Schematic drawing how the target gaussian dataset works. First we are going to take the state as is comes form \algoref{alg:Expert_Dataset} (in yellow). Then we are going to sample a target position from inside a the two dimensional truncated or non truncated gaussian distribution (in blue) and define it as new target position. Optionally we can also compute the corresponding CCD action.}
+    \label{fig:TargetGaussian_Schematics}
+\end{figure}
+
+While training the Variational Autoencoder we settled on hyperparameter as in \tabref{tab:VAE_Hyperparameters} and input vectors as in \tabref{tab:VAE_parameter}. It is important to note that $x$ for VAE, concatenated with $c$ equal to $s_t$ is which is the same input as for the Supervised model. 
+\begin{table}[]
+    \centering
+    \begin{tabular}{l|l}
+        Name & Value \\
+        \hline
+        VAE $x$ & $p_{\text{target}, t}$ \\
+        Supervised $x$ & $s_t$ \\
+        $c$ & $(p_{\text{current}, t}, q_t)$ \\
+        $\hat{x}$ & $q_{t + 1}$
+    \end{tabular}
+    \caption[Latent workflow parameter]{Latent workflow parameter with their correlation}
+    \label{tab:Latent Parameter}
+\end{table}
+
+While training VAE and Supervised model you have to account the additional \texttt{tanh} stage in the back of \figref{fig:research_idea}. This additional stage in introduced with an instance of \texttt{PosProcessor}. The \texttt{PosProcessor} is enabled during training the latent model but deactivated during training SAC, because SAC applies a \texttt{tanh} call in the \texttt{PolicyNet}. 
 
 \section{Software}
 

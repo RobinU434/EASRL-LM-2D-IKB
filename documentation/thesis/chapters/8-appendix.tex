@@ -45,7 +45,7 @@
         kl loss weight & 0.001 \\
         reconstruction loss weight & 1 \\
         distance loss weight & 1 \\
-        imitation loss weight & 0 \\
+        imitation loss weight & 0.001 \\
         dataset type & VAETargetGaussianDataset \\
         dataset mode & "IK random start" \\
         dataset batch size & 2096 \\
@@ -91,3 +91,13 @@
     \end{center}
     \caption[SAC Hyperparameter]{Hyperparameter for SAC. Note that the actor type was left empty. For using a standard feed forward actor use "Actor", for using a VAE Decoder as  latent model use: "LatentActor" and for using a separated pretrained supervised training model use "SuperActor".}
 \end{table}
+
+\section{Additional Experiment Plots}
+
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=0.23 \linewidth]{figures/appendix/alpha_loss_15.png}
+    \end{center}
+    \caption[alpha loss with $N = 15$]{Plot to show the correlation between training abortion and spike in alpha loss.}
+    \label{fig:alpha_loss_15}
+\end{figure}

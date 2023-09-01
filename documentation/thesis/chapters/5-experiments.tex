@@ -92,19 +92,10 @@ Another interesting detail to observe is the strategy an agent is following to r
 
 In the following section I will present the results of our experiments with the Variational-Autoencoder to encode and decode actions from the environment but also learn to solve inverse kinematics by minimizing the presented distance loss form \eqref{eqn:Distance-Loss}. 
 
-\subsection{Gaussian Target dataset}
+\subsection{Distance Loss}
 
-The idea of the gaussian target dataset is the we want to learn an action which moves the end - effector in inside a two dimensional gaussian distrribution around the end - effector. as in \figref{fig:TargetGaussian_Schematics}.
-
-\begin{figure}
-    \begin{center}
-        \includegraphics[width=0.3 \linewidth]{figures/experiments/VAE/TargetGaussian.png}
-    \end{center}
-    \caption[Target Gaussian Schematics]{Schematic drawing how the target guassian dataset works. First we are going to take the state as is comes form \algoref{alg:Expert_Dataset}. Then we are going to sample a target position from inside a the two dimensional gaussian distribution in blue and define it as new target position. Optionally we can also compute the corresponding CCD action.}
-    \label{fig:TargetGaussian_Schematics}
-\end{figure}
-
-Coming up are the training results for different latent dimensions but only with the distance loss enabled.\\ Because we only leverage the usage of the distance loss we don't need to encode and decode an action from an inverse kinematics solver, we just need to encode the target position where we want to go plus the conditional information.
+Coming up are the training results for different latent dimensions but only with the distance loss enabled which means \texttt{dataset target mode = ACTION}.\\ 
+Because we only leverage the usage of the distance loss we don't need to encode and decode an action from an inverse kinematics solver, we just need to encode the target position where we want to go plus the conditional information.
 
 In \figref{fig:VAE_latent} we want to have a closer look into the reconstruction loss and kl loss. While increasing the number of joints with $N \in [2, 5, 10, 15]$ we are also increasing the level of complexity the network has to master to come up with  suitable action which leads to a low distance loss. The increasing level of complexity is quite noticeable in both the kl loss and reconstruction loss. If we first look into the kl loss, all curves are generally shaped in the same way. First a drop before rising with a little overshoot and finally approaching the finial value asymptotically. While increasing $N$ we can see that the first local minimum shifts to the right, the upwards slope becomes slacker and the overshoot diminishes. This behavior confirms the the theory of increasing complexity while increasing the number of joints.
 
@@ -173,6 +164,18 @@ We can find another indicator by analyzing the reconstruction loss in \figref{fi
 By observing the individual number of joints in each plot of \figref{fig:VAE_latent_comparison_reconstruction_loss} form (a) to (d) we can observe that the latent dimension does make a difference in the final reconstruction loss performances of the trained models. Starting with two joints there is no significant difference between the latent dimensions of two to eight. Continuing with 5 joints we can observe no significant difference in the finial performance but a slight difference with respect of how fast the models are converging. The experiments on a latent dimension of four and eight are very similar while the standard deviation for a latent dimension equal to two increases around 600 epochs indicating that some experiments have slight troubles to converge. \\
 A significant difference in final performance can be observed with $N = 10$. Here the best performance is returned by experiments with a latent dimension of four closely followed by two. Comparing two and four in \figref{fig:VAE_latent_comparison_reconstruction_loss/10} shows that four is much more stable and faster in learning the problem as two. Last ranked are the experiments for a latent dimension of eight. Those experiments are by far not on the same level as with a latent dimension of two and four. A deeper look into the inference shows that the model fails to come up with an action to reach the given target position.\\
 In \figref{fig:VAE_latent_comparison_reconstruction_loss/15} a performance difference is noticeable with a latent dimension of two as best and eight as worst. But since the best performance of the experiments with a latent dimension of two is on the same level as eight in \figref{fig:VAE_latent_comparison_reconstruction_loss/10} we can conclude that the the VAE fails at $N = 15$ with the present hyperparameter as in \tabref{tab:VAE_Hyperparameters}.
+
+\subsection{Distance Loss plus Imitation Loss}
+
+In this section we are going to present the results of training the VAE with the imitation loss to pre-calculated solutions from \algoref{alg:CCD}. 
+
+Because of time limitation we applied this loss function only on a setting with a latent dimension of four since this was the best latent dimension fitted only with the distance loss. 
+
+All in all the distance loss functions in \figref{} yield almost the same examples as the distance loss functions in \figref{fig:VAE_latent/reconstruction_4}. Additional to the distance loss we have got also an imitation loss between the computed action 
+
+\begin 
+
+
 
 \subsection{Pure Actions}
 
@@ -332,10 +335,15 @@ This decrease is even more noticeable at 10 joints where is now a gap between th
 \end{figure}
 
 In \figref{fig:SAC_latent_comparison_episode_len} we can observe the mean episode length for different $N \in [2, 5, 10, 15]$. Starting at two joints we can see not much of a difference but at five joints we can observe slight differnces between different latent dimensions. First up is the latent dimension of 2. At this value the experiments perform as in \figref{fig:SAC_latent_comparison_mean_score/5} worst. \todo{discuss why}.\\
-Moving on to a latent dimension of four, those experiments perform best in terms of mean episode length and even undercut the baseline experiments although they have not performed as good in terms of the mean score per step in \figref{fig:SAC_latent_comparison_mean_score/5}. Finally those experiments with a latent dimension of eight are performing almost on the same level as the baseline experiments but not as good as the experiments with a latent dimension of 4.
-In \figref{fig:SAC_latent_comparison_mean_score/10} we can see wide variety of best performances. The best performing setting are the baseline experiments followed by the experiments with a latent dimension of four. The next best performance is coming from a latent dimension equal to two and last ranked are the experiments with a latent dimension of eight. As we have mentioned earlier we suspect this drop in performance caused by the quality the decoder gets hand over to the Soft Actor Critic.
-Note that although the maximum number of steps per episode was set to 400 the standard deviation of the experiment with a latent dimension of eight seam to surpass this threshold which is with a closer look into the actual curves clearly not the case. \todo{insert plot in appendix}. 
-On the performed experiments with 15 joints we can see that none of the latent experiments is able to match the performance of the baseline experiments with even a couple of experiments with a latent dimension of four or eight aborting early. As it turns out this abort is caused by abnormally high values for alpha loss resulting in nan values in update steps. A positive alpha loss translates to a an increase of alpha translates to an increase in exploration for the policy, by encouraging a higher standard deviation for the parameterized distribution returned by the actor network. 
+Moving on to a latent dimension of four, those experiments perform best in terms of mean episode length and even undercut the baseline experiments although they have not performed as good in terms of the mean score per step in \figref{fig:SAC_latent_comparison_mean_score/5}. Finally those experiments with a latent dimension of eight are performing almost on the same level as the baseline experiments but not as good as the experiments with a latent dimension of 4. \\
+In \figref{fig:SAC_latent_comparison_mean_score/10} we can see wide variety of best performances. The best performing setting are the baseline experiments followed by the experiments with a latent dimension of four. The next best performance is coming from a latent dimension equal to two and last ranked are the experiments with a latent dimension of eight. As we have mentioned earlier we suspect this drop in performance caused by the quality the decoder gets hand over to the Soft Actor Critic. \\
+Note that although the maximum number of steps per episode was set to 400 the standard deviation of the experiment with a latent dimension of eight seam to surpass this threshold which is with a closer look into the actual curves clearly not the case. \todo{insert plot in appendix}. \\ 
+On the performed experiments with 15 joints we can see that none of the latent experiments is able to match the performance of the baseline experiments with even a couple of experiments with a latent dimension of four or eight aborting early. As it turns out this abort is caused by abnormally high values for alpha loss as shown in \figref{fig:alpha_loss_15} resulting in \texttt{nan} values in update steps. A positive alpha loss translates to a an increase of alpha translates to an increase in exploration for the policy, by encouraging a higher standard deviation for the parameterized distribution returned by the actor network. 
 
 As a result of the previous observations we can see the latent dimension as an additional hyperparameter to optimize. Because setting it to high could lead the extremely high variance in the Soft Actor Critic task as shown in \figref{fig:SAC_latent_comparison/10} and also
 
+
+\section{Supervised}
+
+
+\section{SAC with Supervised}

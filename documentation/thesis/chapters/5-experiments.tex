@@ -173,10 +173,6 @@ Because of time limitation we applied this loss function only on a setting with 
 
 All in all the distance loss functions in \figref{} yield almost the same examples as the distance loss functions in \figref{fig:VAE_latent/reconstruction_4}. Additional to the distance loss we have got also an imitation loss between the computed action 
 
-\begin 
-
-
-
 \subsection{Pure Actions}
 
 In every state of the sequential decision making process there are multiple actions available to go from the current state $s_t$ to the next state $s_{t+1}$ where the arm end position is at the goal position. To gain a dataset that contains such actions I sampled the robot arm angles in $s_t$ from a uniform distribution $\mathcal{U}_{[0, 2\pi)}$ and applied the CCD algorithm to get access to the action that leads from $s_t$ to $s_{t+1}$ with the robot arm end position near the goal state. \\
@@ -345,5 +341,17 @@ As a result of the previous observations we can see the latent dimension as an a
 
 \section{Supervised}
 
+For the supervised actions we only relied on state information as the input to predict an action to reach from the current state the given target position.  Since this approach is very similar to the Variational Autoencoder setting we are also able to apply the afore mentioned Inverse Kinematics Loss with distance and imitation loss.
+
+The results of the supervised experiments are divided into two parts. The first is only applying the distance loss while the second one is incorporating also an imitation loss with respect ot pre computed actions from the CCD solver.
+
+\subsection{Distance Loss}
+
+The distance loss results over different amount of joints are very similar compared to \figref{} \todo{reference to distance plot from VAE setting.}. We can also see a decrease in performance while increase the number of joints. 
+
+\subsection{Distance + Imitation Loss}
+
+For this series of experiments we also want to emphasis solutions close to solutions computed by the CCD by setting the dataset mode to \texttt{ACTION} and setting the imitation loss weight to 0.01. Like in the first part the distance loss plots are looking very similar to the previous ones as we also see a steady decrease in performance while increasing the number of joints. 
+A bit more interesting are the results on the imitation loss. All curves have a drop in the first couple of epochs but are constant for the rest of the training. Comparing those curves with respect to the number of joints we observed that all mean curves have vastly different levels of convergence which seems not to be linear correlated with $N$. 
 
 \section{SAC with Supervised}

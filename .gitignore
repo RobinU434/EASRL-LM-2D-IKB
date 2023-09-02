@@ -131,6 +131,7 @@ dmypy.json
 # results 
 results/*
 results-old/*
+results_old/*
 *.csv
 
 ## Core latex/pdflatex auxiliary files:

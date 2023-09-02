@@ -28,13 +28,14 @@ def plot2D(plotter: Callable[..., Any]):
         grid: bool = False,
         log_scale: bool = False,
         colorbar: bool = False,
+        projection: str = None, # type: ignore
         **kwargs,
     ) -> Tuple[Figure, Axes]:
         mpl.rcParams["figure.dpi"] = dpi
         if fig is None:
             fig = plt.figure()
         if ax is None:
-            ax = fig.add_subplot()
+            ax = fig.add_subplot(projection=projection)
         if len(title) > 0:
             ax.set_title(title)
 
@@ -269,3 +270,23 @@ def plot_action_distribution(
 
 def plot_joint_correlation(ax: Axes, actions: ndarray) -> Axes:
     return ax
+
+@plot2D
+def plot_pcolormesh(ax: Axes, angle: ndarray, radius: ndarray, z: ndarray, alpha: float = 1, cmap: str = "viridis") -> Axes:
+    """plot polar color mesh
+
+    Args:
+        ax (Axes): axes to plot on
+        angle (ndarray): two dimensions to of angle
+        radius (ndarray): two dimensional array of radius
+        z (ndarray): two dimensional array of z value
+        alpha (float, optional): 1 - transparity value. Defaults to 1.
+        cmap (str, optional): colormap. Defaults to "viridis".
+
+    Returns:
+        Axes: _description_
+    """
+    ax.pcolormesh(angle, radius, z, alpha=alpha, cmap=cmap)
+
+    return ax
+

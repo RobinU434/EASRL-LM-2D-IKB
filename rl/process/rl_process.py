@@ -20,6 +20,7 @@ from utils.plot import (
     plot_arms,
     plot_circle,
     plot_distances,
+    plot_pcolormesh,
     plot_trajectory,
     scatter,
 )
@@ -99,12 +100,22 @@ class RLProcess(LearningProcess):
         )
 
     def _multi_inference(self, checkpoint_dir: str, sample_size: int = 2) -> None:
-        target = sample_target(
-            radius=self._env_config["n_joints"], num_samples=sample_size
-        )
-        # target = np.array([[-1, 1]]) * 10
+        sample_size_sqrt = int(np.sqrt(sample_size))
+        if sample_size % sample_size_sqrt != 0:
+            sample_size = sample_size_sqrt**2
+            logging.warning(f"sample size is not a square -> compute for {sample_size}")
+        rad = np.linspace(0, self._env_config["n_joints"], sample_size_sqrt)
+        azm = np.linspace(0, 2 * np.pi, sample_size_sqrt)
+        r, th = np.meshgrid(rad, azm)
+
+        cart_coords = np.stack([np.cos(th), np.sin(th)]) * r
+        cart_coords = cart_coords.T
+
+        target = np.zeros((sample_size, 3))
+        target[:, :2] = cart_coords.reshape(sample_size, 2)
+
         results = self._algorithm.inference(target)
-        
+
         states = np.concatenate(results["states"], axis=0).squeeze()
         joint_angles = states[:, 4:]
         print(f"number of sampled actions: {joint_angles.shape}")
@@ -115,6 +126,26 @@ class RLProcess(LearningProcess):
             save=True,
             path=checkpoint_dir,
         )
+
+        num_iterations = np.array(
+            [len(traj) for traj in results["trajectories"]]
+        ).reshape(int(np.sqrt(sample_size)))
+
+        solved = np.ones((sample_size_sqrt, sample_size_sqrt), dtype=bool)
+        solved[solved >= self._env_config["n_time_steps"]] = False
+        num_iterations = num_iterations.reshape(sample_size_sqrt, sample_size_sqrt)
+        num_iterations[~solved] = np.nan
+
+        plot_pcolormesh(
+            angle=th,
+            radius=r,
+            z=num_iterations,
+            projection="polar",
+            title="RL Agent Iterations",
+            colorbar=True,
+            save=True,
+            path=checkpoint_dir)
+        
 
     def inference(self, checkpoint_dir: str, sample_size: int = 1) -> None:
         self.build(no_logger=True)

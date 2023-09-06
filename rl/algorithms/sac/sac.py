@@ -4,6 +4,7 @@
 # (date: 04.12.2022)
 # =====================================================================================================================
 
+import logging
 import os
 from typing import Any, Dict, List, Tuple, Union
 
@@ -13,6 +14,7 @@ import torch
 from gym import Env
 from matplotlib import pyplot as plt
 from numpy import ndarray
+from progress.bar import Bar
 from torch import Tensor
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
@@ -207,10 +209,12 @@ class SAC(RLAlgorithm):
         Returns:
             ndarray: trajectories from each arm shape: (num_positions, num_iterations, n_joints + 1, 2)
         """
+        logging.debug("Start SAC inference")
         actions = []
         states = []
         trajectories = []
         self._env: PlaneRobotEnv
+        bar = Bar("SAC inference target positions", max=len(target_positions))
         for target_position in target_positions:
             s = self._env.reset(target_position)
             # .copy because of copy by value
@@ -240,6 +244,9 @@ class SAC(RLAlgorithm):
             actions.append(np.stack(trajectory_actions))
             states.append(np.stack(trajectory_states))
             trajectories.append(trajectory)
+            bar.next()
+        bar.finish()
+
         results = {"trajectories": trajectories, "actions": actions, "states": states}
         return results
 

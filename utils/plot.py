@@ -1,17 +1,20 @@
 import logging
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, List, Tuple, Type
+
 import matplotlib as mpl
-from matplotlib.figure import Figure
-from matplotlib.axes import Axes
-from matplotlib.patches import Circle
 import matplotlib.pyplot as plt
-from numpy import ndarray
+import matplotlib.ticker
+import matplotlib.collections as collections
+import matplotlib.image as image
 import numpy as np
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from matplotlib.patches import Circle
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from numpy import ndarray
 
 from utils.metrics import robust_mean, robust_std
 
-import matplotlib.ticker
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def plot2D(plotter: Callable[..., Any]):
     def wrapper(
@@ -28,7 +31,7 @@ def plot2D(plotter: Callable[..., Any]):
         grid: bool = False,
         log_scale: bool = False,
         colorbar: bool = False,
-        projection: str = None, # type: ignore
+        projection: str = None,  # type: ignore
         **kwargs,
     ) -> Tuple[Figure, Axes]:
         mpl.rcParams["figure.dpi"] = dpi
@@ -36,7 +39,7 @@ def plot2D(plotter: Callable[..., Any]):
             fig = plt.figure()
         if ax is None:
             ax = fig.add_subplot(projection=projection)
-        if len(title) > 0:
+        if title:
             ax.set_title(title)
 
         ax = plotter(ax=ax, color=color, alpha=alpha, **kwargs)
@@ -50,16 +53,19 @@ def plot2D(plotter: Callable[..., Any]):
         if log_scale:
             ax.set_yscale("log")
         if colorbar:
-            im_ax = mpl.image.AxesImage(ax)
-            divider = make_axes_locatable(ax)
-            dvider_kwargs = dict(position="right", size="5%", pad=0.3)
-            cbar = fig.colorbar(
-                im_ax,
-                cax=divider.append_axes(**dvider_kwargs),
-                format=matplotlib.ticker.FuncFormatter(lambda x, pos: ""),
-                ticks=[0, 1]
-            )
-            cbar.ax.set_yticklabels(["0", ">0"])
+            # Create a separate axes for the colorbar outside of the polar projection
+            cax = fig.add_subplot(
+                [0.85, 0.1, 0.03, 0.78]
+            )  # [left, bottom, width, height]
+            axis = ax.get_children()
+            if projection == "polar":
+                key = collections.QuadMesh
+            else:
+                key = image.AxesImage
+
+            mesh = _find_instance(axis, key)
+            cbar = fig.colorbar(mesh, ax=ax, cax=cax)
+
         if save:
             if " " in title:
                 title = title.replace(" ", "_")
@@ -241,12 +247,11 @@ def plot_curves(
 
 
 @plot2D
-def plot_action_distribution(
-    ax: Axes, actions: ndarray, colorbar: bool = False, **kwargs
-) -> ndarray:
+def plot_action_distribution(ax: Axes, actions: ndarray, **kwargs) -> ndarray:
     bins = np.linspace(0, 2 * np.pi, 25)
     # bins = None
     num_joints = actions.shape[1]
+
     if num_joints == 1:
         h, _ = np.histogram(actions, bins=bins)
     elif num_joints == 2:
@@ -255,24 +260,33 @@ def plot_action_distribution(
     else:
         logging.error(f"Not possible to plot action distribution for {num_joints}")
         return ax
+
     ax.imshow(h, extent=bins[[0, -1, -1, 0]])
-    if colorbar:
-        ax.colorbar()
 
     ax.set_xlabel("joint 0")
     ax.set_ylabel("joint 1")
 
-    # ax.text(0, -0.1, f"n = {len(actions)}")
     title = ax.get_title()
     ax.set_title(title + f", n = {len(actions)}")
+
     return ax
 
 
 def plot_joint_correlation(ax: Axes, actions: ndarray) -> Axes:
     return ax
 
+
 @plot2D
-def plot_pcolormesh(ax: Axes, angle: ndarray, radius: ndarray, z: ndarray, alpha: float = 1, cmap: str = "viridis") -> Axes:
+def plot_pcolormesh(
+    ax: Axes,
+    angle: ndarray,
+    radius: ndarray,
+    z: ndarray,
+    alpha: float = 1,
+    cmap: str = "viridis",
+    stats: bool = False,
+    **kwargs,
+) -> Axes:
     """plot polar color mesh
 
     Args:
@@ -282,11 +296,34 @@ def plot_pcolormesh(ax: Axes, angle: ndarray, radius: ndarray, z: ndarray, alpha
         z (ndarray): two dimensional array of z value
         alpha (float, optional): 1 - transparity value. Defaults to 1.
         cmap (str, optional): colormap. Defaults to "viridis".
+        stats (bool): if statistics will be printed or not. Default set to False
 
     Returns:
         Axes: _description_
     """
     ax.pcolormesh(angle, radius, z, alpha=alpha, cmap=cmap)
 
+    if stats:
+        ax.text(
+            2.5,
+            3.5,
+            r"$\mu$ : " + f"{np.mean(z):.4f}\n" + r"$\sigma$ : " + f"{np.std(z):.4f}",
+        )
+
     return ax
 
+
+def _find_instance(array: List[Any], key: Type[object]) -> object:
+    """finds an instance of an object in a given array
+
+    Args:
+        array (List[Any]): array to iterate through
+        key (Type[object]): object to find instance of
+
+    Returns:
+        object: object
+    """
+    for element in array:
+        if isinstance(element, key):
+            return element
+    return None

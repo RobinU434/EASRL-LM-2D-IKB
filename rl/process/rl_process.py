@@ -111,10 +111,9 @@ class RLProcess(LearningProcess):
         cart_coords = np.stack([np.cos(th), np.sin(th)]) * r
         cart_coords = cart_coords.T
 
-        target = np.zeros((sample_size, 3))
-        target[:, :2] = cart_coords.reshape(sample_size, 2)
+        targets = cart_coords.reshape(sample_size, 2)
 
-        results = self._algorithm.inference(target)
+        results = self._algorithm.inference(targets)
 
         states = np.concatenate(results["states"], axis=0).squeeze()
         joint_angles = states[:, 4:]
@@ -127,13 +126,15 @@ class RLProcess(LearningProcess):
             path=checkpoint_dir,
         )
 
+        # num iteration plot
         num_iterations = np.array(
-            [len(traj) for traj in results["trajectories"]]
-        ).reshape(int(np.sqrt(sample_size)))
+            [len(traj) for traj in results["trajectories"]], dtype=float
+        ).reshape((sample_size_sqrt, sample_size_sqrt))
 
-        solved = np.ones((sample_size_sqrt, sample_size_sqrt), dtype=bool)
-        solved[solved >= self._env_config["n_time_steps"]] = False
         num_iterations = num_iterations.reshape(sample_size_sqrt, sample_size_sqrt)
+        solved = np.ones((sample_size_sqrt, sample_size_sqrt), dtype=bool)
+        solved[num_iterations >= self._env_config["n_time_steps"] + 1] = False
+        print(f"solved ratio: {np.mean(solved)}")
         num_iterations[~solved] = np.nan
 
         plot_pcolormesh(
@@ -142,10 +143,48 @@ class RLProcess(LearningProcess):
             z=num_iterations,
             projection="polar",
             title="RL Agent Iterations",
-            colorbar=True,
             save=True,
-            path=checkpoint_dir)
-        
+            colorbar=True,
+            path=checkpoint_dir,
+        )
+
+        # min distance plot
+        min_distances = np.empty((sample_size))
+        min_distance_index = np.empty(sample_size)
+        for sample_idx, (trajectory, target) in enumerate(
+            zip(results["trajectories"], targets)
+        ):
+            end_effectors = trajectory[:, -1]
+            distance = np.linalg.norm(end_effectors - target, axis=-1)
+            min_distances[sample_idx] = min(distance)
+            min_distance_index[sample_idx] = np.argmin(distance).item()
+
+        min_distances = min_distances.reshape((sample_size_sqrt, sample_size_sqrt))
+        min_distance_index = min_distance_index.reshape((sample_size_sqrt, sample_size_sqrt))
+
+        plot_pcolormesh(
+            angle=th,
+            radius=r,
+            z=min_distances,
+            projection="polar",
+            title="Minimal distances",
+            save=True,
+            colorbar=True,
+            path=checkpoint_dir,
+            stats=True
+        )
+
+        plot_pcolormesh(
+            angle=th,
+            radius=r,
+            z=min_distance_index,
+            projection="polar",
+            title="Minimal distances index",
+            save=True,
+            colorbar=True,
+            path=checkpoint_dir,
+            stats=False
+        )
 
     def inference(self, checkpoint_dir: str, sample_size: int = 1) -> None:
         self.build(no_logger=True)

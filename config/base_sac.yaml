@@ -10,12 +10,10 @@ target_entropy: -40.0 # for automated alpha update,
 lr_alpha: 0.001
 n_epochs: 5000
 actor:
-  type: SuperActor  # also possible (SuperActor LatentActor)
+  type: LatentActor  # also possible (SuperActor LatentActor)
   learning_rate: 0.0005
   learning_mode: 0  # regulates if we fine tune the model on data from rl agent or not
   latent_dim: 4  # only relevant for latent actor
-  latent_checkpoint_dir: "results/supervised/imitation_loss"  # specify directory where to look for a suiting checkpoint directory <num_joints>_<latent_dim>_<time_stamp>  results/vae/baseline
+  latent_checkpoint_dir: "results/vae/imitation"  # specify directory where to look for a suiting checkpoint directory <num_joints>_<latent_dim>_<time_stamp>  results/vae/baseline
   architecture: [128, 128]
   activation_function: ReLU
-
-

@@ -1,4 +1,4 @@
-n_joints: 2
+n_joints: 15
 n_epochs: 3001
 val_interval: 5
 dataset:

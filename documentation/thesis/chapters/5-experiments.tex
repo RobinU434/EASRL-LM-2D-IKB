@@ -94,7 +94,7 @@ In the following section I will present the results of our experiments with the 
 
 \subsection{Distance Loss}
 
-Coming up are the training results for different latent dimensions but only with the distance loss enabled which means \texttt{dataset target mode = ACTION}.\\ 
+Coming up are the training results for different latent dimensions but only with the distance loss enabled which means \texttt{dataset target mode = POSITION}.\\ 
 Because we only leverage the usage of the distance loss we don't need to encode and decode an action from an inverse kinematics solver, we just need to encode the target position where we want to go plus the conditional information.
 
 In \figref{fig:VAE_latent} we want to have a closer look into the reconstruction loss and kl loss. While increasing the number of joints with $N \in [2, 5, 10, 15]$ we are also increasing the level of complexity the network has to master to come up with  suitable action which leads to a low distance loss. The increasing level of complexity is quite noticeable in both the kl loss and reconstruction loss. If we first look into the kl loss, all curves are generally shaped in the same way. First a drop before rising with a little overshoot and finally approaching the finial value asymptotically. While increasing $N$ we can see that the first local minimum shifts to the right, the upwards slope becomes slacker and the overshoot diminishes. This behavior confirms the the theory of increasing complexity while increasing the number of joints.
@@ -167,11 +167,35 @@ In \figref{fig:VAE_latent_comparison_reconstruction_loss/15} a performance diffe
 
 \subsection{Distance Loss plus Imitation Loss}
 
-In this section we are going to present the results of training the VAE with the imitation loss to pre-calculated solutions from \algoref{alg:CCD}. 
+In this section we are going to present the results of training the VAE with the imitation loss to pre-calculated solutions from \algoref{alg:CCD}. The important change in the config file is setting \texttt{dataset target mode = ACTION} to tell the dataset to also calculate action from ccd.  
 
 Because of time limitation we applied this loss function only on a setting with a latent dimension of four since this was the best latent dimension fitted only with the distance loss. 
 
-All in all the distance loss functions in \figref{} yield almost the same examples as the distance loss functions in \figref{fig:VAE_latent/reconstruction_4}. Additional to the distance loss we have got also an imitation loss between the computed action 
+All in all the distance loss functions in \figref{fig:VAE_imitation/distance_loss} yield almost the same examples as the distance loss functions in \figref{fig:VAE_latent/reconstruction_4}.\\
+Additional to the distance loss we have got also an imitation loss between the computed action from  CCD and the action yielded from form the neural Network in \figref{fig:VAE_imitation/imitation_loss}. Here it is interesting to note that the imitation loss is increasing alongside $N$ but not in the same scale. Where the differences between the imitation losses are becoming smaller for bigger $N$. Another thing that is particular interesting is the convergence behavior of each curve. They all hav a huge drop in the beginning but stay on their level for the rest of the training as if the have reached their optimal value. \\
+Finally looking at the KL-divergence we do can note an almost indistinguishable plot form \figref{fig:VAE_latent/kl_4}.
+
+\begin{figure}
+    \begin{center}
+        \subfloat[Distance loss]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/vae_comparison_imitation_[2, 5, 10, 15]_latent_4 4 4 4_distance_loss.png}
+            \label{fig:VAE_imitation/distance_loss}
+            }
+        \hfill
+        \subfloat[Imitation loss]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/vae_comparison_imitation_[2, 5, 10, 15]_latent_4 4 4 4_imitation_loss.png}
+            \label{fig:VAE_imitation/imitation_loss}
+            }
+        \hfill
+        \subfloat[KL diveregence from standard normal distribution]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/vae_comparison_imitation_[2, 5, 10, 15]_latent_4 4 4 4_kl_loss.png}
+            \label{fig:VAE_imitation/kl_loss}
+            }
+    \end{center}
+    \caption[VAE validation results with imitation loss]{Results on the validation dataset while training a VAE with a latent dimension of 4 but incorporating an imitation loss weighted with 0.01. Results are collected from ten different runs and with a solid mean curve and a shaded standard deviation area. $N \in [2, 5, 10, 15]$} 
+    \label{fig:VAE_imitation}
+\end{figure}
+\iffalse
 
 \subsection{Pure Actions}
 
@@ -215,6 +239,7 @@ The results for 800 epochs are shown in \figref{}.
 
 \todo{description?}
 
+\fi
 
 \section{SAC with VAE}
 
@@ -271,9 +296,6 @@ As we have seen in the previous section we carried out VAE experiments with thre
     \caption[SAC + VAE on latent dim = 8]{SAC + decoder form VAE with \textbf{latent dimension = 8}. Each experiment was conducted 10 times with different random seeds. The solid strong line is the mean over those 10 experiments. The color shaded area covering the mean is the standard deviation around the mean.}
     \label{fig:SAC_latent_8}
 \end{figure}
-
-
-
 \begin{figure}
     \begin{center}
         \subfloat[$N = 2$]{
@@ -298,7 +320,6 @@ As we have seen in the previous section we carried out VAE experiments with thre
     \caption[SAC + VAE latent dimension comparison]{Shown are the collected mean scores over the the last 20 episodes per step, compared different latent dimensions and the baseline. Solid line is the mean over 10 experiments and the color shaded area is the corresponding standard deviation. Higher means better with 0 as the maximum. The colored dotted lines mark an end of an experiment.}
     \label{fig:SAC_latent_comparison_mean_score}
 \end{figure}
-
 
 In \figref{fig:SAC_latent_comparison_mean_score} we can observe what difference the choice of latent dimension has on the performance of the Soft Actor Critic algorithm. Quite obviously to see is that the the choice of latent dimension really starts to matter after 5 joints. Where at 10 joints 2 and 4 succeed but 8 doesn't. This is clearly related to the performance of the VAE during its training. There we were also able to see that the latent dimension has an impact of the reconstruction loss performance of the VAE. Therefor it is no surprise to see that the best VAE checkpoints on 15 joints and the best VAE checkpoint on 10 joints with a latent dimension of 8 fails for the SAC + VAE setting. 
 
@@ -338,20 +359,62 @@ On the performed experiments with 15 joints we can see that none of the latent e
 
 As a result of the previous observations we can see the latent dimension as an additional hyperparameter to optimize. Because setting it to high could lead the extremely high variance in the Soft Actor Critic task as shown in \figref{fig:SAC_latent_comparison/10} and also
 
-
 \section{Supervised}
 
-For the supervised actions we only relied on state information as the input to predict an action to reach from the current state the given target position.  Since this approach is very similar to the Variational Autoencoder setting we are also able to apply the afore mentioned Inverse Kinematics Loss with distance and imitation loss.
+For the supervised actions we only relied on state information as the input to predict an action to reach from the current state the given target position.  Since this approach is very similar to the Variational Autoencoder setting we are also able to apply the afore mentioned Inverse Kinematics Loss with distance and imitation loss as in \eqref{eqn:IK-Loss}.
 
 The results of the supervised experiments are divided into two parts. The first is only applying the distance loss while the second one is incorporating also an imitation loss with respect ot pre computed actions from the CCD solver.
 
 \subsection{Distance Loss}
 
-The distance loss results over different amount of joints are very similar compared to \figref{} \todo{reference to distance plot from VAE setting.}. We can also see a decrease in performance while increase the number of joints. 
+The distance loss results over different amount of joints in \figref{fig:supervised_distance} are very similar compared to \figref{fig:VAE_latent} (a) to (c). Parallel to \figref{fig:VAE_latent} we can also observe an increase in loss while increasing $N$. Different to the exoeriments on the VAE is the standard deviation between the experiments. The supervised experiments show a smaller standard deviation across the whole training period compared to the VAE experiments.
+
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_2_distance_loss.png}
+    \end{center}
+    \caption[Supervised Distance Loss]{Distance loss for supervised experiments over different $N \in [2, 5, 10, 15, 20]$. For each $N$ we conducted 10 experiments. }
+    \label{fig:supervised_distance}
+\end{figure}
 
 \subsection{Distance + Imitation Loss}
 
-For this series of experiments we also want to emphasis solutions close to solutions computed by the CCD by setting the dataset mode to \texttt{ACTION} and setting the imitation loss weight to 0.01. Like in the first part the distance loss plots are looking very similar to the previous ones as we also see a steady decrease in performance while increasing the number of joints. 
-A bit more interesting are the results on the imitation loss. All curves have a drop in the first couple of epochs but are constant for the rest of the training. Comparing those curves with respect to the number of joints we observed that all mean curves have vastly different levels of convergence which seems not to be linear correlated with $N$. 
+For this series of experiments we also want to emphasis solutions close to solutions computed by the CCD by setting the dataset mode to \texttt{ACTION} and setting the imitation loss weight to 0.01. Unlike as in the previous section the distance loss differs a lot from \figref{fig:supervised_distance}. We do not see a steady increase in loss over different numbers of joints we do see vastly different levels of final distance loss performances starting with two joints at around 1.1 and ending with 15 joints at XXX.
+A bit more interesting are the results on the imitation loss. Similar to \figref{fig:VAE_imitation/imitation_loss} all curves have a drop in the first couple of epochs but are constant for the rest of the training. Comparing those curves with respect to the number of joints we observed that all mean curves have vastly different levels of convergence which seems not to be linear correlated with $N$. Compared to the experiments in \figref{fig:VAE_imitation/imitation_loss} all imitation losses are higher higher. 
+
+\begin{figure}
+    \begin{center}
+        \subfloat[Distance Loss]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_imitation_2_latent_4 4 4 4_distance_loss.png}
+            \label{fig:supervised_imitation/distance_loss}
+            }
+        \hfill
+        \subfloat[Imitation Loss]{
+        \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_imitation_2_latent_4 4 4 4_imitation_loss.png}
+            \label{fig:supervised_imitation/imitation_loss}
+            }
+    \end{center}
+    \caption[Supervised Distance and Imitation Loss]{Validation results for supervised experiments on distance and imitation loss. }
+    \label{fig:supervised_imitation}
+\end{figure}
+
 
 \section{SAC with Supervised}
+
+
+\begin{figure}
+    \begin{center}
+        \subfloat[Distance Loss]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/}
+            \label{fig:supervised_imitation/distance_loss}
+            }
+        \hfill
+        \subfloat[Imitation Loss]{
+        \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_imitation_2_latent_4 4 4 4_imitation_loss.png}
+            \label{fig:supervised_imitation/imitation_loss}
+            }
+    \end{center}
+    \caption[Supervised Distance and Imitation Loss]{Validation results for supervised experiments on distance and imitation loss. }
+    \label{fig:supervised_imitation}
+\end{figure}
+

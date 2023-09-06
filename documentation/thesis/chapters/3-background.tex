@@ -728,13 +728,54 @@ Cyclic Coordinate Descent (CCD) is a popular numerical method for solving invers
 The algorithm works by iteratively updating the joint angles based on the discrepancy between the current and desired end-effector positions ($p_\text{target}$). At each iteration, CCD focuses on a single joint and adjusts its angle to minimize the positional error. By sequentially updating the joint angles in a cyclic manner, CCD aims to converge towards a solution that satisfies the desired end-effector position.
 
 As illustrated in \algoref{alg:CCD} and \figref{fig:background/CCD geometry} in each iteration, CCD calculates the vector from the current joint position $p_i$ with $p_i$ as the position of the $i$th joint with $i \in \{0, \ldots, N-1\}$, to the end-effector position ($v_\text{current}$) and the vector from the current joint position to the target position ($v_\text{target}$). By finding the rotation necessary to align $v_\text{current}$ with $v_\text{target}$, represented as $\delta\phi$, the algorithm updates the joint angle accordingly. This process is repeated for each joint in the kinematic chain until convergence is achieved.
-
 \begin{figure}
 	\centering
 	\includegraphics[width=0.4\textwidth,]{figures/background/CCD_geometry.png}
 	\caption[CCD geometry]{CCD geometry: Shown is the geometry of one step in \algoref{alg:CCD}. $p_\text{target}$ is the target position. $p_i$ is the 2D position of each joint. Not that we start with the first joint outside the origin since the base position is fixed to the origin.}
 	\label{fig:background/CCD geometry}
 \end{figure}
-\todo{make own figure}
 
-\todo{experiments for runtime analysis in dependence of number of joints}
+This afore mentioned strategy can be reviewed in \figref{fig:ccd_trajectory}. Here we can see that the strategy appears to move closer and closer to the origin before heading towards the target position in blue.
+\begin{figure}
+    \begin{center}
+        \subfloat[$N = 2$ with 5 iterations]{
+            \includegraphics[width=0.31\linewidth]{figures/background/CCD_trajectory_2.png}
+            \label{fig:ccd_trajectory/2}
+            }
+        \hfill
+        \subfloat[$N = 5$ with 11 iterations]{
+            \includegraphics[width=0.31\linewidth]{figures/background/CCD_trajectory_5.png}
+            \label{fig:ccd_trajectory/5}
+            } 
+		\hfill
+        \subfloat[$N = 10$ with 64 iterations]{
+            \includegraphics[width=0.31\linewidth]{figures/background/CCD_trajectory_10.png}
+            \label{fig:ccd_trajectory/10}
+            } 
+    \end{center}
+    \caption[ccd trajectory]{Computed trajectory of CCD. The two scattered lines resemble the start end effector positon (green) and the target position (blue). The red line is the trajectory of the end effector after each while iterations as in \algoref{alg:CCD}. }
+    \label{fig:ccd_trajectory}
+\end{figure}
+
+That CCD needs different amounts of while iterations depending on start and end position can be observed in \figref{fig:ccd_iterations}. The heatmap plots the different amounts of while iterations needed to get from a constant start position at $p = [N, 0]$ with all angles equal $0$, to a desired target position. Interesting to see are the patterns emerging in those heatmaps where target positions counter clockwise of the start positions are faster to solve than target positions clockwise to the start positions.
+\begin{figure}
+    \begin{center}
+        \subfloat[$N = 2$]{
+            \includegraphics[width=0.31\linewidth]{figures/background/CCD_2_iteration_heatmap.png}
+            \label{fig:ccd_iterations/2}
+            }
+        \hfill
+        \subfloat[$N = 5$]{
+            \includegraphics[width=0.31\linewidth]{figures/background/CCD_5_iteration_heatmap.png}
+            \label{fig:ccd_iterations/5}
+            } 
+		\hfill
+        \subfloat[$N = 10$]{
+            \includegraphics[width=0.31\linewidth]{figures/background/CCD_10_iteration_heatmap.png}
+            \label{fig:ccd_iterations/10}
+            } 
+    \end{center}
+    \caption[CCD iteration heatmap]{Heatmaps for while iterations needed to reach from a start position at $[N, 0]$ to target positions at $p_{(i, j)} = [\cos(\omega_i), \sin(\omega_i)] * \mathfrak{R}_j, \omega = [0, \ldots, 2\pi], \mathfrak{R} = [0, \ldots, N]$}
+    \label{fig:ccd_iterations}
+\end{figure}
+

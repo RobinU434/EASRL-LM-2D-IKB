@@ -90,7 +90,7 @@ If you want to normalize the reward function you have to divide $R$ by $N$.
 \begin{figure}[h]
 	\centering
 	\includegraphics[width=0.5\textwidth,]{figures/methodology/RewardFunction.png}
-	\caption[Reward function]{Normalized Reward function with $q \in [0, 2\pi]^N$ as element of the whole space and $p_\text{target} = [-0.5, 0.5]$. }
+	\caption[Reward function]{Normalized Reward function with $q \in [0, 2\pi]^N$ as element of the whole space and $p_\text{target} = [-0.5, 0.5]$. The target position $p_\text{target}$ is marked with a red start.}
 	\label{fig:Reward_function}
 \end{figure}
 
@@ -150,7 +150,7 @@ The problems encountered with the vanilla sampling algorithm in \secref{sec:vani
     \begin{algorithmic}
         \State{} Input: number of joints: $N$, number of samples: $K$.
         \State{} $\mathcal{D} \leftarrow \{\}$  Dataset
-        \For{$i \in {0, ldots, N -1}$}
+        \For{$i \in [0, \ldots, N -1]$}
             \State{} $p_{\text{current}} \leftarrow (\text{\ref{eqn:position_sample}})$ sample a position in 2D space with \eqref{eqn:position_sample}
             \State{} $q_t \sim \mathcal{U}$ sample initial arm angles from a uniform distribution as in \eqref{eqn:angle_sample}
             \State{} $q_t \leftarrow IK(q_t, p_{\text{current}})$ solve IK for $p_{\text{current}}$ and with $q_t$ as start
@@ -163,7 +163,6 @@ The problems encountered with the vanilla sampling algorithm in \secref{sec:vani
 The clear advantage from this algorithm is that we ensure now that $p_{\text{target}}$ and $p_{\text{current}}$ are uniform with respect to direction and distance to origin.
 
 On the other hand we are now  bound to the actions the $IK$-solver, in our application CCD as in \algoref{alg:CCD}, is providing. This could lead to unpredicted behavior of the RL agent if we leaf the covered part of $q_t$ as shown in \figref{fig:dataset_action_correlation}. Another disadvantage is that this algorithm is now much slower compared to the vanilla sampling algorithm. 
-
 \begin{figure}
     \begin{center}
         \includegraphics[width=0.46 \linewidth]{figures/methodology/dataset/action_correlation.png}
@@ -172,7 +171,7 @@ On the other hand we are now  bound to the actions the $IK$-solver, in our appli
     \label{fig:dataset_action_correlation}
 \end{figure}
 
-To have a more detailed look into the runtime complexity we focus in the runtime complexity of CCD as this is the slowest part of \algoref{alg:Expert_Dataset}. We can observe that the runtime of each CCD run is different since CCD belongs to the family of iterative inverse kinematics solver and the runtime is either limited by a given maximum number of iterations or a break condition depending on how close we are to the goal. 
+To have a more detailed look into the runtime complexity we focus in the runtime complexity of CCD as this is the slowest part of \algoref{alg:Expert_Dataset}. We can observe that the runtime of each CCD run is different since CCD belongs to the family of iterative inverse kinematics solver and the runtime is either limited by a given maximum number of iterations or a break condition depending on how close we are to the goal. \\
 In \figref{fig:expert_dataset/runtime_histograms} we can see that all continuous probability density functions have a similar shape but with different standard deviations and means. Since we are interested in the runtime complexity of CCD we plotted the mean runtime of each density function in \figref{fig:expert_dataset/runtime_complexity}. Here we can observe that the runtime complexity of CCD is at least $\mathcal{O}(N^k)$ with $k \geq 3$ since the first order empirical derivation is still at least quadratic. Further derivations would be not plausible because with each derivation we would decrease the number of datapoints by one and therefor having no points left anymore.
 \begin{figure}
     \begin{center}

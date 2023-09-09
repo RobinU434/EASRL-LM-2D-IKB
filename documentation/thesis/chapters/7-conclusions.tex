@@ -1,1 +1,27 @@
 \chapter{Conclusion}\label{chap:conclusion}
+
+
+This thesis explores the integration of latent models, including pre-trained Variational Autoencoder decoders and supervised models, into Reinforcement Learning frameworks. The objective is to expand the action space capabilities of RL agents. The research is evaluated using a benchmark environment: solving a 2D Inverse Kinematics problem on a robot arm with a variable number of joints $N$. The study investigates how the incorporation of latent models enhances the RL agent's performance in handling complex action spaces.
+
+The key findings in this research are that the merge of a pretrained decoder from VAE with SAC works and can offer a solution to cope high dimensional action spaces but is not yet on the same level as standard approaches and needs further improvement. The second key finding is the RL-Benchmark-Environment on a 2D inverse kinematics problem. This environment has proven to be a suitable and flexible candidate to benchmark different RL algorithms. 
+
+The practical implications of this work are:
+\begin{itemize}
+    \item \textbf{Efficient Training}: The approach streamlines the training process for RL agents by reducing the dimensionality of action spaces. This has practical implications for scenarios with limited training data or costly exploration.
+    \item \textbf{Transfer Learning}: This thesis facilitates more efficient transfer learning in RL, by transferring the responsibility on the latent model, making it easier to adapt agents to new tasks and environments, broadening the range of applications.
+\end{itemize}
+
+The theoretical contributions are:
+\begin{itemize}
+    \item \textbf{Advancements in RL}: The presented research advances RL methodology by introducing a novel approach for handling high-dimensional action spaces and expanding the scope of RL applications.
+    \item \textbf{Latent Model Integration}: The conducted work contributes to the theoretical understanding of integrating latent models into RL, addressing aspects in design, training, and utilization.
+    \item \textbf{Action Space Abstraction}: Research in this thesis advances the theory of action space abstraction, demonstrating the effectiveness of latent models in simplifying complex action spaces.
+\end{itemize}
+
+While our research yielded results below our initial expectations, we did not observe a significant performance increase for RL agents with a high number of joints. Additionally, our approach fell short when compared to baseline experiments. These outcomes, signal the presence of challenges in latent model integration and action space expansion in RL. Our findings provide a foundation for future investigations aimed at addressing these complexities and achieving our research goals.
+
+The primary limitations of this research stem from the observed performance gap between expected and actual results, particularly in scenarios involving a high number of joints. Additionally, the underperformance of the proposed approach when compared to baseline experiments raises questions about its effectiveness. Challenges related to scalability, the choice of latent models, and the complexity of the RL environment may have influenced the outcomes. Further considerations include data efficiency, generalizability to other RL tasks, and the specific complexities of the 2D Inverse Kinematics problem, all of which present avenues for future investigation and improvement.
+
+Future research directions encompass refining latent models for improved action space expansion, including advanced generative models such as GANs or additional latent model refinement during the RL training process. Extensive hyperparameter tuning should be explored to optimize model and algorithm parameters, enhancing overall performance and efficiency. Investigating data augmentation techniques and designing benchmark environments that mirror real-world complexities will improve the practicality of the proposed approach. Additionally, future avenues include transfer learning, multi-agent RL applications, and interdisciplinary collaborations to expand the applicability of latent model-enhanced RL. 
+
+Readers of the thesis will gain insights into the importance of expanding action spaces in Reinforcement Learning (RL) through the integration of latent models, such as Variational Autoencoders (VAEs) and supervised models. They will also understand the challenges and limitations faced in achieving performance improvements, particularly in scenarios with a high number of joints. The thesis highlights the significance of benchmarking RL agents in various environments and provides directions for future research, including advanced latent models, hyperparameter optimization, and ethical considerations. Ultimately, readers will appreciate the real-world relevance of this research, particularly in fields like robotics and automation, and recognize the iterative nature of scientific inquiry in advancing RL capabilities.

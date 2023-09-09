@@ -351,7 +351,7 @@ On the performed experiments with 15 joints we can see that none of the latent e
             \label{fig:SAC_action_correlation_comp/latent_4}
             }
         \subfloat[SAC + VAE with latent dimension = 4, distance and imitation loss enabled]{
-            \includegraphics[width=0.31 \linewidth]{figures/place_holder.png}
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/action_correlations_latent_imitation_4_2_1693269830_3000.png}
             \label{fig:SAC_action_correlation_comp/latent_4_imitation}
             }
     \end{center}
@@ -408,12 +408,12 @@ A bit more interesting are the results on the imitation loss. Similar to \figref
 \begin{figure}
     \begin{center}
         \subfloat[Mean score per step]{
-            \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_supervised_dist_[2, 5]_mean_score.png}
             \label{fig:sac_supervised/distance_loss}
             }
         \hfill
         \subfloat[episode length]{
-        \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+        \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_supervised_dist_[2, 5]_episode_len.png}
             \label{fig:sac_supervised/imitation_loss}
             }
     \end{center}
@@ -446,12 +446,12 @@ A very interesting point of distinguishing the merge of SAC with either the VAE 
 \begin{figure}
     \begin{center}
         \subfloat[Mean score per step]{
-            \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_supervised_imitation[2, 5, 10]_mean_score.png}
             \label{fig:sac_supervised_imitation/distance_loss}
             }
         \hfill
         \subfloat[episode length]{
-        \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+        \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_supervised_imitation[2, 5, 10]_episode_len.png}
             \label{fig:sac_supervised_imitation/imitation_loss}
             }
     \end{center}
@@ -462,3 +462,23 @@ A very interesting point of distinguishing the merge of SAC with either the VAE 
 Experiments conducted with a supervised model trained with imitation loss enabled are shown in \figref{fig:sac_supervised_imitation}.
 
 A further property is the log probability the imitation loss regressor experiments are returning during training as in \tabref{tab:policy_log_probs}. The actor network is very certain about the action it would like to exploit leaving almost no room for exploration. 
+
+\begin{figure}
+    \begin{center}
+        \subfloat[SAC baseline experiments]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/action_correlations_baseline_2_1691621262_5000.png}
+            \label{fig:SAC_action_correlation_supervised/baseline}
+            }
+        \hfill
+        \subfloat[SAC + Supervised model trained only with distance loss enabled]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/action_correlations_supervised_dist_loss_2_1693272467_3000.png}
+            \label{fig:SAC_action_correlation_supervised/supervised}
+            }
+        \subfloat[SAC + Supervised model trained only with distance loss enabled]{
+            \includegraphics[width=0.31 \linewidth]{figures/place_holder.png}
+            \label{fig:SAC_action_correlation_supervised/supervised_imitation}
+            }
+    \end{center}
+    \caption[action correlation comparison with supervised model]{Action correlation for baseline experiments, experiments with SAC and supervised model with only distance loss enabled and SAC with supervised model with distance and imitation loss enabled.}
+    \label{fig:SAC_action_correlation_supervised}
+\end{figure}

@@ -86,18 +86,33 @@ Comparing RL with SAC we already described the end-effector movements in \chapre
 
 \begin{table}
     \begin{center}
-        \begin{tabular}{ l || l l | l l | l l | l l}
-        $N$ & \multicolumn{2}{ c | }{baseline} & \multicolumn{2}{c | }{latent 2}  & \multicolumn{2}{c | }{latent 4}  & \multicolumn{2}{c}{latent 8}  \\
-        & $\mathfrak{S}$ & max $R_t$ & $\mathfrak{S}$ & max $R_t$ & $\mathfrak{S}$ & max $R_t$ & $\mathfrak{S}$ & max $R_t$ \\
+        \begin{tabular}{ l l | l l l l l}
+        experiment series           & $N$                   & 2    & 5    & 10   & 15   & 20   \\
         \hline
-        2   & 0.73 & 0.09 & 0.66 & 0.11 &  0.76 & 0.09 &  0.72 & 0.09 \\
-        5   & 0.83 & 0.10 & 0.78 & 0.15 &  0.84 & 0.09 &  0.88 & 0.08 \\
-        10  & 0.57 & 0.32 & 0.33 & 0.83 &  0.54 & 0.50 &  0.22 & 2.97 \\
-        15  & 0.42 & 0.74 & 0.04 & 3.62 &       & &       & \\
-        20  & 0.30 & 0.82 &      &      &       & &       & 
+        \hline
+        \textit{baseline}           & $\mathfrak{S}$        & 0.73 & 0.83 & 0.57 & 0.42 & 0.30 \\
+                                    & max eval $\bar{R_t}$  & 0.09 & 0.10 & 0.32 & 0.74 & 0.82 \\
+        \hline
+        \textit{latent 2}           & $\mathfrak{S}$        & 0.66 & 0.78 & 0.33 & 0.04 &      \\
+                                    & max eval $\bar{R_t}$  & 0.11 & 0.15 & 0.83 & 3.62 &      \\
+        \hline
+        \textit{latent 4}           & $\mathfrak{S}$        & 0.76 & 0.84 & 0.54 &      &      \\
+                                    & max eval $\bar{R_t}$  & 0.09 & 0.09 & 0.50 &      &      \\
+        \hline
+        \textit{latent 8}           & $\mathfrak{S}$        & 0.72 & 0.88 & 0.22 &      &      \\
+                                    & max eval $\bar{R_t}$  & 0.09 & 0.08 & 2.97 &      &      \\
+        \hline
+        \textit{latent imitation}   & $\mathfrak{S}$        & 0.85 & 0.85 & ?    &      &      \\
+                                    & max eval $\bar{R_t}$  & ?    & ?    & ?    &      &      \\
+        \hline
+        \textit{super distance}     & $\mathfrak{S}$        & 0.62 & 0.60 & 0.53 &      &      \\
+                                    & max eval $\bar{R_t}$  & ?    & ?    & ?    &      &      \\
+        \hline
+        \textit{super imitation}    & $\mathfrak{S}$        & ?    & ?    & ?    &      &      \\
+                                    & max eval $\bar{R_t}$  & ?    & ?    & ?    &      &      \\
     \end{tabular}
     \end{center}
-    \caption[SAC Solved ratio]{Solved ratio $\mathfrak{S}$ and closest distance to target during one episode as known as the maximum reward during one episode, for all SAC experiments starting at $[N, 0]$ and targeting the same targets as in \figref{fig:SAC_baseline_min_distances} with a maximal budged of 400 steps. Those are examples from individual experiments all from epoch 5000. For more details which experiments please have a look into the figures directory. The suffix of each png describes where to find the experiment. For a closer inspection of how the individual models perform over the evaluation please refer to \chapref{chap:appendix}}
+    \caption[SAC Solved ratio]{Solved ratio $\mathfrak{S}$ and closest distance to target during one episode as known as the maximum reward during one episode for one target position, for all SAC experiments starting at $[N, 0]$ and targeting the same targets as in \figref{fig:SAC_baseline_min_distances} with a maximal budged of 400 steps. Those are examples from individual experiments all from epoch 3000. For more details which experiments please have a look into the figures directory. The suffix of each png describes where to find the experiment. For a closer inspection of how the individual models perform over the evaluation please refer to \chapref{chap:appendix}}
     \label{tab:SAC_solved_ratio}
 \end{table}
 
@@ -122,8 +137,6 @@ Comparing RL with SAC we already described the end-effector movements in \chapre
     \label{fig:SAC_baseline_min_distance_step}
 \end{figure}
 
-
-
 \section{Latent Model}
 
 Moving on to the experiments to train a latent model. We train a latent model to augment SAC and let it control the latent model and therefor the actions from a higher level while having access to all state space information.
@@ -137,10 +150,10 @@ We also have similar results with the imitation loss
 
 \section{SAC with Latent Model}
 
-Embedding the Latent Model into the workflow of SAC yielded performances as presented in \chapref{chap:experiments}. While understanding and seeing the vast difference in problem solving strategies between the trained latent models and the Inverse Kinematics solver CCD it is quite surprising this approach works in the first place. Usually such a significant change in the observation space distribution, leads to unpredictable and unfeasible behavior in the predicted actions in the Action space. We tried to master this issue by introducing the imitation loss to emphasis predicted actions leading to state angles which are much closer to the original distribution. \todo{look into results.} Arguments that the approach actually works can be found by looking into a greedy inference with the latent models where we simulate a very light weight version of the Plane-Robot-Environment while assuming the optimal policy, following the direction from start to end.
-
-Another interesting perspective are the different log probabilities yielded by the different experiments. While the actor network of SAC has to be very certain about what action to generate from the supervised latent model, the VAE as the latent model leaf a bit more    
+Embedding the Latent Model into the workflow of SAC yielded performances as presented in \chapref{chap:experiments}. While understanding and seeing the vast difference in problem solving strategies between the trained latent models and the Inverse Kinematics solver CCD it is quite surprising this approach works in the first place. Usually such a significant change in the observation space distribution, leads to unpredictable and unfeasible behavior in the predicted actions in the Action space. We tried to master this issue by introducing the imitation loss to emphasis predicted actions leading to state angles which are much closer to the original distribution. Arguments that the approach actually works can be found by looking into a greedy inference with the latent models where we simulate a very light weight version of the Plane-Robot-Environment while assuming the optimal policy, following the direction from start to end.
 
 But why do we see differences for different latent dimensions? Looking first into those experiments with a latent dimension of 2. Since we are trying to encode the two dimensional target information which is sampled according to the idea of the TargetGaussianDataset, into a two dimensional gaussian manifold, the best information keeping strategy would be to pipe the mean values while returning a standard deviation close to zero. Because we do employ the ELBO with a gaussian distribution for a Variational Autoencoder we have to pick a parameterized latent distribution close the standard normal distribution. An additional difficulty is to encode the target position as independent random variables. Knowing these properties and constrains it could be quite challenging to compress. On the other hand choosing the latent dimension to high could add to much computational complexity, difficulty in sampling and a reduction in robustness.
 
 As a result of the previous observations we can set the latent dimension of a VAE as an additional hyperparameter to optimize. Because setting it to high could lead the extremely high variance in the Soft Actor Critic task as shown in \figref{fig:SAC_latent_comparison/10} and setting it to low could lead to loss in encoded information. 
+
+Further we want to revisit the action correlation plots. As previously mentioned the action correlation plots across all SAC experiments are vastly different from the initial distribution as in \figref{fig:dataset_action_correlation} but are very similar among themselves as in \figref{fig:SAC_action_correlation}. We can see the same hot-spots in left half across all SAC and SAC + VAE experiments which is clearly not a result to be expected because each models could chose a different solving strategy for itself and start each time from scratch. On the other hand activating the imitation loss in  the VAE experiements and merging this experiment with SAC should lead to a significant step towards the rhombus as in \figref{fig:dataset_action_correlation}. Instead the know hotspots as in \figref{fig:SAC_action_correlation} disappear and we get a new distribution with the same spike at the $[\pi, 0]$ shown in \figref{fig:SAC_action_correlation_comp/latent_4_imitation}.

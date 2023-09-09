@@ -304,9 +304,10 @@ def plot_pcolormesh(
     ax.pcolormesh(angle, radius, z, alpha=alpha, cmap=cmap)
 
     if stats:
+        r = 1.75 * max(radius)
         ax.text(
             2.5,
-            3.5,
+            r,
             r"$\mu$ : " + f"{np.mean(z):.4f}\n" + r"$\sigma$ : " + f"{np.std(z):.4f}",
         )
 

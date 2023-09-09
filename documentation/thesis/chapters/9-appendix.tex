@@ -1,7 +1,8 @@
-\chapter{Appendix}
+\chapter{Appendix}\label{chap:appendix}
+
 
 \section{Hyperparameters}
-\begin{table}
+\begin{table}[h]
     \begin{center}
         \begin{tabular}{ l | l }
         \hline \\
@@ -26,7 +27,7 @@
     \caption[Environment Hyperparameter]{Hyperparameter for the inverse kinematics environment. Not that num joints is different from experiment to experiment. You can adjust those values by altering \textit{config/base\textunderscore vae.yaml}}
 \end{table}
 
-\begin{table}
+\begin{table}[h]
     \label{tab:VAE_Hyperparameters}
     \begin{center}
         \begin{tabular}{ l | l }
@@ -62,7 +63,7 @@
     \caption[VAE Hyperparameter]{Hyperparameter for Variational Autoencoder. Note that num joints and latent dim varies from between different types of experiments and is therefor not fixed. You can adjust those values by altering \textit{config/base\textunderscore vae.yaml}. There are multiple datyset types available. But for the majority of our experiments we used the VAETargetGaussianDataset}
 \end{table}
 
-\begin{table}
+\begin{table}[h]
     \label{tab:SAC_Baseline_Hyperparameters}
     \begin{center}
         \begin{tabular}{ l | l }
@@ -94,10 +95,114 @@
 
 \section{Additional Experiment Plots}
 
-\begin{figure}
+\begin{figure}[h]
     \begin{center}
         \includegraphics[width=0.23 \linewidth]{figures/appendix/alpha_loss_15.png}
     \end{center}
     \caption[alpha loss with $N = 15$]{Plot to show the correlation between training abortion and spike in alpha loss.}
     \label{fig:alpha_loss_15}
+\end{figure}
+
+\begin{figure}[h]
+    \begin{center}
+        \subfloat[$N = 2$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_baseline_2_1691621262_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_baseline/2}
+            }
+        \hfill
+        \subfloat[$N = 5$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_baseline_5_1691621331_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_baseline/5}
+            }
+        \\
+        \subfloat[$N = 10$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_baseline_10_1691618968_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_baseline/10}
+            }
+        \hfill
+        \subfloat[$N = 15$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_baseline_15_1691619106_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_baseline/15}
+            }
+        \\
+        \subfloat[$N = 20$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_baseline_20_1691619159_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_baseline/20}
+            }
+    \end{center}
+    \caption[RL Agent iteration evaluation baseline]{}
+    \label{fig:RL_Agent_Target_Space_evaluation_baseline}
+\end{figure}
+
+\begin{figure}[h]
+    \begin{center}
+        \subfloat[$N = 2$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_latent_actor_2_2_1693146377_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_2/2}
+            }
+        \hfill
+        \subfloat[$N = 5$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_latent_actor_2_5_1693146402_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_2/5}
+            }
+        \\
+        \subfloat[$N = 10$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_latent_actor_2_10_1693146420_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_2/10}
+            }
+        \hfill
+        \subfloat[$N = 15$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_latent_actor_2_15_1693146466_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_2/15}
+            }
+    \end{center}
+    \caption[RL Agent iteration evaluation on VAE with latent = 2]{}
+    \label{fig:RL_Agent_Target_Space_evaluation_latent_2}
+\end{figure}
+
+\begin{figure}[h]
+    \begin{center}
+        \subfloat[$N = 2$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_latent_actor_4_2_1693063115_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_4/2}
+            }
+        \hfill
+        \subfloat[$N = 5$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_latent_actor_4_5_1693063141_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_4/5}
+            }
+        \\
+        \subfloat[$N = 10$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_latent_actor_4_10_1691620301_5000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_4/10}
+            }
+        \hfill
+        \subfloat[$N = 15$]{
+            \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_4/15}
+            }
+    \end{center}
+    \caption[RL Agent iteration evaluation on VAE with latent = 4]{}
+    \label{fig:RL_Agent_Target_Space_evaluation_latent_4}
+\end{figure}
+
+\begin{figure}[h]
+    \begin{center}
+        \subfloat[$N = 2$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_latent_actor_8_2_1691615359_3000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_8/2}
+            }
+        \hfill
+        \subfloat[$N = 5$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_latent_actor_8_5_1691612773_3000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_8/5}
+            }
+        \\
+        \subfloat[$N = 10$]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/RL_Agent_Iterations_latent_actor_8_10_1691612526_3000.png}
+            \label{fig:RL_Agent_Target_Space_evaluation_latent_8/10}
+            }
+    \end{center}
+    \caption[RL Agent iteration evaluation on VAE with latent = 8]{}
+    \label{fig:RL_Agent_Target_Space_evaluation_latent_8}
 \end{figure}

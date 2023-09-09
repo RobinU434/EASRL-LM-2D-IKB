@@ -1,12 +1,19 @@
 \chapter{Experiments}\label{chap:experiments}
 
-% \input{figures/experiments/figExample}
-% \input{figures/experiments/tabAccuracy}
+In this chapter we want to present the experimental results. We focus hereby on five main sections:
+\begin{itemize}
+    \item \textbf{Baseline SAC}: To see how SAC solves the environment without any further help.
+    \item \textbf{VAE}: Where we look into the results how the Variational Autoencoder.
+    \item \textbf{SAC with VAE}: How SAC performs together with the VAE decoder.
+    \item \textbf{Supervised}: We are looking into results how the supervised approach is handling the low level inverse kinematics task.
+    \item \textbf{SAC with Supervised}: How SAC is performing using the supervised model as a low level controller.
+\end{itemize}
 
+In this thesis we are focusing on merging the Soft Actor Critic with a decoder from a pretrained Variational Autoencoder. Results on merging SAC with a pretrained supervised model are only for comparison and to leverage the importance why someone should use a VAE instead of a supervised neural network.
 
 \section{Baseline SAC}
 
-First we would like to have a look how a the plain SAC algorithm, where the actor network directly returns actions for the environment, will perform on the inverse kinematics environment. Further we will describe those kind of experiments as sac baseline experiments. In \tabref{tab:SAC_Baseline_Hyperparameters} we describe the basic hyperparameter used for this line of experiments.
+First we would like to have a look how a the plain SAC algorithm, where the actor network directly returns actions for the environment, will perform on the inverse kinematics environment as described in \secref{sec:RL-Environment}. Further we will describe this kind of experiments as SAC baseline experiments. All Hyperparameters used for the SAC baseline experiments can be found in \chapref{chap:appendix}.
 \begin{figure}
     \begin{center}
         \subfloat[Mean reward per step over the last 20 episodes.]{
@@ -23,14 +30,14 @@ First we would like to have a look how a the plain SAC algorithm, where the acto
     \label{fig:SAC_baseline}
 \end{figure}
 
-In \figref{fig:SAC_baseline} we plotted the corrected mean reward and the average episode length over the last 20 epochs for different $N \in [2, 5, 10, 15, 20]$. Overall we can observe a decreasing mean of collected reward in \figref{fig:SAC_baseline/reward} while an increasing amount of steps in one episode in \figref{fig:SAC_baseline/episode_len} by increasing the number of joints $N$. In \figref{fig:SAC_baseline/episode_len} the training curves are approaching the maximum step limit of one episode while increasing the number of joints. Additionally we can observe that the standard deviation over multiple experiments is decreasing while increasing the number of joints.
+In \figref{fig:SAC_baseline} we plotted the mean reward per step and the average episode length over the last 20 epochs for different $N \in [2, 5, 10, 15, 20]$. Overall we can observe a decrease of collected reward per step in \figref{fig:SAC_baseline/reward} and an increasing amount of steps in one episode in \figref{fig:SAC_baseline/episode_len} while increasing the number of joints $N$. In \figref{fig:SAC_baseline/episode_len} the training curves are approaching the maximum step limit of one episode while increasing the number of joints. Additionally we can observe that the standard deviation over multiple experiments is decreasing while increasing the number of joints.
 
-To show the actual behavior of an agent in a standardized setting we also plotted an inference step as in \figref{fig:SAC_baseline_inference_distance} and the distance remaining to target. The standardization \figref{fig:SAC_baseline_inference_trajectory} for one selected experiment for a relative consistent target position at $[-0.5, 0.5] \cdot N$. \\
-As expected from the performance statistics in \figref{fig:SAC_baseline} agents with 2 to 5 joints perform much better than agents with 10 or more joints. \\
-Interesting to observe is that all agents are minimizing the distance to the target quite fast in their first couple of steps. But after missing the target closely the agent behavior becomes kind of desperate and the end effector moves towards the origin. After increasing the distance by moving towards the origin the distance starts to oscillate as we can see in \figref{fig:SAC_baseline_inference_trajectory/greedy_15} and \figref{fig:SAC_baseline_inference_trajectory/greedy_20} and nevers goes below the threshold of 0.1. \todo{discuss}
+To show the actual behavior of an agent in a standardized setting we also plot an inference episode in \figref{fig:SAC_baseline_inference_trajectory} and the distance remaining to target in \figref{fig:SAC_baseline_inference_distance}. The standardization in \figref{fig:SAC_baseline_inference_trajectory} for one selected experiment for a relative consistent target position at $[-0.5, 0.5] \cdot N$. \\
+As expected from the performance statistics in \figref{fig:SAC_baseline} agents with two and five joints perform much better than agents with ten or more joints. \\
+Interesting to observe is that all agents are minimizing the distance to the target quite fast in their first couple of steps. But after missing the target closely the agent behavior becomes kind of desperate and the end effector moves towards the origin. After increasing the distance by moving towards the origin the distance starts to oscillate as we can see in \figref{fig:SAC_baseline_inference_trajectory/greedy_15} and \figref{fig:SAC_baseline_inference_trajectory/greedy_20} and nevers goes below the threshold of 0.1.
 \begin{figure}
     \begin{center}
-        \subfloat[From experiment 2\textunderscore 1691621262 at checkpoint 5000 ]{
+        \subfloat[From experiment 2\textunderscore 1691621262 at checkpoint 5000]{
             \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_2_1691621262_5000.png}
             \label{fig:SAC_baseline_inference_trajectory/greedy_2}
             }
@@ -90,16 +97,12 @@ Another interesting detail to observe is the strategy an agent is following to r
 
 \section{VAE}
 
-In the following section I will present the results of our experiments with the Variational-Autoencoder to encode and decode actions from the environment but also learn to solve inverse kinematics by minimizing the presented distance loss form \eqref{eqn:Distance-Loss}. 
+In the following section I will present the results of our experiments with the Variational-Autoencoder to encode and decode actions from the environment but also learn to solve inverse kinematics by minimizing the presented distance loss form \eqref{eqn:Distance-Loss}. Within the section we are covering two loss function setups. The first setup we are going to concentrate on only uses the distance loss while the second setup incorporates also an imitation loss.
 
 \subsection{Distance Loss}
 
 Coming up are the training results for different latent dimensions but only with the distance loss enabled which means \texttt{dataset target mode = POSITION}.\\ 
-Because we only leverage the usage of the distance loss we don't need to encode and decode an action from an inverse kinematics solver, we just need to encode the target position where we want to go plus the conditional information.
-
-In \figref{fig:VAE_latent} we want to have a closer look into the reconstruction loss and kl loss. While increasing the number of joints with $N \in [2, 5, 10, 15]$ we are also increasing the level of complexity the network has to master to come up with  suitable action which leads to a low distance loss. The increasing level of complexity is quite noticeable in both the kl loss and reconstruction loss. If we first look into the kl loss, all curves are generally shaped in the same way. First a drop before rising with a little overshoot and finally approaching the finial value asymptotically. While increasing $N$ we can see that the first local minimum shifts to the right, the upwards slope becomes slacker and the overshoot diminishes. This behavior confirms the the theory of increasing complexity while increasing the number of joints.
-
-We can find another indicator by analyzing the reconstruction loss in \figref{fig:VAE_latent} (a) to (c). For all joints it is very good to see that the learning curves are shaped similar but approaching different final performances. For those experiments of $N \in [2, 5]$ we get a reconstruction loss $< 0.02$ independent of the latent dimension. But if we turn towards $N = 10$ we can clearly see that the latent dimension does make a significant difference between finding a solution, with a latent dimension of four, or failing with a latent dimension of eight.
+Because we only leverage the usage of the distance loss we do not need to encode and decode an action from an inverse kinematics solver, we just need to encode target information where we want to go plus state information as conditional information.
 \begin{figure}
     \begin{center}
         \subfloat[mean reconstruction loss over the las 20 epochs for \textbf{latent dimension = 2}]{
@@ -135,6 +138,10 @@ We can find another indicator by analyzing the reconstruction loss in \figref{fi
     \caption[VAE validation results, only distance loss and latent = 4]{VAE validation results over different amounts of joints and with a latent dimension of 4. Each experiment was conducted 10 times with different random seeds. The solid curve is the average over those 10 experiments and the color shaded area resembles the standard deviation. Notice that the y axis in bot plots is in log scale.}
     \label{fig:VAE_latent}
 \end{figure}
+
+In \figref{fig:VAE_latent} we have a closer look into the reconstruction loss and kl loss. While increasing the number of joints $N \in [2, 5, 10, 15]$ we are also increasing the level of complexity the network has to master to come up with suitable action which leads to a low distance loss. The increasing level of complexity is quite noticeable in both the kl loss and reconstruction loss. \\
+All KL-Loss curves in \figref{fig:VAE_latent} (d) to (e) are shaped in the same way. First a drop before rising with a little overshoot and finally approaching the terminal value asymptotically. While increasing $N$ we can see that the first local minimum shifts to the right, the upwards slope becomes slacker and the overshoot diminishes. This behavior confirms the the theory of increasing complexity while increasing the number of joints.\\
+We can find another indicator by analyzing the reconstruction loss in \figref{fig:VAE_latent} (a) to (c). For all joints it is quite clear that the learning curves are shaped similar but approaching different final performances. For those experiments of $N \in [2, 5]$ we get a reconstruction loss $< 0.02$ independent of the latent dimension. But if we turn towards $N = 10$ we can clearly see that the latent dimension does make a significant difference between finding a solution, with a latent dimension of four, or failing with a latent dimension of eight. A further increase of $N$ does not lead to better reconstruction losses across all latent space dimensions. 
 \begin{figure}
     \begin{center}
         \subfloat[$N = 2$]{
@@ -161,11 +168,11 @@ We can find another indicator by analyzing the reconstruction loss in \figref{fi
     \label{fig:VAE_latent_comparison_reconstruction_loss}
 \end{figure}
 
-By observing the individual number of joints in each plot of \figref{fig:VAE_latent_comparison_reconstruction_loss} form (a) to (d) we can observe that the latent dimension does make a difference in the final reconstruction loss performances of the trained models. Starting with two joints there is no significant difference between the latent dimensions of two to eight. Continuing with 5 joints we can observe no significant difference in the finial performance but a slight difference with respect of how fast the models are converging. The experiments on a latent dimension of four and eight are very similar while the standard deviation for a latent dimension equal to two increases around 600 epochs indicating that some experiments have slight troubles to converge. \\
+By observing the individual number of joints in each plot of \figref{fig:VAE_latent_comparison_reconstruction_loss} form (a) to (d) we can observe that the latent dimension does make a difference in the final reconstruction loss performances. Starting with two joints there is no significant difference between the latent dimensions of two to eight. Continuing with 5 joints we can observe no significant difference in the finial performance but a slight difference with respect of how fast the models are converging. The experiments on a latent dimension of four and eight are very similar while the standard deviation for a latent dimension equal to two increases around 600 epochs indicating that some experiments have slight troubles to converge. \\
 A significant difference in final performance can be observed with $N = 10$. Here the best performance is returned by experiments with a latent dimension of four closely followed by two. Comparing two and four in \figref{fig:VAE_latent_comparison_reconstruction_loss/10} shows that four is much more stable and faster in learning the problem as two. Last ranked are the experiments for a latent dimension of eight. Those experiments are by far not on the same level as with a latent dimension of two and four. A deeper look into the inference shows that the model fails to come up with an action to reach the given target position.\\
 In \figref{fig:VAE_latent_comparison_reconstruction_loss/15} a performance difference is noticeable with a latent dimension of two as best and eight as worst. But since the best performance of the experiments with a latent dimension of two is on the same level as eight in \figref{fig:VAE_latent_comparison_reconstruction_loss/10} we can conclude that the the VAE fails at $N = 15$ with the present hyperparameter as in \tabref{tab:VAE_Hyperparameters}.
 
-\subsection{Distance Loss plus Imitation Loss}
+\subsection{Distance plus Imitation Loss}
 
 In this section we are going to present the results of training the VAE with the imitation loss to pre-calculated solutions from \algoref{alg:CCD}. The important change in the config file is setting \texttt{dataset target mode = ACTION} to tell the dataset to also calculate action from ccd.  
 
@@ -195,57 +202,12 @@ Finally looking at the KL-divergence we do can note an almost indistinguishable 
     \caption[VAE validation results with imitation loss]{Results on the validation dataset while training a VAE with a latent dimension of 4 but incorporating an imitation loss weighted with 0.01. Results are collected from ten different runs and with a solid mean curve and a shaded standard deviation area. $N \in [2, 5, 10, 15]$} 
     \label{fig:VAE_imitation}
 \end{figure}
-\iffalse
-
-\subsection{Pure Actions}
-
-In every state of the sequential decision making process there are multiple actions available to go from the current state $s_t$ to the next state $s_{t+1}$ where the arm end position is at the goal position. To gain a dataset that contains such actions I sampled the robot arm angles in $s_t$ from a uniform distribution $\mathcal{U}_{[0, 2\pi)}$ and applied the CCD algorithm to get access to the action that leads from $s_t$ to $s_{t+1}$ with the robot arm end position near the goal state. \\
-
-The results of the training process are shown in \figref{}
-
-\subsection{Conditioning on States}
-
-After watching the pure action encoding and decoding fail in the all important reconstruction loss. I got inspired by the paper \todo{cite LASER} and rerolled the experiments with an conditional Variational-Autoencoder where the conditional information is the information from $s_t$. 
-The results of the training process are shown in \figref{}
-
-We can observe that the test reconstruction loss is much lower that before and the kl loss
-
-\begin{table}[]
-    \centering
-    \begin{tabular}{l|l|r|r}
-         n & latent dim & r loss & kl loss\\
-         2 & 2 & & \\
-         2 & 1 & & \\
-         5 & 5 & & \\
-         5 & 4 & & \\
-         5 & 3 & & \\
-         5 & 2 & & \\
-         5 & 1 & & \\
-         10 & 2 & & \\
-         10 & 2 & & \\
-         10 & 2 & & \\
-         10 & 2 & & \\
-    \end{tabular}
-    \caption{n is the number of joints, latent dimension is the size of the dimension the action is compressed to, r loss is the test reconstruction loss I used the MSE as the metric for the reconstruction loss, kl loss is the Kullback Leiber diveregence from the standard normal distribution on the test dataset}
-    \label{tab:CVAE results}
-\end{table}
-\todo{Concering the table: make a lot of experiments so I can get an std ?, or should I just say that the training turns out to be not as stable as it should be in comparison to an VAE on MNIST and that we sampled runs until we got a good result?}
-
-\subsection{Fitting Random Noise}
-
-In this section I will present the results on how we tried to encode and decode actions sampled from a parameterized distributuion.
-The idea is that in every state the agent can choose an action from $[-1, 1]^n$. Therefor I sampled a dataset independent and identically distributed from $\mathcal{U}^n_{[-1, 1]}$. this could be describe of trying to fit random noise.
-The results for 800 epochs are shown in \figref{}.
-
-\todo{description?}
-
-\fi
 
 \section{SAC with VAE}
 
-In this section we are going to talk about the experimental results of combining the variational autoencoder with soft actor critic. As we know from \chapref{chap:Methodology} we only use the decoder of the trained variational Autoencoder with input from the corresponding state and a latent action directly sampled from the parameterized distribution from the actor network. 
+In this section we are going to talk about the experimental results of combining the decoder from a Variational Autoencoder with soft actor critic. As we know from \chapref{chap:Methodology} we only use the decoder of the trained Variational Autoencoder with input from the corresponding state and a latent action directly sampled from the parameterized distribution from the actor network.
+
 \begin{table}
-    \label{tab:VAE_checkpoints_SAC}
     \begin{center}
         \begin{tabular}{ l | c  c | c  c | c  c}
         \textbf{$N$} & \multicolumn{6}{c}{latent dimension} \\
@@ -260,42 +222,47 @@ In this section we are going to talk about the experimental results of combining
         \end{tabular}
     \end{center}
     \caption[Used VAE checkpoints for SAC]{Used checkpoints to train SAC with decoder from VAE. All experiments can be found in \texttt{results/vae/<$N$>\textunderscore<latent dimension>\textunderscore <random seed>/VAE\textunderscore<epoch>*.pt}}
+    \label{tab:VAE_checkpoints_SAC}
 \end{table}
 
-As we have seen in the previous section we carried out VAE experiments with three different latent space dimensions. Accordingly we trained ten SAC runs for each latent space size and number of joints with $N \in [2, 5, 10, 15]$. We used the best VAE checkpoint available according to the overall validation loss. The detailed listing whoch checkpoints where actually used can be found in \tabref{tab:VAE_checkpoints_SAC}. 
+As we have seen in the previous section we carried out VAE experiments with three different latent space dimensions. Accordingly we trained ten SAC runs for each latent space size and number of joints with $N \in [2, 5, 10, 15]$. We used the best VAE checkpoint available according to the overall validation loss. The detailed listing which checkpoints where actually used can be found in \tabref{tab:VAE_checkpoints_SAC}. 
 
 \begin{figure}
     \begin{center}
-        \subfloat[mean episode reward per step averaged over the last 20 episodes. ]{
-            \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_latent_actor_4_mean_score.png}
+        \subfloat[mean episode reward per step averaged over the last 20 episodes. With a \textbf{latent dimension = 2}]{
+            \includegraphics[width=0.31 \linewidth]{figures/place_holder.png}
             \label{fig:SAC_latent_4/reward}
             }
         \hfill
-        \subfloat[mean episode length avergaed over the last 20 episodes]{
-        \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_latent_actor_4_episode_len.png}
-            \label{fig:SAC_latent_4/episode_len}
-            }
-    \end{center}
-    \caption[SAC + VAE on latent dim = 4]{SAC + decoder form VAE with \textbf{latent dimension = 4}. Each experiment was conducted 10 times with different random seeds. The solid strong line is the mean over those 10 experiments. The color shaded area covering the mean is the standard deviation around the mean.}
-    \label{fig:SAC_latent_4}
-\end{figure}
-
-
-\begin{figure}
-    \begin{center}
-        \subfloat[mean episode reward per step averaged over the last 20 episodes. ]{
-            \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_latent_actor_8_mean_score.png}
-            \label{fig:SAC_latent_8/reward}
+        \subfloat[mean episode reward per step averaged over the last 20 episodes. With a \textbf{latent dimension = 4}]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/sac_latent_actor_4_mean_score.png}
+            \label{fig:SAC_latent_4/reward}
             }
         \hfill
-        \subfloat[mean episode length avergaed over the last 20 episodes]{
-        \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_latent_actor_8_episode_len.png}
+        \subfloat[mean episode reward per step averaged over the last 20 episodes. With a \textbf{latent dimension = 8}]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/sac_latent_actor_8_mean_score.png}
+            \label{fig:SAC_latent_8/reward}
+            }
+        \\
+        \subfloat[mean episode length avergaed over the last 20 episodes. With a \textbf{latent dimension = 2}]{
+            \includegraphics[width=0.31 \linewidth]{figures/place_holder.png}
+            \label{fig:SAC_latent_4/episode_len}
+            }
+        \hfill
+        \subfloat[mean episode length avergaed over the last 20 episodes. With a \textbf{latent dimension = 4}]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/sac_latent_actor_4_episode_len.png}
+            \label{fig:SAC_latent_4/episode_len}
+            }
+        \hfill
+        \subfloat[mean episode length avergaed over the last 20 episodes. With a \textbf{latent dimension = 8}]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/sac_latent_actor_8_episode_len.png}
             \label{fig:SAC_latent_8/episode_len}
             }
     \end{center}
-    \caption[SAC + VAE on latent dim = 8]{SAC + decoder form VAE with \textbf{latent dimension = 8}. Each experiment was conducted 10 times with different random seeds. The solid strong line is the mean over those 10 experiments. The color shaded area covering the mean is the standard deviation around the mean.}
-    \label{fig:SAC_latent_8}
+    \caption[SAC + VAE on latent dim = 4]{SAC + decoder form VAE with different latent dimensions. Each experiment was conducted 10 times with different random seeds. The solid strong line is the mean over those 10 experiments. The color shaded area covering the mean is the standard deviation around the mean.}
+    \label{fig:SAC_latent_4}
 \end{figure}
+
 \begin{figure}
     \begin{center}
         \subfloat[$N = 2$]{
@@ -323,8 +290,8 @@ As we have seen in the previous section we carried out VAE experiments with thre
 
 In \figref{fig:SAC_latent_comparison_mean_score} we can observe what difference the choice of latent dimension has on the performance of the Soft Actor Critic algorithm. Quite obviously to see is that the the choice of latent dimension really starts to matter after 5 joints. Where at 10 joints 2 and 4 succeed but 8 doesn't. This is clearly related to the performance of the VAE during its training. There we were also able to see that the latent dimension has an impact of the reconstruction loss performance of the VAE. Therefor it is no surprise to see that the best VAE checkpoints on 15 joints and the best VAE checkpoint on 10 joints with a latent dimension of 8 fails for the SAC + VAE setting. 
 
-By having a closer look into the difference between the collected mean score we can see that for 2 joints all mean curves, the solid ones are packet closely together where at 5 joints we can start to see a slight decrease in performance at 1000 epochs continuing up to 5000 epochs, between the experiments done with a latent dimension of 2 and the others.\\
-This decrease is even more noticeable at 10 joints where is now a gap between the experiments done with a latent dimension of 4 and the baseline experiments too. \todo{set in perspective of VAE performance}
+By having a closer look into the difference between the collected mean score we can see that for two joints all mean curves, the solid ones, are packet closely together where at five joints we can start to see a slight decrease in performance at 1000 epochs continuing up to 5000 epochs, between the experiments done with a latent dimension of two and the others.\\
+This decrease is even more noticeable at ten joints where is now a gap between the experiments done with a latent dimension of four and the baseline experiments too. \todo{set in perspective of VAE performance}
 \begin{figure}
     \begin{center}
         \subfloat[$N = 2$]{
@@ -351,13 +318,48 @@ This decrease is even more noticeable at 10 joints where is now a gap between th
     \label{fig:SAC_latent_comparison_episode_len}
 \end{figure}
 
-In \figref{fig:SAC_latent_comparison_episode_len} we can observe the mean episode length for different $N \in [2, 5, 10, 15]$. Starting at two joints we can see not much of a difference but at five joints we can observe slight differnces between different latent dimensions. First up is the latent dimension of 2. At this value the experiments perform as in \figref{fig:SAC_latent_comparison_mean_score/5} worst. \todo{discuss why}.\\
-Moving on to a latent dimension of four, those experiments perform best in terms of mean episode length and even undercut the baseline experiments although they have not performed as good in terms of the mean score per step in \figref{fig:SAC_latent_comparison_mean_score/5}. Finally those experiments with a latent dimension of eight are performing almost on the same level as the baseline experiments but not as good as the experiments with a latent dimension of 4. \\
+In \figref{fig:SAC_latent_comparison_episode_len} we can observe the mean episode length for different $N \in [2, 5, 10, 15]$. Starting at two joints we can see not much of a difference but at five joints we can observe slight differences between different latent dimensions. First up is the latent dimension of two At this value the experiments perform as in \figref{fig:SAC_latent_comparison_mean_score/5} worst.\\
+Moving on to a latent dimension of four, those experiments perform best in terms of mean episode length and even undercut the baseline experiments although they have not performed as good in terms of the mean score per step in \figref{fig:SAC_latent_comparison_mean_score/5}. Finally those experiments with a latent dimension of eight are performing almost on the same level as the baseline experiments but not as good as the experiments with a latent dimension of four. \\
 In \figref{fig:SAC_latent_comparison_mean_score/10} we can see wide variety of best performances. The best performing setting are the baseline experiments followed by the experiments with a latent dimension of four. The next best performance is coming from a latent dimension equal to two and last ranked are the experiments with a latent dimension of eight. As we have mentioned earlier we suspect this drop in performance caused by the quality the decoder gets hand over to the Soft Actor Critic. \\
 Note that although the maximum number of steps per episode was set to 400 the standard deviation of the experiment with a latent dimension of eight seam to surpass this threshold which is with a closer look into the actual curves clearly not the case. \todo{insert plot in appendix}. \\ 
-On the performed experiments with 15 joints we can see that none of the latent experiments is able to match the performance of the baseline experiments with even a couple of experiments with a latent dimension of four or eight aborting early. As it turns out this abort is caused by abnormally high values for alpha loss as shown in \figref{fig:alpha_loss_15} resulting in \texttt{nan} values in update steps. A positive alpha loss translates to a an increase of alpha translates to an increase in exploration for the policy, by encouraging a higher standard deviation for the parameterized distribution returned by the actor network. 
+On the performed experiments with 15 joints we can see that none of the latent experiments is able to match the performance of the baseline experiments with even a couple of experiments with a latent dimension of four or eight aborting early. As it turns out this abort is caused by abnormally high values for alpha loss as shown in \figref{fig:alpha_loss_15} resulting in \texttt{nan} values in update steps. A positive alpha loss translates to a an increase of alpha translates to an increase in exploration for the policy, by encouraging a higher standard deviation for the parameterized distribution returned by the actor network.
+\begin{figure}
+    \begin{center}
+        \subfloat[mean episode reward per step averaged over the last 20 episodes. ]{
+            \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+            \label{fig:SAC_latent_8/reward}
+            }
+        \hfill
+        \subfloat[mean episode length avergaed over the last 20 episodes]{
+        \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+            \label{fig:SAC_latent_8/episode_len}
+            }
+    \end{center}
+    \caption[SAC + VAE on latent dim = 4]{SAC + decoder form VAE with \textbf{latent dimension = 4} and trained with imitation loss enabled. Each experiment was conducted 10 times with different random seeds. The solid strong line is the mean over those 10 experiments. The color shaded area covering the mean is the standard deviation around the mean.}
+    \label{fig:SAC_latent_8}
+\end{figure}
 
-As a result of the previous observations we can see the latent dimension as an additional hyperparameter to optimize. Because setting it to high could lead the extremely high variance in the Soft Actor Critic task as shown in \figref{fig:SAC_latent_comparison/10} and also
+\begin{figure}
+    \begin{center}
+        \subfloat[SAC baseline experiments]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/action_correlations_baseline_2_1691621262_5000.png}
+            \label{fig:SAC_action_correlation_comp/baseline}
+            }
+        \hfill
+        \subfloat[SAC + VAE with latent dimension = 4 and only distance loss enabled]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/action_correlations_latent_actor_4_2_1693063115_5000.png}
+            \label{fig:SAC_action_correlation_comp/latent_4}
+            }
+        \subfloat[SAC + VAE with latent dimension = 4, distance and imitation loss enabled]{
+            \includegraphics[width=0.31 \linewidth]{figures/place_holder.png}
+            \label{fig:SAC_action_correlation_comp/latent_4_imitation}
+            }
+    \end{center}
+    \caption[action correlation comparison]{Action correlation for baseline experiments, latent dimension only trained on distance loss and SAC + VAE trained on distance and imitation loss. }
+    \label{fig:SAC_action_correlation_comp}
+\end{figure}
+
+Because we have seen a lack in performance between the baseline SAC experiments we additional trained VAEs with the imitation loss enabled to minimize the distance between the state angle distribution the decoder is receiving as in \figref{fig:SAC_action_correlation_comp} versus the state angle distribution the decoder is trained as in \figref{fig:dataset_action_correlation}. But if we have a look into \figref{fig:SAC_action_correlation_comp/latent_4_imitation} and compare to the plots on the left we do not see a significant change. This could be extrapolated to higher $N$ and explain the missing improvement we would expect. But since this is not the main focus of this thesis we leaf these steps for future research.
 
 \section{Supervised}
 
@@ -367,7 +369,7 @@ The results of the supervised experiments are divided into two parts. The first 
 
 \subsection{Distance Loss}
 
-The distance loss results over different amount of joints in \figref{fig:supervised_distance} are very similar compared to \figref{fig:VAE_latent} (a) to (c). Parallel to \figref{fig:VAE_latent} we can also observe an increase in loss while increasing $N$. Different to the exoeriments on the VAE is the standard deviation between the experiments. The supervised experiments show a smaller standard deviation across the whole training period compared to the VAE experiments.
+The distance loss results over different amount of joints in \figref{fig:supervised_distance} are very similar compared to \figref{fig:VAE_latent} (a) to (c). Parallel to \figref{fig:VAE_latent} we can also observe an overall increase in loss while increasing $N$ and finishing at different convergence levels. Different to the experiments on the VAE is the standard deviation between the experiments. The supervised experiments show a significant smaller standard deviation across the whole training period compared to the VAE experiments.
 
 \begin{figure}
     \begin{center}
@@ -379,8 +381,11 @@ The distance loss results over different amount of joints in \figref{fig:supervi
 
 \subsection{Distance + Imitation Loss}
 
-For this series of experiments we also want to emphasis solutions close to solutions computed by the CCD by setting the dataset mode to \texttt{ACTION} and setting the imitation loss weight to 0.01. Unlike as in the previous section the distance loss differs a lot from \figref{fig:supervised_distance}. We do not see a steady increase in loss over different numbers of joints we do see vastly different levels of final distance loss performances starting with two joints at around 1.1 and ending with 15 joints at XXX.
-A bit more interesting are the results on the imitation loss. Similar to \figref{fig:VAE_imitation/imitation_loss} all curves have a drop in the first couple of epochs but are constant for the rest of the training. Comparing those curves with respect to the number of joints we observed that all mean curves have vastly different levels of convergence which seems not to be linear correlated with $N$. Compared to the experiments in \figref{fig:VAE_imitation/imitation_loss} all imitation losses are higher higher. 
+For this series of experiments we also want to emphasis solutions close to solutions computed by the CCD by setting the dataset mode to \texttt{ACTION} and setting the imitation loss weight to 0.01. 
+
+Unlike as in the previous section the distance loss differs a lot from \figref{fig:supervised_distance}. We do not see a steady increase in loss over different numbers of joints instead we do see vastly different levels of final distance loss performances starting with two joints at around 1.1 and ending with 15 joints at XXX.\\
+A bit more interesting are the results on the imitation loss. Similar to \figref{fig:VAE_imitation/imitation_loss} all curves have a drop in the first couple of epochs but are constant for the rest of the training. Comparing those curves with respect to the number of joints we observed that all mean curves have vastly different levels of convergence which seems not to be linear correlated with $N$.
+
 
 \begin{figure}
     \begin{center}
@@ -398,23 +403,62 @@ A bit more interesting are the results on the imitation loss. Similar to \figref
     \label{fig:supervised_imitation}
 \end{figure}
 
-
 \section{SAC with Supervised}
-
 
 \begin{figure}
     \begin{center}
-        \subfloat[Distance Loss]{
-            \includegraphics[width=0.46 \linewidth]{figures/experiments/}
-            \label{fig:supervised_imitation/distance_loss}
+        \subfloat[Mean score per step]{
+            \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+            \label{fig:sac_supervised/distance_loss}
             }
         \hfill
-        \subfloat[Imitation Loss]{
-        \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_imitation_2_latent_4 4 4 4_imitation_loss.png}
-            \label{fig:supervised_imitation/imitation_loss}
+        \subfloat[episode length]{
+        \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+            \label{fig:sac_supervised/imitation_loss}
             }
     \end{center}
     \caption[Supervised Distance and Imitation Loss]{Validation results for supervised experiments on distance and imitation loss. }
-    \label{fig:supervised_imitation}
+    \label{fig:sac_supervised}
 \end{figure}
 
+Merging the supervised model with SAC yields performances as in \figref{fig:sac_supervised}. We do can see very similar performances as with merging SAC with VAE. 
+
+\begin{table}
+    \begin{center}
+        \begin{tabular}{ l | c  c | c  c | c  c}
+        experiment series & \multicolumn{6}{c}{$N$} \\
+        \hline
+        & \multicolumn{2}{c |}{2} & \multicolumn{2}{c |}{5} & \multicolumn{2}{c}{10} \\
+        & mean & std. & mean & std. & mean & std. \\
+        \hline
+        \textit{baseline}                    &  -5.16 & $\pm$ 0.95 & -15.29 & $\pm$ 1.62 & -32.51 & $\pm$ 2.64 \\
+        \textit{latent actor 4}              & -13.45 & $\pm$ 2.93 & -15.60 & $\pm$ 2.49 & -15.45 & $\pm$ 4.42\\
+        \textit{supervised imitation loss}   &  10.96 & $\pm$ 2.07 &  41.76 & $\pm$ 2.75 &  39.71 & $\pm$ 2.89  \\
+        \textit{supervised distance loss}    &  -9.03 & $\pm$ 0.98 & -10.54 & $\pm$ 0.41 & & \\
+        \end{tabular}
+    \end{center}
+    \caption[policy log probabilities]{Log probabilities of each policy series during training form the last 50 episodes each over 10 experiments. }
+    \label{tab:policy_log_probs}
+\end{table}
+
+A very interesting point of distinguishing the merge of SAC with either the VAE approach or the supervised regressor can be shown by the log probabilities, the actor networks are returning for the gaussian distribution to sample from in \tabref{tab:policy_log_probs}. If we look first at \textit{baseline} the mean log probability decreases with the number of joints and therefor increases the stochastisity of the policy. If we look at the the latent experiments \textit{latent actor 4} and \textit{supervised distance loss} the log probability stays on the same level but is significant higher for the VAE approach. 
+
+\begin{figure}
+    \begin{center}
+        \subfloat[Mean score per step]{
+            \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+            \label{fig:sac_supervised_imitation/distance_loss}
+            }
+        \hfill
+        \subfloat[episode length]{
+        \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+            \label{fig:sac_supervised_imitation/imitation_loss}
+            }
+    \end{center}
+    \caption[Supervised Distance and Imitation Loss]{Validation results for supervised experiments on distance and imitation loss. }
+    \label{fig:sac_supervised_imitation}
+\end{figure}
+
+Experiments conducted with a supervised model trained with imitation loss enabled are shown in \figref{fig:sac_supervised_imitation}.
+
+A further property is the log probability the imitation loss regressor experiments are returning during training as in \tabref{tab:policy_log_probs}. The actor network is very certain about the action it would like to exploit leaving almost no room for exploration. 

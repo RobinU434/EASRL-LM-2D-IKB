@@ -1,9 +1,6 @@
 \chapter{Methodology}\label{chap:Methodology}
 
-covers:
-research idea
-rl-environment
-experiments on VAE, Supervised and merged pipeline
+In this section we are going to explain the research idea and introduce the inverse kinematics benchmark environment. Further we will dive a bit deeper into the techniques how to create a dataset and explain the used criterions for the latent models. We are going to conclude this chapter by providing a short introduction into the software written and used tools.
 
 \section{Research Idea}
 
@@ -21,7 +18,6 @@ Alternatively, the supervised model approach involves training a supervised lear
 	\label{fig:research_idea}
 \end{figure}
 
-
 \section{RL Environment}\label{sec:RL-Environment}
 
 To apply RL in general you need an environment the agent can send actions to and receives feedback as discussed in \secref{sec:RL-Framework}. As previously introduced the key problem we are targeting is inverse kinematics of a robot arm. This problem turn out to be suitable because:
@@ -31,7 +27,8 @@ To apply RL in general you need an environment the agent can send actions to and
     \item it is expandable. You are always able to extend the environment with additional constrains like objects the robot has to navigate around or joint angle constrains.
 \end{itemize}
 
-In this section I'm going to present the a novel RL-Environment for bench-marking the performance of different algorithms to solve inverse kinematics for a robot arm with $N$ many joints and subsequently $N$ many segments with lengths $l \in\mathbb{R}_{>0}^N$ in 2D space. For simplicity reasons $l$ is constant with $l = \{ 1 \}^N$.
+In this section we are going to present the a novel RL-Environment for bench-marking the performance of different algorithms to solve inverse kinematics for a robot arm with $N$ many joints and subsequently $N$ many segments with lengths $l \in\mathbb{R}_{>0}^N$ in 2D space. For simplicity reasons $l$ is constant with $l = \{ 1 \}^N$.
+The environment is embedded into the Farama Gymnasium framework \cite{Gymnasium}.
 
 \begin{figure}[h]
 	\centering
@@ -95,7 +92,6 @@ If you want to normalize the reward function you have to divide $R$ by $N$.
 \end{figure}
 
 In \figref{eqn:Rewardfunction} we can see the linear gradient for any current position towards the target position at $[-0.5, 0.5]$.
-
 
 \section{Dataset Creation} \label{sec:Dataset_creation}
 
@@ -200,17 +196,15 @@ In this section we will explain the tangible KL divergence as well as the indivi
 
 \subsection{Kulback Leiber Divergence}
 
-The Kulllback Leiber divergence first pulbished by Solomon Kullback and Richard Leiber  in 1951 \todo{cite: https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-22/issue-1/On-Information-and-Sufficiency/10.1214/aoms/1177729694.full} is mathematical measure of how a probability distribution $P$ differs from a second distribution $P'$ and is denoted as $D_\text{KL}(P||P')$. Inside the ELBO it functions as a regularization element between the latent distribution $p_\phi(z|x)$ and a target distribution $p(z)$. Throughout this thesis we take the standard normal distribution as the target distribution, $p(z) = \mathcal{N}(0, I)$. Since we implement a parameterized gaussian as the latent distribution due to the nature of continuous input data, $p_\phi(z|x) = \mathcal{N}_\phi(\mu_\phi(x)| \ \Sigma_\phi(x))$. Therefor we can calculate the Kullback Leiber Divergence as:
+The Kulllback Leiber divergence first published by Solomon Kullback and Richard Leiber  in 1951 \cite{pml2Book} is mathematical measure of how a probability distribution $P$ differs from a second distribution $P'$ and is denoted as $D_\text{KL}(P||P')$. Inside the ELBO it functions as a regularization element between the latent distribution $p_\phi(z|x)$ and a target distribution $p(z)$. Throughout this thesis we take the standard normal distribution as the target distribution, $p(z) = \mathcal{N}(0, I)$. Since we implement a parameterized gaussian as the latent distribution due to the nature of continuous input data, $p_\phi(z|x) = \mathcal{N}_\phi(\mu_\phi(x)| \ \Sigma_\phi(x))$. Therefor we can calculate the Kullback Leiber Divergence as:
 \begin{align*}
     D_\text{KL}( \mathcal{N}_\phi(\mu_\phi(x)| \Sigma_\phi(x))|| \mathcal{N}(0, I)) &= \frac{1}{2} \left(\mu_\phi(x)^T\mu_\phi(x)  + tr\left(\Sigma_\phi(x)\right) - K - \log{|\Sigma_\phi(x)|} \right)\\
     &= \frac{1}{2} \left(\mu_\phi(x)^T\mu_\phi(x)  + \sum_{i=1}^K\Sigma_\phi(x)_{ii} - K - \log\left(\sum_{i=1}^K\Sigma_\phi(x)_{ii}\right)\right) 
-\end{align*}\todo{employ in code and test diffferent KL divergence} \todo{proof in appendix from https://mr-easy.github.io/2020-04-16-kl-divergence-between-2-gaussian-distributions/}
-\todo{KL div}
+\end{align*}
 
 \subsection{Reconstruction Loss}
 
 Inside the Evidence Lower Bound objective, the reconstruction loss minimizes the distance between the input data $x$ and the model output $\hat{x}$. In our experiments we employed three different approaches for the reconstruction loss:
-
 
 \textbf{Imitation Loss}. The imitation loss is a criterion to minimize the mean squared error between a given label $y$, in this case an action from an expert which results in $y \in \mathbb{R}^N$ and the predicted action $\hat{x} \in \mathbb{R}^N$. It is defined as in \eqref{eqn:Imitation-Loss}.
 
@@ -221,8 +215,7 @@ Inside the Evidence Lower Bound objective, the reconstruction loss minimizes the
     \end{split}
 \end{equation}
 
-
-\textbf{Distance Loss}. This loss function minimizes the distance between a desired position in 2D space as label $p_\text{target}$ and the action outcome of a state action combination. The state information needed for this criterion are only the current robot arm angles $q$. Like before the action is referred to as $\hat{x}$. \todo{wirte forward kinematics algorithm}
+\textbf{Distance Loss}. This loss function minimizes the distance between a desired position in 2D space as label $p_\text{target}$ and the action outcome of a state action combination. The state information needed for this criterion are only the current robot arm angles $q$. Like before the action is referred to as $\hat{x}$.
 
 \begin{equation}\label{eqn:Distance-Loss}
     \begin{split}

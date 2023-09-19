@@ -8,7 +8,7 @@ The following sections are a summary of the present work from several different 
 
 Learning is a topic that is present in all our lives since their beginning. We all learn to move our arms, like an infant that is wiggling around, learn to walk, to speak and more or less any other skill that we find in our personal repository until now.  
 
-Reinforcement Learning (RL) is about to have a computational approach to this kind of learning.
+Reinforcement Learning (RL) is a computational approach for this kind of learning by doing principal.
 In the class of RL-Problems the environment provides a challenge like, riding a bicycle. But it is not told how this goal can be achieved.  Therefore it has be learned how to derive actions from situations on or off the bike in order to complete this task or - speaking of the numerical approach - maximize a reward function.
 In most cases the problem solving methods that are classified as RL-methods are applied on tasks that require not only a sequence of actions to interact with an environment but also some kind of feedback.
 Therefore these setups are designed to provide this kind of feedback. Either if it is an immediate feedback like an additional time step the agent has not crashed the bike or if it is more like a long shot feedback, for example a bonus that the agent has earned after winning board game. 
@@ -25,14 +25,14 @@ Before we can have an exemplary look on the closed loop mechanics, we would like
 % \include{figures/background/agent-envorinment-interaction}
 \begin{figure}
 	\centering
-	\minipage{0.5\textwidth}
+	\minipage{0.7\textwidth}
     \includegraphics[width=\linewidth,]{figures/background/agent-environment-interaction.png}
 	\caption[interaction between agent and environment]{interaction between agent and the environment is living in to pursue his goal. Figure is kindly provided by R. Sutton and A. Barto in ``Reinforcement Learning: An Introduction'' \cite{SuttonBartoRLBook}}
 	\label{fig:agent-environment_interaction}
 	\endminipage
 \end{figure}
 
-Every agent exists in a specified environment and also interacts within a sequence of discrete time steps $t \in \mathbb{N}$. In order to do so the agent has to perceive the environment through a \textbf{state} representation $S_t \in \mathcal{S}$ which is an element of all possible states, the state space $\mathcal{S}$. To really interact with the environment the agent has to perform an \textbf{action} $A_t \in \mathcal{A}(S_t)$ where $\mathcal{A}(S_t)$ is the set of all possible actions in given state $S_t$. To chose an action the agent calculates for each possible action $A_t$ a probability $\pi_{\theta, t}(A_t|S_t)$ for a given state $S_t$ and chooses the maximum with respect to the given actions. To achieve a more compact notation we will refer to the action $A_t = a$ and the state $S_t = s$. To avoid confusions with the number $\pi \approx 3.141$ we refer to the policy always as a parameterized policy $\pi_\theta = \pi_{\theta, t}(a|s)$.  
+Every agent exists in a specified environment and also interacts within a sequence of discrete time steps $t \in \mathbb{N}$. In order to do so the agent has to perceive the environment through a \textbf{state} representation $S_t \in \mathcal{S}$ which is an element of all possible states, the state space $\mathcal{S}$. To interact with the environment the agent has to perform an \textbf{action} $A_t \in \mathcal{A}(S_t)$ where $\mathcal{A}(S_t)$ is the set of all possible actions in given state $S_t$. To chose an action the agent calculates for each possible action $A_t$ a probability $\pi_{\theta, t}(A_t|S_t)$ for a given state $S_t$ and samples from an action from this distribution. To achieve a more compact notation we will refer to the action $A_t = a$ and the state $S_t = s$. Further we refer to the policy always as a parameterized policy $\pi_\theta = \pi_{\theta, t}(a|s)$.  
 This probability distribution is called the \textbf{policy}. 
 After the agent has chosen and executed an action, which also means the environment will move one time step further $t \to t + 1$, the environment will return the next state $S_{t+1}$ and the agent will perceive a \textbf{reward} $R_{t+1} \in \mathbb{R}$ with $\mathbb{R}$ as the set of all possible rewards.\\
 The long term goal of the agent is to adapt its policy to maximize the total amount reward the agent receives from the environment.

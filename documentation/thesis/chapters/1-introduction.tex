@@ -4,7 +4,7 @@
 
 % This thesis explores the integration of latent models, including pre-trained Variational Autoencoder decoders and supervised models, into Reinforcement Learning frameworks. The objective is to expand the action space capabilities of RL agents. The research is evaluated using a benchmark environment: solving a 2D Inverse Kinematics problem on a robot arm with a variable number of joints $N$. The study investigates how the incorporation of latent models enhances the RL agent's performance in handling complex action spaces.
 
-In the ever-evolving landscape of artificial intelligence and machine learning, Reinforcement Learning (RL) stands as a powerful paradigm for enabling autonomous agents to learn and adapt to their environments. RL has demonstrated remarkable success in a variety of applications, from game-playing agents to robotics control systems. However, one of the enduring challenges in RL lies in the limitation of the action space—an agent's ability to act upon its environment. The dimensionality and complexity of the action space profoundly impact an agent's capacity to solve increasingly intricate tasks.
+In the ever-evolving landscape of artificial intelligence and machine learning, Reinforcement Learning (RL) stands as a powerful paradigm for enabling autonomous agents to learn and adapt to their environments. RL has demonstrated remarkable success in a variety of applications, from game-playing agents \cite{SAC_VideoGames_Paper} to robotics control systems \cite{SAC_Applications_Paper} \cite{anymal_RL}. However, one of the enduring challenges in RL lies in the limitation of the action space—an agent's ability to act upon its environment. The dimensionality and complexity of the action space profoundly impact an agent's capacity to solve increasingly intricate tasks \cite{RL_Complex_Action_Spaces}.
 
 This thesis explores a novel approach to address the action space limitations in RL by leveraging latent models. Specifically, it investigates the integration of pre-trained latent models, including Variational Autoencoder (VAE) decoders and supervised models, into RL frameworks. The primary aim is to empower RL agents to handle significantly more extensive and complex action spaces effectively. To evaluate the effectiveness of this approach, we developed a new scalable benchmark environment: the 2D Inverse Kinematics problem.
 
@@ -16,7 +16,7 @@ This challenge has motivated researchers to seek innovative solutions that expan
 
 \textbf{The Role of Latent Models in Expanding Action Spaces}
 
-Latent models, such as VAEs and supervised models, have demonstrated their prowess in capturing essential patterns and representations within data. By pre-training these models on relevant tasks, we can harness their latent spaces to transform high-dimensional action spaces into more compact and manageable forms. This, in turn, equips RL agents with the ability to explore and exploit action spaces that were previously deemed insurmountable.
+Latent models, such as VAEs and supervised models, have demonstrated their prowess in capturing essential patterns and representations within data \cite{pml2Book}. By pre-training these models on relevant tasks, we can harness their latent spaces to transform high-dimensional action spaces into more compact and manageable forms. This, in turn, equips RL agents with the ability to explore and exploit action spaces that were previously deemed insurmountable.
 
 \textbf{Benchmarking Progress: The 2D Inverse Kinematics Problem}
 

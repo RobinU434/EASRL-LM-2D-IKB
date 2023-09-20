@@ -1,6 +1,6 @@
 \chapter{Background}\label{chap:background}
 
-The following part is to provide a short introduction into the theory of reinforcement learning, the Soft Actor Critic Algorithm (SAC) as well to Variational Autoencoders (VAE) and Conditional Variational Autoencoders (CVAE). In the end we will explain the concepts behind forward and inverse kinematics and go deeper into the Cyclic Coordinate Descent (CCD) Algorithm.
+The following part is to provide a short introduction into the theory of reinforcement learning, the Soft Actor Critic Algorithm (SAC) as well to Variational Autoencoders (VAE) and Conditional Variational Autoencoders (CVAE). In the end we will explain the concepts behind forward and inverse kinematics and go deeper into the algorithm representing a expert for inverse kinematics, Cyclic Coordinate Descent (CCD).
 
 The following sections are a summary of the present work from several different groups and researchers. For more details please refer to their original publications or to more sophisticated literature like the textbook ``Reinforcement Learning: An Introduction'' from Richard Sutton and Andrew Barto \cite{SuttonBartoRLBook}, ``Deep Learning'' from Ian Goodfellow, Yoshua Bengio and Aaron Courville \cite{DeepLearningTextBook} and ``Probabilistic Machine Learning: Advanced Topics'' from Kevin Murphy \cite{pml2Book}. 
 
@@ -8,16 +8,12 @@ The following sections are a summary of the present work from several different 
 
 Learning is a topic that is present in all our lives since their beginning. We all learn to move our arms, like an infant that is wiggling around, learn to walk, to speak and more or less any other skill that we find in our personal repository until now.  
 
-Reinforcement Learning (RL) is a computational approach for this kind of learning by doing principal.
-In the class of RL-Problems the environment provides a challenge like, riding a bicycle. But it is not told how this goal can be achieved.  Therefore it has be learned how to derive actions from situations on or off the bike in order to complete this task or - speaking of the numerical approach - maximize a reward function.
-In most cases the problem solving methods that are classified as RL-methods are applied on tasks that require not only a sequence of actions to interact with an environment but also some kind of feedback.
-Therefore these setups are designed to provide this kind of feedback. Either if it is an immediate feedback like an additional time step the agent has not crashed the bike or if it is more like a long shot feedback, for example a bonus that the agent has earned after winning board game. 
-These principals can be boiled down to three main characteristics of reinforcement learning problems:
+Reinforcement Learning (RL) is a computational approach based on learning by doing, where an agent interacts with an environment to maximize a reward. RL problems, like riding a bicycle, present challenges without explicit instructions for achieving the goal. They involve a closed-loop system where actions yield feedback, whether immediate (e.g., not crashing a bike) or delayed (e.g., earning a bonus in a board game). RL problems can be characterized by three key features:
 
 \begin{itemize}
-    \item There is a closed loop mechanism between actions and feedback that is provided by the environment where the agent is operating in.
-    \item The agent is not given any direct instructions how to solve the given problem.
-    \item The actions an agent is performing have consequences over time. Either for him or the environment he is working in.  
+    \item Closed-loop interaction between actions and environment feedback.
+    \item Lack of explicit problem-solving instructions for the agent.
+    \item Actions having consequences over time for the agent or the environment.
 \end{itemize}
 
 Before we can have an exemplary look on the closed loop mechanics, we would like to introduce a couple of key components of RL including the Markov Decision Process.
@@ -45,7 +41,7 @@ The overall goal of an agent is to maximize its received cumulative return $G_t$
 	&= R_{t+1} + \gamma G_{t+1} \label{eqn:discounted-cumulative-return-recursive}
 \end{align}
 
-Unfortunately the individual rewards $R_t$ are highly dependent on state action pairs in the future, so they are not accessible at the current time step. To solve this problem reinforcement algorithms are trying to maximize the expected return $v_{\pi_\theta}(s)$ as in \eqref{eqn:expected-return} \cite{SuttonBartoRLBook}, or value function, for a given state. For Markov decision process we can define the value function as in \eqref{eqn:Bellman-valuefunction} \cite{SuttonBartoRLBook}. 
+Due to the dependence of individual rewards $R_t$ on state-action pairs from the same time step $t$, we can not compute the received cumulative return until the episodes end. To solve this problem reinforcement learning algorithms try to maximize the expected return $v_{\pi_\theta}(s)$ as in \eqref{eqn:expected-return} \cite{SuttonBartoRLBook}, or value function, for a given state. For Markov decision process we can define the value function as in \eqref{eqn:Bellman-valuefunction} \cite{SuttonBartoRLBook}. 
 
 \begin{align}
 	% v_{\pi_\theta}(s) = \sum_a \pi_\theta(a|s) \sum_{s', r} P(s', r| s, a)\left[r + \gamma v_{\pi_\theta}(s'm)\right] 
@@ -87,7 +83,7 @@ One fundamental concept for reinforcement learning algorithms is policy iteratio
 \begin{figure}
     \begin{center}
         \includegraphics[width=0.5\linewidth]{figures/background/PolicyIterationConcept.png}
-        \caption[policy iteration concept]{policy iteration concept. Adapted graphic from \cite{SuttonBartoRLBook}}
+        \caption[policy iteration concept]{Policy iteration concept. We can see the alternating uptate between policy and value-function. This process continues until we reached either the optimal policy and optimal value-function or is limited by the number of epochs. Adapted graphic from \cite{SuttonBartoRLBook}}
         \label{fig:policy-iteration-concept}
     \end{center}
 \end{figure}
@@ -196,7 +192,7 @@ Because we will have a closer look into actual implementation, we now refer to t
 To \textbf{train the parameterized action-value-functions} the objective function (\ref{eqn:q-loss}) is defined as the expected squared difference between the action-state-value $Q_{\phi_i}(s, a)$ and its temporal difference target $y(r, s', d)$. \eqref{eqn:q-loss} leads directly to the update equation (\ref{eqn:q-update}) as its derived empirical counterpart.
 
 \begin{equation}\label{eqn:q-loss}
-	L_Q(\phi_i, \mathcal{D}) = \mathbb{E}_\mathcal{D}\left[\left(Q_{\phi_i}(s, a) - y(r, s', d)\right)^2\right]
+	\mathcal{L}_Q(\phi_i, \mathcal{D}) = \mathbb{E}_\mathcal{D}\left[\left(Q_{\phi_i}(s, a) - y(r, s', d)\right)^2\right]
 \end{equation}
 
 The temporal difference target target $y$ is defined as in \eqref{eqn:td-target} with $\hat{a}' \sim \pi\theta(\cdot| s')$. To stabilize the target signal SAC applies the clipped double-Q trick, where it selects the minimum q-value between the two target q-functions $Q_{\phi_{\text{target}, i}}$.
@@ -224,7 +220,7 @@ For more details please refer to \cite{SAC_Applications_Paper}.
 
 To compute the policy loss, as in training the action-value-function approximation, the crucial step involves replacing $q_{\pi_\theta}$ with one of our function approximators $Q_{\phi_i}$. SAC utilizes the minimum of the two $q_{\pi_\theta}$ approximators $\min_{i=0,1} Q_{\phi_i}$. Consequently, the policy is optimized based on this minimum action-state-value approximation and therefor make only more conservative estimates.
 \begin{equation}\label{eqn:policy-loss}
-	L_\pi(\theta, \mathcal{D}) = - \mathbb{E}_{\mathcal{D}, \mathcal{N}(0, I)}\left[\min_{i=0,1}Q_{\phi_i}(s, \hat{a}_\theta(s, \epsilon) - \alpha \log \pi_\theta(\hat{a}_\theta(s, \epsilon)| s))\right]
+	\mathcal{L}_\pi(\theta, \mathcal{D}) = - \mathbb{E}_{\mathcal{D}, \mathcal{N}(0, I)}\left[\min_{i=0,1}Q_{\phi_i}(s, \hat{a}_\theta(s, \epsilon) - \alpha \log \pi_\theta(\hat{a}_\theta(s, \epsilon)| s))\right]
 \end{equation}
 
 Note that we are taking the negative expectation because we want to maximize the expected return and the entropy by using SGD as in \eqref{eqn:policy-update} in \algoref{alg:SGD}. The different notation can be explained a ${\{s, a, r, s', d\}}_{\mathcal{B}, k}$ stand for the $k$th element from the minibatch $\mathcal{B}$..
@@ -233,7 +229,7 @@ Now lets turn to the entropy regularization parameter $\alpha$. In general there
 The second approach how to treat $\alpha$, proposed by \cite{SAC_Applications_Paper}, adjusts $\alpha$ constantly during the training process. The optimization criterion is stated as:
 
 \begin{equation}\label{eqn:alpha-criterion}
-	L_\alpha = \underset{a_t\sim\pi_\theta}{\mathbb{E}}\left[-\alpha \log \pi_(a_t|s_t) - \alpha \bar{H}\right]
+	\mathcal{L}_\alpha(\pi_\theta \bar{H}) = \underset{a_t\sim\pi_\theta}{\mathbb{E}}\left[-\alpha \log \pi_\theta(a_t|s_t) - \alpha \bar{H}\right]
 \end{equation}
 
 \eqref{eqn:alpha-criterion} resembles an objective for dual gradient descent because we are trying to minimize $\alpha$ but also the expected difference between the policy entropy and a target entropy $\bar{H}$ as a hyperparameter. In practice this can be translated into a positive gradient if the expected difference is positive so the agent is less exploring as should be and into a negative gradient if the difference is negative so the agent is to focused on exploring. Selecting a target entropy is not as delicate as selecting a fixed $\alpha$ because you are able to read from training results if your environment requires a more or less greedy policy \cite{SpinningUp2018}.
@@ -261,19 +257,19 @@ The second approach how to treat $\alpha$, proposed by \cite{SAC_Applications_Pa
 			\State{} sample minibatch: $(s_\mathcal{B}, a_\mathcal{B}, r_\mathcal{B}, s'_\mathcal{B}, d_\mathcal{B}) = \mathcal{B}$ $\leftarrow$ $\mathcal{D}$ 
 			\State{} compute td target $y$ with $\tilde{a}'_\mathcal{B} \sim \pi_\theta(\cdot|s'_\mathcal{B})$
 			\begin{equation}\label{eqn:td-target-batch}
-				y(r_\mathcal{B}, s'_\mathcal{B}, d_\mathcal{B}) = r + \gamma \cdot d \cdot \left(\min_{i\in\{0, 1\}}\left(Q_{\phi_{\text{target}, i}}(s'_\mathcal{B}, \tilde{a}'_\mathcal{B})\right) - \alpha \cdot \log\left(\pi_\theta(\tilde{a}'_\mathcal{B}|s'_\mathcal{B})\right)\right)
+				y(r_\mathcal{B}, s'_\mathcal{B}, d_\mathcal{B}) = r_\mathcal{B} + \gamma(1 - d_\mathcal{B}) \left(\min_{j=0,1}Q_{\phi_{\text{target}, i}}(s'_\mathcal{B}, \hat{a}'_\mathcal{B}) - \alpha \log \pi\theta(\hat{a}'_\mathcal{B}| s'_\mathcal{B})\right)
 			\end{equation}
 			\State{} Update Q-functions for parameters $\phi_i$ $i \in \{0, 1\}$ using:
 			\begin{equation}\label{eqn:q-update}
-				\nabla_{\phi_i} \frac{1}{|B|} \sum_{k \in |\mathcal{B}|}\mathcal{L}_\beta\left(y(r_{\mathcal{B}, k}, s'_{\mathcal{B}, k}, d_{\mathcal{B}, k}), Q_{\phi_i}(s_{\mathcal{B}, k}, a_{\mathcal{B}, k})\right)    
+				\nabla_{\phi_i} \frac{1}{|B|} \sum_{k \in |\mathcal{B}|}\mathcal{L}_Q(\phi_i, \mathcal{D})   
 			\end{equation}
-			\State{} Update policy with $\tilde{a}_\mathcal{B} \sim \pi_\theta(\cdot|s_\mathcal{B})$ using:
+			\State{} Update policy using:
 			\begin{equation}\label{eqn:policy-update}
-			   \nabla_{\theta} \frac{1}{|\mathcal{B}|}\sum_{k \in |\mathcal{B}|}\min_{i\in\{0, 1\}}Q_{\phi_i}(s_{\mathcal{B}, k}, \tilde{a}_{\mathcal{B}, k}) - \alpha \cdot \log\left(\pi_\theta(\tilde{a}_{\mathcal{B}, k}|s_{\mathcal{B}, k}\right))
+			   \nabla_{\theta} \frac{1}{|\mathcal{B}|}\sum_{k \in |\mathcal{B}|}\mathcal{L}_\pi(\theta, \mathcal{D})
 			\end{equation}
 			\State{} Update $\alpha$ with target entropy $H_\text{target}$ and $\tilde{a}_\mathcal{B} \sim \pi_\theta(\cdot|s_\mathcal{B})$ using:
 			\begin{equation*}
-				\nabla_\alpha -\frac{\alpha}{|\mathcal{B}|} \sum_{k \in |\mathcal{B}|} \left(\log\left(\pi_\theta(a'_{\mathcal{B}, k}|s_{\mathcal{B}, k})\right)\ - H_\text{target}\right)
+				\nabla_\alpha -\frac{\alpha}{|\mathcal{B}|} \sum_{k \in |\mathcal{B}|} \mathcal{L}_\alpha(\pi_\theta \bar{H})
 			\end{equation*}
 			\State{} Update target networks $\phi_{\text{target}, i}$ $i \in \{0, 1\}$ with $\phi_i$ $i \in \{0, 1\}$ using:
 			\begin{equation*}

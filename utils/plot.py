@@ -304,7 +304,7 @@ def plot_pcolormesh(
     ax.pcolormesh(angle, radius, z, alpha=alpha, cmap=cmap)
 
     if stats:
-        r = 1.75 * max(radius)
+        r = 1.75 * np.max(radius)
         ax.text(
             2.5,
             r,

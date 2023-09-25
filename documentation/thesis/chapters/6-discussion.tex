@@ -1,22 +1,12 @@
 \chapter{Discussion}\label{chap:discussion}
 
-In this section we are going to discuss the before presented results in the experiments. 
+In this section we are going to discuss the before presented results in the experiments. We focus hereby only on the results from the Reinforcement Learning section in \chapref{chap:experiments}.
 
-\section{Latent Model}
+\section{Baseline SAC}
 
-Moving on to the experiments to train a latent model. We train a latent model to augment SAC and let it control the latent model and therefor the actions from a higher level while having access to all state space information.
-e
-Since the standalone results of each latent model type are very similar we will discuss them together.
-Both ways to train a model with the TargetGaussian Dataset yielded almost the same performance in the distance loss. This is not very surprising as we have seen neural networks struggle with the inverse Kinematics task while increasing the number of joints $N$. Looking deeper into the model performance shows that the distance loss is dependent is also dependent on the state information we are providing in datasets. \todo{think about how to plot this}   
 
-We also have similar results with the imitation loss
-\todo{big change in observation space distribution}
+Let's delve into the foundational results of the baseline SAC experiments. We immediately noticed a pronounced correlation between the performance of the SAC algorithm and the number of joints it was trained on. This connection is quite logical, as the effectiveness and computational demands of other inverse kinematics solvers, such as CCD, are intricately linked to the number of joints in the robotic system. This connection beautifully aligns with the runtime complexity analysis portrayed in \figref{fig:expert_dataset/runtime_complexity}.
 
-\section{Reinforcement Learning}
-
-\subsection{Baseline SAC}
-
-Starting with the baseline results for SAC we have seen a clear correlation between the algorithms performance and the number of joints we  train on. This is reasonable because the performance of other also other Inverse Kinematics solver mentioned earlier, including CCD are highly dependent on the number of joints required to solve for, as we have seen in the section about runtime complexity of CCD in \figref{fig:expert_dataset/runtime_complexity}.\\
 
 \begin{figure}
     \begin{center}
@@ -64,20 +54,53 @@ Starting with the baseline results for SAC we have seen a clear correlation betw
     \label{fig:SAC_action_correlation}
 \end{figure}
 
+\begin{table}
+    \begin{center}
+        \begin{tabular}{ l l | l l l l l}
+        experiment series           & $N$                   & 2    & 5    & 10   & 15   & 20   \\
+        \hline
+        \hline
+        \textit{baseline}           & $\mathfrak{S}$        & 0.73 & 0.83 & 0.57 & 0.42 & 0.30 \\
+                                    & max eval $\bar{R_t}$  & 0.09 & 0.10 & 0.32 & 0.74 & 0.82 \\
+        \hline
+        \textit{latent 2}           & $\mathfrak{S}$        & 0.66 & 0.78 & 0.33 & 0.04 &      \\
+                                    & max eval $\bar{R_t}$  & 0.11 & 0.15 & 0.83 & 3.62 &      \\
+        \hline
+        \textit{latent 4}           & $\mathfrak{S}$        & 0.76 & 0.84 & 0.54 & 0.04 &      \\
+                                    & max eval $\bar{R_t}$  & 0.09 & 0.09 & 0.50 & 3.89 &      \\
+        \hline
+        \textit{latent 8}           & $\mathfrak{S}$        & 0.72 & 0.88 & 0.22 & 0.06 &      \\
+                                    & max eval $\bar{R_t}$  & 0.09 & 0.08 & 2.97 & 4.22 &      \\
+        \hline
+        \textit{latent imitation}   & $\mathfrak{S}$        & 0.85 & 0.85 & 0.45 & 0.11 &      \\
+                                    & max eval $\bar{R_t}$  & 0.08 & 0.10 & 0.44 & 2.01 &      \\
+        \hline
+        \textit{super distance}     & $\mathfrak{S}$        & 0.62 & 0.60 & 0.53 &      &      \\
+                                    & max eval $\bar{R_t}$  & 0.11 & 0.20 & 0.64 &      &      \\
+        \hline
+        \textit{super imitation}    & $\mathfrak{S}$        & 0.19 & 0.25 & 0.21 &      &      \\
+                                    & max eval $\bar{R_t}$  & 0.37 & 0.34 & 0.71 &      &      \\
+    \end{tabular}
+    \end{center}
+    \caption[SAC Solved ratio]{Solved ratio $\mathfrak{S}$ and closest distance to target during one episode as known as the maximum reward during one episode for one target position, for all SAC experiments starting at $[N, 0]$ and targeting the same targets as in \figref{fig:SAC_baseline_min_distances} with a maximal budged of 400 steps. Those are examples from individual experiments all from epoch 3000. For more details which experiments please have a look into the figures directory. The suffix of each png describes where to find the experiment. For a closer inspection of how the individual models perform over the evaluation please refer to \chapref{chap:appendix}}
+    \label{tab:SAC_solved_ratio}
+\end{table}
 
-While comparing the CCD with baseline SAC we found a couple of differences those two solvers present.
+A comparison between CCD and baseline SAC revealed several intriguing distinctions:
+
 \begin{itemize}
-    \item \textbf{Target Dependence}: By looking deeper into CCD it is clear that its granular performance in a single run is also highly dependent on the given start configuration and target as show in \figref{fig:CCD_iteration}. Note that we talk about the performance of CCD as the number of iterations needed to reach the desired target position. If we now look into the steps needed to reach the desired target position of SAC we can seed that while increasing the number of joints we are increasingly often capped by the maximum number of iterations than ending the episode by reaching the target. One possible reason is teased by \figref{fig:SAC_baseline_inference_trajectory}. Here we were able to see that the agents behavior sometimes collapses as it is about to reach the target but after failing very closely the end-effector moves rapidly towards the origin and never coming as close as before to the desired target position. This observation is supported by \figref{fig:SAC_baseline_min_distance_step} where the minimal distance to the target can be found almost all of the time at around 50 or less steps in the episode. One reason why the agent struggles to reach the target with a increasing amount of joints could be the constant threshold to end an episode of 0.1 euclidean distance between end-effector and target position. As we increase the number of joints the area where the end-effector position ends an episode decreases due to $A = \pi N^2$ quadratically which makes it even harder to reach the position while increasing $N$. Against this argument stands that the robot arm is capable to perform more precise movements or even reducing the problem further down. One strategy could position joint 1 to $N - 2$ so the last two joints are able to reach the target and let do joint $N - 1$ to $N$ do the precise work. But why is the agent failing with a high margin after it went so close towards the target? An explanation could be that the agent is reaching a target very often dependent on the actual target position and has no opportunity to learn from those experiences. On the other hand are the  extended episode length and the increasing failure rate as in \tabref{tab:SAC_solved_ratio}.
-    \item \textbf{Solutions}: While having a deeper look into the solutions how SAC and CCD solve Inverse Kinematics we can observe a vast difference in the state angle distribution Comparing \figref{fig:dataset_action_correlation} to \figref{fig:SAC_action_correlation/baseline}. While in \figref{fig:dataset_action_correlation} the state angles to reach the target distribution are rhombus shaped the state angle plot in \figref{fig:SAC_action_correlation/baseline} is way more scattered. This change is also observable while looking deeper into the chosen trajectory. 
+    \item \textbf{Target Dependence}: Upon closer examination of CCD, it became evident that its performance in a single run was significantly influenced by the initial configuration and the specific target location. This was well-illustrated in  \figref{fig:CCD_iteration}, which depicted CCD's performance in terms of the number of iterations required to reach the desired target position. Interestingly, when we analyzed the steps needed to reach the target position using SAC, a noteworthy trend emerged. As the number of joints increased, we found that SAC more frequently reached the maximum iteration limit rather than successfully reaching the target as illustrated in \chapref{chap:appendix} and \tabref{tab:SAC_solved_ratio}. One potential explanation, alluded to in \figref{fig:SAC_baseline_inference_trajectory}, was that the agent's behavior sometimes declined as it neared the target. After coming tantalizingly close, the end-effector would rapidly retreat towards the arms  origin, failing to get as close to the desired target as before. This observation was backed up by \figref{fig:SAC_baseline_min_distance_step}, which showed that the minimum distance to the target was typically achieved in around 50 steps or fewer during an episode. It's worth noting that this difficulty in reaching the target could be attributed to SAC's fixed threshold for ending an episode, which required a $0.1$ Euclidean distance between the end-effector and the target by definition. As the number of joints increased, the area within which the end-effector's position could end an episode diminished quadratically, making it progressively harder to reach the target with more joints. However, this argument was counterbalanced by the fact that the robot arm could execute more precise movements or potentially decompose the problem into smaller parts. For instance, joint $1$ to $N-2$ could be utilized to roughly position the end-effector near the target, while joint $N-1$ to $N$ could perform the precise adjustments. This raises a crucial question: why did the agent consistently fail, often by a substantial margin, after coming so close to the target? One plausible explanation is that the agent frequently encountered scenarios where it almost reached the target but had no opportunity to learn from these experiences. On the contrary, the extended episode length and increasing failure rate while increasing $N$, as seen in  \tabref{tab:SAC_solved_ratio}, should work against this trend.
+    \item \textbf{Solutions}: A deeper exploration of how SAC and CCD tackled inverse kinematics problems unveiled a strong contrast in the distribution of state angles. Comparing \figref{fig:dataset_action_correlation}, which depicted the state angle distribution required to reach the target in the dataset, with \figref{fig:SAC_action_correlation/baseline}, which illustrated the distribution resulting from baseline SAC, highlighted this discrepancy. While the former exhibited a rhombus-shaped distribution, the latter showcased a more scattered pattern.
 \end{itemize}
 
-Note that this is only an qualitative comparison because CCD has the full action space on its disposal while SAC is limited to -1 to one because of the action normalizer at the back of SAC. Although scaling the hyperbolic tangent output up to a span of $2\pi$ or higher is not the perfect solution because SAC could find multiple actions for the same action outcome. It could also interfere with computing the probability of $\log(\pi_\theta(a|s))$.
+It is important to recognize that this qualitative comparison between CCD and SAC is inherently limited. CCD enjoys unrestricted access to the entire action space, whereas SAC's action range is constrained due to action normalization. It's also noteworthy that scaling the hyperbolic tangent output to a range of $2\pi$ or higher, while a potential solution, is not without its challenges. Doing so could lead to SAC finding multiple actions that yield the same action outcome or potentially complicating the calculation of log probabilities for the policy.
 
-The presented decrease in the SAC performance in \figref{fig:SAC_baseline} could be also explained because of the linear increase of complexity of the observation space since $S \subset \mathbb{R}^{4+N}$. To counter the increase of complexity some could also increase the number of hidden layer or neurons per layer and have a closer look into neural architecture search. Another way to maybe proof this theory could be the application of Neural-Evolution-of-Augmented-Topologies short NEAT. This algorithm finds the smallest possible architecture to conquer a given task. Given the provided background information we assume the found neural architecture increases in complexity while increasing $N$.
+At this juncture, we can draw connections between our baseline experiments and the concepts presented in the Motor Synergy paper \cite{Motor_Synergy_Learning}. An interesting proposition arises when we closely examine the inverse kinematics problem as defined in the environment description. One conceivable strategy involves dividing the robot arm into two sections, each comprising $N/2$ segments, and constraining the relative angles within each segment. These two segments would effectively resemble a robot arm with just two extended joints. As previously demonstrated, environments with two joints are quite tractable. Yet, why doesn't the policy opt for such a strategy? Several arguments come to the fore. It's plausible that this strategy results in a longer trajectory to reach the target, which could affect the accumulated reward. Additionally, the choice could be influenced by the exploration strategy, as increasing entropy to encourage exploration does not seem effective due to the collapsing distribution, as seen in \figref{fig:Uniform_dataset}.
 
-Comparing RL with SAC we already described the end-effector movements in \chapref{chap:experiments}. With the current training settings it is clear that SAC is clearly not the better solutions than a more standard approach like SAC as we can see for the solved rar
+The decrease in SAC's performance, as evidenced in \figref{fig:SAC_baseline}, can also be attributed to the linear growth in the complexity of the observation space, given that $S$ is a subset of $\mathbb{R}^{4+N}$. To address this escalating complexity, researchers might consider increasing the number of hidden layers or neurons per layer while delving into neural architecture search. An alternative approach for investigating this theory could involve the application of Neural-Evolution-of-Augmented-Topologies (NEAT). This algorithm seeks to identify the smallest neural architecture capable of solving a given task. Given the context provided, it's reasonable to assume that the discovered neural architecture becomes increasingly complex as $N$ increases.
 
-\todo{discuss jaspers policy in comparission to motor synergy learning}
+
+
 
 \begin{figure}
     \begin{center}
@@ -100,37 +123,6 @@ Comparing RL with SAC we already described the end-effector movements in \chapre
     \label{fig:SAC_baseline_min_distances}
 \end{figure}
 
-\begin{table}
-    \begin{center}
-        \begin{tabular}{ l l | l l l l l}
-        experiment series           & $N$                   & 2    & 5    & 10   & 15   & 20   \\
-        \hline
-        \hline
-        \textit{baseline}           & $\mathfrak{S}$        & 0.73 & 0.83 & 0.57 & 0.42 & 0.30 \\
-                                    & max eval $\bar{R_t}$  & 0.09 & 0.10 & 0.32 & 0.74 & 0.82 \\
-        \hline
-        \textit{latent 2}           & $\mathfrak{S}$        & 0.66 & 0.78 & 0.33 & 0.04 &      \\
-                                    & max eval $\bar{R_t}$  & 0.11 & 0.15 & 0.83 & 3.62 &      \\
-        \hline
-        \textit{latent 4}           & $\mathfrak{S}$        & 0.76 & 0.84 & 0.54 &      &      \\
-                                    & max eval $\bar{R_t}$  & 0.09 & 0.09 & 0.50 &      &      \\
-        \hline
-        \textit{latent 8}           & $\mathfrak{S}$        & 0.72 & 0.88 & 0.22 &      &      \\
-                                    & max eval $\bar{R_t}$  & 0.09 & 0.08 & 2.97 &      &      \\
-        \hline
-        \textit{latent imitation}   & $\mathfrak{S}$        & 0.85 & 0.85 & ?    &      &      \\
-                                    & max eval $\bar{R_t}$  & ?    & ?    & ?    &      &      \\
-        \hline
-        \textit{super distance}     & $\mathfrak{S}$        & 0.62 & 0.60 & 0.53 &      &      \\
-                                    & max eval $\bar{R_t}$  & ?    & ?    & ?    &      &      \\
-        \hline
-        \textit{super imitation}    & $\mathfrak{S}$        & ?    & ?    & ?    &      &      \\
-                                    & max eval $\bar{R_t}$  & ?    & ?    & ?    &      &      \\
-    \end{tabular}
-    \end{center}
-    \caption[SAC Solved ratio]{Solved ratio $\mathfrak{S}$ and closest distance to target during one episode as known as the maximum reward during one episode for one target position, for all SAC experiments starting at $[N, 0]$ and targeting the same targets as in \figref{fig:SAC_baseline_min_distances} with a maximal budged of 400 steps. Those are examples from individual experiments all from epoch 3000. For more details which experiments please have a look into the figures directory. The suffix of each png describes where to find the experiment. For a closer inspection of how the individual models perform over the evaluation please refer to \chapref{chap:appendix}}
-    \label{tab:SAC_solved_ratio}
-\end{table}
 
 \begin{figure}
     \begin{center}
@@ -149,16 +141,50 @@ Comparing RL with SAC we already described the end-effector movements in \chapre
             \label{fig:SAC_baseline_min_distance_step/10}
             }
     \end{center}
-    \caption[CCD iteration heatmap]{Heatmap of how many iterations CCD has needed to solve inverse kinematics starting from $[N, 0]$ targeting the middle of each polygon. The maximum budged are 20 times $N$ with a target precision of $0.1$.}
+    \caption[SAC iteration heatmap]{Heatmap of how many iterations baseline SAC has needed to solve inverse kinematics starting from $[N, 0]$ targeting the middle of each polygon. The maximum budged are 20 times $N$ with a target precision of $0.1$.}
     \label{fig:SAC_baseline_min_distance_step}
 \end{figure}
 
-\subsection{SAC with Latent Model}
+\section{SAC with Latent Model}
 
-Embedding the Latent Model into the workflow of SAC yielded performances as presented in \chapref{chap:experiments}. While understanding and seeing the vast difference in problem solving strategies between the trained latent models and the Inverse Kinematics solver CCD it is quite surprising this approach works in the first place. Usually such a significant change in the observation space distribution, leads to unpredictable and unfeasible behavior in the predicted actions in the Action space. We tried to master this issue by introducing the imitation loss to emphasis predicted actions leading to state angles which are much closer to the original distribution. Arguments that the approach actually works can be found by looking into a greedy inference with the latent models where we simulate a very light weight version of the Plane-Robot-Environment while assuming the optimal policy, following the direction from start to end.
+The integration of the Latent Model into the SAC framework yielded the results showcased in \chapref{chap:experiments}. While comprehending the striking disparities in problem-solving strategies between the trained latent models, as illustrated in \figref{fig:SAC_action_correlation}, and the Inverse Kinematics solver CCD, as depicted in \figref{fig:dataset_action_correlation}, it is rather astonishing that this approach was effective. Typically, such a substantial shift in the distribution of the observation space would result in unpredictable and unworkable behavior in the predicted actions within the Action space. We attempted to address this challenge by introducing the imitation loss, emphasizing predicted actions that led to state angles much closer to the original distribution.
 
-But why do we see differences for different latent dimensions? Looking first into those experiments with a latent dimension of 2. Since we are trying to encode the two dimensional target information which is sampled according to the idea of the TargetGaussianDataset, into a two dimensional gaussian manifold, the best information keeping strategy would be to pipe the mean values while returning a standard deviation close to zero. Because we do employ the ELBO with a gaussian distribution for a Variational Autoencoder we have to pick a parameterized latent distribution close the standard normal distribution. An additional difficulty is to encode the target position as independent random variables. Knowing these properties and constrains it could be quite challenging to compress. On the other hand choosing the latent dimension to high could add to much computational complexity, difficulty in sampling and a reduction in robustness.
+As seen earlier, we obtained varying performances from the VAEs with different latent dimensions. But why? Let's first consider the experiments with a latent dimension of two. Given that we are endeavoring to encode two-dimensional target information, which is sampled in accordance with the concept of the \texttt{TargetGaussianDataset}, into a two-dimensional Gaussian manifold, the most efficient strategy for retaining information would involve channeling the mean values while returning a standard deviation close to zero. Since we employ the Evidence Lower Bound (ELBO) with a Gaussian distribution for a Variational Autoencoder (VAE), we must select a parameterized latent distribution that closely approximates the standard normal distribution. An additional challenge lies in encoding the target position as independent random variables. Given these properties and constraints, compressing this information can indeed be quite challenging. On the other hand, selecting a latent dimension that is too high can introduce excessive computational complexity, sampling difficulties, and a reduction in robustness.
 
-As a result of the previous observations we can set the latent dimension of a VAE as an additional hyperparameter to optimize. Because setting it to high could lead the extremely high variance in the Soft Actor Critic task as shown in \figref{fig:SAC_latent_comparison/10} and setting it to low could lead to loss in encoded information. 
+Based on these observations, we propose setting the latent dimension of a VAE as an additional hyperparameter to optimize. Setting it too high can result in the extremely high variance observed in the Soft Actor Critic task, while setting it too low may lead to a loss of encoded information.
 
-Further we want to revisit the action correlation plots. As previously mentioned the action correlation plots across all SAC experiments are vastly different from the initial distribution as in \figref{fig:dataset_action_correlation} but are very similar among themselves as in \figref{fig:SAC_action_correlation}. We can see the same hot-spots in left half across all SAC and SAC + VAE experiments which is clearly not a result to be expected because each models could chose a different solving strategy for itself and start each time from scratch. On the other hand activating the imitation loss in  the VAE experiements and merging this experiment with SAC should lead to a significant step towards the rhombus as in \figref{fig:dataset_action_correlation}. Instead the know hotspots as in \figref{fig:SAC_action_correlation} disappear and we get a new distribution with the same spike at the $[\pi, 0]$ shown in \figref{fig:SAC_action_correlation_comp/latent_4_imitation}.
+Furthermore, let's revisit the action correlation plots. As previously mentioned, these plots across all SAC experiments deviate significantly from the initial distribution, as depicted in \figref{fig:dataset_action_correlation}. However, they exhibit remarkable similarity among themselves, as illustrated in \figref{fig:SAC_action_correlation}. This is an unexpected outcome, as each model could adopt a distinct problem-solving strategy and start anew in each iteration. Conversely, activating the imitation loss in the VAE experiments and integrating this approach with SAC should ideally result in a substantial shift towards the rhombus-shaped distribution observed in Figure 5.4. However, the familiar hotspots seen in \figref{fig:dataset_action_correlation} vanish, and a new distribution emerges, characterized by the same spike at $(\pi, 0)$, as depicted in \figref{fig:SAC_action_correlation_comp/latent_4_imitation}.
+
+% \begin{figure}[h]
+%     \begin{center}
+%         \subfloat[SAC baseline experiments]{
+%             \includegraphics[width=0.31 \linewidth]{figures/experiments/action_correlations_baseline_2_1691621262_5000.png}
+%             \label{fig:SAC_action_correlation_supervised/baseline}
+%             }
+%         \hfill
+%         \subfloat[SAC + Supervised model trained only with distance loss enabled]{
+%             \includegraphics[width=0.31 \linewidth]{figures/experiments/action_correlations_supervised_dist_loss_2_1693272467_3000.png}
+%             \label{fig:SAC_action_correlation_supervised/supervised}
+%             }
+%         \subfloat[SAC + Supervised model trained only with distance and imitation loss enabled]{
+%             \includegraphics[width=0.31 \linewidth]{figures/experiments/action_correlations_supervised_imitation_2_1693487256_3000.png}
+%             \label{fig:SAC_action_correlation_supervised/supervised_imitation}
+%             }
+%     \end{center}
+%     \caption[action correlation comparison with supervised model]{Action correlation for baseline experiments, experiments with SAC and supervised model with only distance loss enabled and SAC with supervised model with distance and imitation loss enabled.}
+%     \label{fig:SAC_action_correlation_supervised}
+% \end{figure}
+
+
+Finally we want to discuss which kind of latent model someone should prefer. The VAE or the supervised learning model? \\
+As we have seen in the experimental part but also in \tabref{tab:SAC_solved_ratio}, the SAC + VAE returns much more stable results and also better results compared to the supervised model. One reason might be the generalization within the training of a VAE. This results in a much smoother latent space than we could achieve with the supervised model. Another advantage from the VAE is the implied dimensionality invariance we do achieve with a constant latent dimension but different prediction dimension. An indication for this theory can seen by the almost constant mean log probability. 
+
+
+Lastly, let's address the choice between the VAE and the supervised learning model. As demonstrated in the experimental section and summarized in \tabref{tab:SAC_solved_ratio}, SAC combined with the VAE returns significantly more stable results and outperforms the supervised model. One possible reason for this is the generalization achieved within the training of a VAE. This leads to a much smoother latent space compared to what can be achieved with the supervised model. Another advantage of the VAE lies in the implied dimensionality invariance achieved with a constant latent dimension but varying prediction dimensions. This notion is supported by the nearly constant mean log probability, indicating the model's ability to capture the underlying patterns across various prediction dimensions.
+
+
+\textbf{Choosing Between Latent Models}
+
+The discussion culminates in a comparison between VAEs and supervised learning models, highlighting the advantages of each. Notably, SAC combined with VAEs returned more stable and superior results compared to the supervised model. This was attributed to the generalization capabilities inherent in VAE training, resulting in a smoother latent space compared to the supervised model. Additionally, VAEs offered dimensionality invariance with a constant latent dimension and different prediction dimensions.
+
+Overall, the results and insights presented in this discussion section offer a valuable foundation for understanding the performance and potential applications of VAEs and supervised models in solving complex tasks like inverse kinematics in robotic systems. The choice between these models depends on specific use cases and optimization objectives.

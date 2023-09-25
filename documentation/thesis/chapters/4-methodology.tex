@@ -165,12 +165,12 @@ To have a more detailed look into the runtime complexity we focus in the runtime
 In \figref{fig:expert_dataset/runtime_histograms} we can see that all probability density functions have a similar shape but with different means. Since we are interested in the runtime complexity of CCD we plotted the mean runtime of each density function in \figref{fig:expert_dataset/runtime_complexity}. Here we can observe that the runtime complexity of CCD is at least $\mathcal{O}(N^k)$ with $k \geq 3$ since the first order empirical derivation is still at least quadratic. Further derivations would be not plausible because with each derivation we would decrease the number of datapoints by one and therefor having no points left anymore.
 \begin{figure}
     \begin{center}
-        \subfloat[continuous desnsity function of collected runtimes of ccd over different amount of joints. For each joint we sampled 1000 differnt start conditions, (target, angles) for CCD to solve inverse kinematics. Note that the x axis is in log scale. ]{
+        \subfloat[continuous desnsity function of collected runtimes of CCD over different amount of joints. For each joint we sampled 1000 differnt start conditions, (target, angles) for CCD to solve inverse kinematics. Note that the x axis is in log scale. ]{
             \includegraphics[width=0.46 \linewidth]{figures/methodology/dataset/runtime_histograms.png}
             \label{fig:expert_dataset/runtime_histograms}
             }
         \hfill
-        \subfloat[plotted is the mean runtime for 1000 runs of ccd over the number of joints]{
+        \subfloat[plotted is the mean runtime for 1000 runs of CCD over the number of joints]{
         \includegraphics[width=0.46 \linewidth]{figures/methodology/dataset/runtime_complexity.png}
             \label{fig:expert_dataset/runtime_complexity}
             }
@@ -179,7 +179,7 @@ In \figref{fig:expert_dataset/runtime_histograms} we can see that all probabilit
     \label{fig:expert_dataset}
 \end{figure}
 
-Another interesting point of view is the correlation between resulting angles from ccd. Since we are limited to maximal two dimensional plot we can only plot a heatmap to show the correlations between state joint actions as in \figref{fig:dataset_action_correlation}. Important to note is that the actions are already in environment format and therefor are absolute angles with respect to a horizontal line in positive x direction. We can clearly see that CCD does not use the whole space but only focuses on a rhombus shaped area. 
+Another interesting point of view is the correlation between resulting angles from CCD. Since we are limited to maximal two dimensional plot we can only plot a heatmap to show the correlations between state joint actions as in \figref{fig:dataset_action_correlation}. Important to note is that the actions are already in environment format and therefor are absolute angles with respect to a horizontal line in positive x direction. We can clearly see that CCD does not use the whole space but only focuses on a rhombus shaped area. 
 
 \section{Latent Criterion}
 
@@ -255,7 +255,7 @@ The idea behind the gaussian target dataset is to learn an action which moves th
     \label{tab:Latent Parameter}
 \end{table}
 
-While training the Variational Autoencoder we settled on hyperparameter as described in \chapref{chap:appendix} and input vectors as in \tabref{tab:VAE_parameter}. It is important to note that $x$ for VAE, concatenated with $c$ equal to $s_t$ is which is the same input as for the Supervised model. 
+While training the Variational Autoencoder we settled on hyperparameter as described in \chapref{chap:appendix} and input vectors as in \tabref{tab:Latent Parameter}. It is important to note that $x$ for VAE, concatenated with $c$ equal to $s_t$ is which is the same input as for the Supervised model. 
 
 While training VAE and Supervised model you have to account the additional hyperbolic tangent function in the back of \figref{fig:research_idea}. This additional stage in introduced with an instance of \texttt{PosProcessor}. The \texttt{PosProcessor} is enabled during training the latent model but deactivated during training SAC, because SAC applies a hyperbolic tangent function in the \texttt{PolicyNet}. 
 

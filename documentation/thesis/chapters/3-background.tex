@@ -160,13 +160,13 @@ As a result of entropy regularization in each time step both value function $v_{
 	v_{\pi_\theta, H}(s) &= \underset{\tau\sim\pi_\theta}{\mathbb{E}}\left[\sum_{t=0}^T\gamma^t\left(R_t + \alpha H(\pi_\theta(\cdot|s_t))\right)\mid s_0 = s\right]\label{eqn:valuefunction-entropy-reg} \\
 	q_{\pi_\theta, H}(s, a) &= \underset{\tau\sim\pi_\theta}{\mathbb{E}}\left[\sum_{t=0}^T\gamma^t R_t + \alpha \sum_{t=1}^T \gamma^t H(\pi_\theta(\cdot|s_t))\mid s_0 = s, a_0=a\right]\label{eqn:action-valuefunction-entropy-reg} \\
 	&= \underset{s'\sim P, a' \sim \pi_\theta}{\mathbb{E}}\left[R_t + \gamma (q_{\pi_\theta, H}(s', a') + \alpha H(\pi_\theta(\cdot|s')))\right]\label{eqn:action-valuefunction-entropy-reg-recursive} 
-\end{align} \todo{include entropy in the first time step -> look at the code and search for the appropriate paper}
+\end{align} 
 
 This changes subsequently also the original relation between $v_{\pi_\theta}$ and $q_{\pi_\theta}$. $v_{\pi_\theta, H}$ and $q_{\pi_\theta, H}$ are connected via~\eqref{eqn:valuefunction-action-valuefucntion-reg-connection}.
 
 \begin{equation}\label{eqn:valuefunction-action-valuefucntion-reg-connection}
 	v_{\pi_\theta, H}(s) = \mathbb{E}_{\pi_\theta}\left[q_{\pi_\theta}(s, a)\right] + \alpha H(\pi_\theta)
-\end{equation} \todo{proof in appendix?}
+\end{equation}
 
 Note, that we introduce a new parameter $\alpha$ into $v_{\pi_\theta,H}$ and $q_{\pi_\theta,H}$. This parameter controls the tradeoff between exploration and exploitation.  Higher values of $\alpha$ promote more exploration, whereas lower values of $\alpha$ encourage more exploitation in the Soft Actor-Critic algorithm~\cite{SpinningUp2018}. For more details how to this parameter is used in Soft Actor-Critic please have look into \secref{sec:SAC-architectur}.
 
@@ -200,7 +200,7 @@ The temporal difference target target $y$ is defined as in~\eqref{eqn:td-target}
 
 \begin{equation}\label{eqn:td-target}
 	y(r, s', d) = r + \gamma(1 - d) \left(\min_{j=0,1}Q_{\phi_{\text{target}, i}}(s', \hat{a}') - \alpha \log \pi_\theta(\hat{a}'| s')\right)
-\end{equation} \todo{where exactly is the target coming from?}
+\end{equation} 
 
 This function is employed in the SAC algorithm in~\eqref{eqn:td-target-batch} but with the small difference that all arguments are sampled from a minibatch $\mathcal{B}$. 
 
@@ -281,8 +281,6 @@ The second approach how to treat $\alpha$, proposed by~\cite{SAC_Applications_Pa
 			\EndFor{}
 	\end{algorithmic}
 \end{algorithm}
-
-\todo{rework equations from pseudo code}
 
 \subsection{Advantages}
 
@@ -541,7 +539,7 @@ The Evidence Lower Bound~\cite{pml2Book} (ELBO) is a fundamental concept in the 
 It is derived from the principle of variational inference and represents a lower bound on the log-likelihood of the data given the models parameters. Maximizing the ELBO is equivalent to minimizing the Kullback-Leibler (KL) divergence~\cite{pml2Book} between the true posterior distribution $q(z|x)$ over latent variables $z$ and the approximated posterior distribution $q_\phi(z|x)$ used in the VAE.
 
 \begin{equation}\label{eqn:ELBO}
-	\mathcal{L}_\text{ELBO}(x, z) = \mathbb{E}_{z\sim q_\phi(\cdot|x)} \left[ \log p_\psi(x|z) \right] - \text{KL}\left( q_\phi(z|x) \| p(z) \right)
+	\text{KL}(q_\phi(z) ||p_\psi(z|x)) \geq \mathcal{L}_\text{ELBO}(x, z) = \mathbb{E}_{z\sim q_\phi(\cdot|x)} \left[ \log p_\psi(x|z) \right] - \text{KL}\left( q_\phi(z|x) \| p(z) \right)
 \end{equation}
 
 Further we will discuss the individual components of the Evidence lower bound 
@@ -563,7 +561,6 @@ Further we will discuss the individual components of the Evidence lower bound
 	This term quantifies the difference between the approximated parameterized posterior distribution $q_\psi(z|x) $ over latent variables $z$ and a chosen prior distribution $p(z)$. As mentioned before it is a popular choice to use a standard normal distribution $p(z)=\mathcal(N)(0,I)$ as the prior distribution. The KL divergence encourages the latent variables to be close to the prior distribution, promoting regularization and preventing overfitting.
 \end{itemize}
 
-\todo{Explain prior and posterior distributions}
 \iffalse
 The posterior distribution, denoted as q(z|x), is a conditional probability distribution in Bayesian inference. In the context of Variational Autoencoders (VAEs), the posterior distribution refers to the distribution of the latent variables z given the observed data x.
 In VAEs, the encoder network parameterizes the approximate posterior distribution q(z|x), which takes the input data x as input and outputs the parameters (e.g., mean and variance) of the distribution over the latent variables z. The encoder learns to map the data x to a distribution in the latent space, where each point in the latent space represents a potential encoding of the data.
@@ -578,9 +575,8 @@ The choice of the prior distribution can impact the VAEs performance and the cha
 
 The basic notation of the Evidence Lower Bound for Variational Autoencoders as in~\eqref{eqn:ELBO} can be easily extented for an Conditional Variational Autoencoder:
 \begin{equation}\label{eqn:ELBO-CVAE}
-	\mathcal{L}_\text{ELBO}(x, z, c) = \mathbb{E}_{z\sim q_\phi(\cdot|x, c)} \left[ \log p_\psi(x|z, c) \right] - \text{KL}\left( q_\phi(z|x, c) \| p(z|c) \right)
+	\mathcal{L}_\text{C, ELBO}(x, z, c) = \mathbb{E}_{z\sim q_\phi(\cdot|x, c)} \left[ \log p_\psi(x|z, c) \right] - \text{KL}\left( q_\phi(z|x, c) \| p(z|c) \right)
 \end{equation}
-\todo{Describe also the components of the CVAE ELBO }
 
 By optimizing the ELBO, VAEs effectively learn to approximate the true posterior distribution and generate meaningful latent representations of the data, enabling various tasks such as data generation, interpolation, and denoising within a Bayesian framework~\cite{pml2Book}.
 

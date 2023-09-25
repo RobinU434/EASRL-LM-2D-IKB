@@ -470,7 +470,7 @@ VAEs and CVAEs are important because they can learn to generate realistic and di
 Lets start with a Autoencoder. An Autoencoder $f = d \circ e$ consists of two parameterized function approximators in series, one encoder $e_\phi$ and one decoder $d_\psi$. 
 The encoder maps the high dimensional input $x \in \mathbb{X}$ into a lower dimensional latent space $z \in \mathbb{Z}$, $z = e(x)$.
 The latent vector $z$ is typically a lower dimensional representation of the input $x$. 
-In the second stage we map the latent vector $z$ back into the high dimensional features space $\mathbb{X}$, $d: \mathbb{Z} \to \mathbb{X}$. This should optimally reconstruct the given input $\hat{x} = d(z) = d(e(x))$. 
+In the second stage, we map the latent vector $z$ back into the high dimensional features space $\mathbb{X}$, $d: \mathbb{Z} \to \mathbb{X}$. This should optimally reconstruct the given input $\hat{x} = d(z) = d(e(x))$. 
 
 Because Autoenders are designed to learn a compact determine representation in the latent space it follows that similar input values $x$ should correspond to similar latent vectors $z$ and similar latent vectors $z$ correspond to similar outputs $\hat{x}$.
 
@@ -544,7 +544,7 @@ It is derived from the principle of variational inference and represents a lower
 	\mathcal{L}_\text{ELBO}(x, z) = \mathbb{E}_{z\sim q_\phi(\cdot|x)} \left[ \log p_\psi(x|z) \right] - \text{KL}\left( q_\phi(z|x) \| p(z) \right)
 \end{equation}
 
-Further I will discuss the individual components of the Evidence lower bound 
+Further we will discuss the individual components of the Evidence lower bound 
 \begin{itemize}
 	\item \textbf{Posterior Distribution}: In general the posterior distribution $q(z|x)$ is considered as the probability of the latent variable $z$ given the observed data $x$. Specific for Variational Autoencoder it can be computed from Bayesian Inference as in~\eqref{eqn:Bayesian-inference} which is as mentioned in \secref{sec:VAE} not feasible is therefor approximated.
 	\item \textbf{Likelihood}: The likelihood function $p(x|z)$ or conditional likelihood in the context of probabilistic models is the probability distribution of the observed data $x$ given the latent variables $z$. Dependent on the observed data it is possible to chose from a set of different probability distributions. Examples are a multivariate gaussian distribution for continuous data, a Bernoulli distribution for binary data or categorical distribution for discrete data with multiple categories.

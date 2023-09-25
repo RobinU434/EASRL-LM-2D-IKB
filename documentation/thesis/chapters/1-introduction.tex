@@ -8,6 +8,17 @@ In the ever-evolving landscape of artificial intelligence and machine learning, 
 
 This thesis explores a novel approach to address the action space limitations in RL by leveraging latent models. Specifically, it investigates the integration of pre-trained latent models, including Variational Autoencoder (VAE) decoders and supervised models, into RL frameworks. The primary aim is to empower RL agents to handle significantly more extensive and complex action spaces effectively. To evaluate the effectiveness of this approach, we developed a new scalable benchmark environment: the 2D Inverse Kinematics problem.
 
+This thesis is motivated by two central questions:
+
+\begin{enumerate}
+    \item \textbf{How does an increase in action space dimensionality affect the performance of a reinforcement learning agent?} In RL, an agent's success at completing tasks of varying complexity is greatly influenced by the dimension and complexity of the action space. An exploration of how changes in action space dimensionality impact an agent's capabilities is vital. 
+    \item \textbf{Does the employment of latent models increase the action space complexity an agent can handle?} Leveraging pre-trained latent models, including Variational Autoencoder (VAE) decoders and supervised models, into RL frameworks offers a promising avenue to expand the boundaries of RL action spaces, but does it effectively enhance an agent's capability to navigate complex action spaces?
+\end{enumerate}
+
+
+These questions lie at the core of our research endeavor and guide our exploration into the integration of latent models into RL frameworks to empower agents to handle significantly more extensive and complex action spaces effectively.
+
+
 \textbf{The Challenge of Action Space in Reinforcement Learning}
 
 The action space of an RL agent comprises the set of actions it can take to interact with its environment. In many real-world scenarios, especially those involving robotic systems and control tasks, the action space can be high-dimensional and continuous. Traditional RL algorithms often struggle to operate effectively in such settings due to the curse of dimensionality, making the exploration of all possible actions computationally infeasible.

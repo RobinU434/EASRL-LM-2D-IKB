@@ -4,7 +4,7 @@ In this section we are going to explain the research idea and introduce the inve
 
 \section{Research Idea}
 
-The primary research idea of my thesis is to pursue a transformation from the RL environment action space $\mathcal{A}$ into a lower-dimensional latent action space $\mathcal{A}_L$. This latent action space will align with the latent space between the encoder and decoder of a VAE model or the feature space of a feed-forward-neural network. By doing so, we aim to enable RL agents to effectively explore and learn within a more compact and smoothened action representation. An schematic drawing can be revisited at \figref{fig:research_idea}
+The primary research idea of this thesis is to pursue a transformation from the RL environment action space $\mathcal{A}$ into a lower-dimensional latent action space $\mathcal{A}_L$. This latent action space will align with the latent space between the encoder and decoder of a VAE model or the feature space of a feed-forward-neural network. By doing so, we aim to enable RL agents to effectively explore and learn within a more compact and smoothened action representation. An schematic drawing can be revisited at \figref{fig:research_idea}
 
 We propose two potential approaches for achieving this reduction in dimensionality: VAEs and supervised models.
 
@@ -78,7 +78,7 @@ Subsequently after updating the state angles the current end-effector position g
 The reward function $R: \mathcal{A} \times \mathcal{S} \to \mathbb{R}$ as in~\eqref{eqn:Rewardfunction} for the conducted experiments and this environment aims to minimize the distance between the current end-effector position $p_{\text{current}, t}$ and the current target position $p_{\text{target}, t}$. The current end-effector position is calculated by the forward-kinematics function on state-angles $q_t$ plus action $a_t$. The target position is sampled at the beginning of an episode and stays constant throughout the episode until completion or time limit is reached. 
 
 \begin{equation}\label{eqn:Rewardfunction}
-    R(s_t, a_t) = ||FK(s_{t, (4, \ldots, N + 4)}  + a_t), s_{t, (0 ,1)}||_2
+    R(s_t, a_t) = - ||FK(s_{t, (4, \ldots, N + 4)}  + a_t) - s_{t, (0 ,1)}||_2
 \end{equation}
 
 If you want to normalize the reward function you have to divide $R$ by $N$.
@@ -133,7 +133,7 @@ In our application this makes the vanilla algorithm not suitable because we are 
 
 \subsection{Expert Guidance}
 
-The problems encountered with the vanilla sampling algorithm in \secref{sec:vanilla_sampling} lead to the development of an sampling algorithm guided by an expert. 
+The problems encountered with the vanilla sampling algorithm in \secref{sec:vanilla_sampling} lead to the development of separate sampling algorithm which involve guidance by an expert. 
 
 \begin{algorithm}
     \caption{Expert Guided Dataset Creation}\label{alg:Expert_Dataset}
@@ -162,10 +162,10 @@ On the other hand we are now  bound to the actions the $IK$-solver, in our appli
 \end{figure}
 
 To have a more detailed look into the runtime complexity we focus in the runtime complexity of CCD as this is the slowest part of \algoref{alg:Expert_Dataset}. We can observe that the runtime of each CCD run is different since CCD belongs to the family of iterative inverse kinematics solver and the runtime is either limited by a given maximum number of iterations or a break condition depending on how close we are to the goal. \\
-In \figref{fig:expert_dataset/runtime_histograms} we can see that all continuous probability density functions have a similar shape but with different standard deviations and means. Since we are interested in the runtime complexity of CCD we plotted the mean runtime of each density function in \figref{fig:expert_dataset/runtime_complexity}. Here we can observe that the runtime complexity of CCD is at least $\mathcal{O}(N^k)$ with $k \geq 3$ since the first order empirical derivation is still at least quadratic. Further derivations would be not plausible because with each derivation we would decrease the number of datapoints by one and therefor having no points left anymore.
+In \figref{fig:expert_dataset/runtime_histograms} we can see that all probability density functions have a similar shape but with different means. Since we are interested in the runtime complexity of CCD we plotted the mean runtime of each density function in \figref{fig:expert_dataset/runtime_complexity}. Here we can observe that the runtime complexity of CCD is at least $\mathcal{O}(N^k)$ with $k \geq 3$ since the first order empirical derivation is still at least quadratic. Further derivations would be not plausible because with each derivation we would decrease the number of datapoints by one and therefor having no points left anymore.
 \begin{figure}
     \begin{center}
-        \subfloat[continuous desnsity function of collected runtimes of ccd over different amount of joints. For each joint we sampled 1000 differnt start conditions, (target, angles) for ccd to solve inverse kinematics. ]{
+        \subfloat[continuous desnsity function of collected runtimes of ccd over different amount of joints. For each joint we sampled 1000 differnt start conditions, (target, angles) for CCD to solve inverse kinematics. Note that the x axis is in log scale. ]{
             \includegraphics[width=0.46 \linewidth]{figures/methodology/dataset/runtime_histograms.png}
             \label{fig:expert_dataset/runtime_histograms}
             }
@@ -184,7 +184,7 @@ Another interesting point of view is the correlation between resulting angles fr
 \section{Latent Criterion}
 
 
-In this section I will cover the employed loss functions to train the latent models. 
+In this section we will cover the employed loss functions to train the latent models. 
 As discussed in \secref{sec:VAE} we employ the Evidence Lower Bound as the objective function to train Variational Autoencoder. To fit our problem of inverse kinematics we tried out 3 different reconstruction loss function.
 
 In this section we will explain the tangible KL divergence as well as the individual reconstruction loss functions.

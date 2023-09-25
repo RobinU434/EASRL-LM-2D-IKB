@@ -1,6 +1,20 @@
 \chapter{Discussion}\label{chap:discussion}
 
-\section{Baseline SAC}
+In this section we are going to discuss the before presented results in the experiments. 
+
+\section{Latent Model}
+
+Moving on to the experiments to train a latent model. We train a latent model to augment SAC and let it control the latent model and therefor the actions from a higher level while having access to all state space information.
+e
+Since the standalone results of each latent model type are very similar we will discuss them together.
+Both ways to train a model with the TargetGaussian Dataset yielded almost the same performance in the distance loss. This is not very surprising as we have seen neural networks struggle with the inverse Kinematics task while increasing the number of joints $N$. Looking deeper into the model performance shows that the distance loss is dependent is also dependent on the state information we are providing in datasets. \todo{think about how to plot this}   
+
+We also have similar results with the imitation loss
+\todo{big change in observation space distribution}
+
+\section{Reinforcement Learning}
+
+\subsection{Baseline SAC}
 
 Starting with the baseline results for SAC we have seen a clear correlation between the algorithms performance and the number of joints we  train on. This is reasonable because the performance of other also other Inverse Kinematics solver mentioned earlier, including CCD are highly dependent on the number of joints required to solve for, as we have seen in the section about runtime complexity of CCD in \figref{fig:expert_dataset/runtime_complexity}.\\
 
@@ -62,6 +76,8 @@ Note that this is only an qualitative comparison because CCD has the full action
 The presented decrease in the SAC performance in \figref{fig:SAC_baseline} could be also explained because of the linear increase of complexity of the observation space since $S \subset \mathbb{R}^{4+N}$. To counter the increase of complexity some could also increase the number of hidden layer or neurons per layer and have a closer look into neural architecture search. Another way to maybe proof this theory could be the application of Neural-Evolution-of-Augmented-Topologies short NEAT. This algorithm finds the smallest possible architecture to conquer a given task. Given the provided background information we assume the found neural architecture increases in complexity while increasing $N$.
 
 Comparing RL with SAC we already described the end-effector movements in \chapref{chap:experiments}. With the current training settings it is clear that SAC is clearly not the better solutions than a more standard approach like SAC as we can see for the solved rar
+
+\todo{discuss jaspers policy in comparission to motor synergy learning}
 
 \begin{figure}
     \begin{center}
@@ -137,18 +153,7 @@ Comparing RL with SAC we already described the end-effector movements in \chapre
     \label{fig:SAC_baseline_min_distance_step}
 \end{figure}
 
-\section{Latent Model}
-
-Moving on to the experiments to train a latent model. We train a latent model to augment SAC and let it control the latent model and therefor the actions from a higher level while having access to all state space information.
-
-Since the standalone results of each latent model type are very similar I will discuss them together.
-Both ways to train a model with the TargetGaussian Dataset yielded almost the same performance in the distance loss. This is not very surprising as we have seen neural networks struggle with the inverse Kinematics task while increasing the number of joints $N$. Looking deeper into the model performance shows that the distance loss is dependent is also dependent on the state information we are providing in datasets. \todo{think about how to plot this}   
-
-We also have similar results with the imitation loss
-\todo{big change in observation space distribution}
-
-
-\section{SAC with Latent Model}
+\subsection{SAC with Latent Model}
 
 Embedding the Latent Model into the workflow of SAC yielded performances as presented in \chapref{chap:experiments}. While understanding and seeing the vast difference in problem solving strategies between the trained latent models and the Inverse Kinematics solver CCD it is quite surprising this approach works in the first place. Usually such a significant change in the observation space distribution, leads to unpredictable and unfeasible behavior in the predicted actions in the Action space. We tried to master this issue by introducing the imitation loss to emphasis predicted actions leading to state angles which are much closer to the original distribution. Arguments that the approach actually works can be found by looking into a greedy inference with the latent models where we simulate a very light weight version of the Plane-Robot-Environment while assuming the optimal policy, following the direction from start to end.
 

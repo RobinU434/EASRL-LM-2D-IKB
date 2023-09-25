@@ -1,105 +1,18 @@
 \chapter{Experiments}\label{chap:experiments}
 
-In this chapter we want to present the experimental results. We focus hereby on five main sections:
-\begin{itemize}
-    \item \textbf{Baseline SAC}: To see how SAC solves the environment without any further help.
-    \item \textbf{VAE}: Where we look into the results how the Variational Autoencoder.
-    \item \textbf{SAC with VAE}: How SAC performs together with the VAE decoder.
-    \item \textbf{Supervised}: We are looking into results how the supervised approach is handling the low level inverse kinematics task.
-    \item \textbf{SAC with Supervised}: How SAC is performing using the supervised model as a low level controller.
-\end{itemize}
+In this chapter we are going to present the experimental results. We focus hereby on two main sections: ``Training Latent Models'' and ``Reinforcement Learning''. In the first section we will cover all results on training Latent Models including experiments with the Variational Autoencoder and Supervised model trained with different loss functions as introduced in \chapref{chap:Methodology}. \\
+The second section ``Reinforcement Learning'' is going to present the results on how the Soft Actor-Critic handles the introduced 2D inverse kinematics environment and how the fusion with the pre-trained latent models affects the training
 
-In this thesis we are focusing on merging the Soft Actor Critic with a decoder from a pretrained Variational Autoencoder. Results on merging SAC with a pretrained supervised model are only for comparison and to leverage the importance why someone should use a VAE instead of a supervised neural network.
 
-\section{Baseline SAC}
+\section{Training of Latent Models}
 
-First we would like to have a look how a the plain SAC algorithm, where the actor network directly returns actions for the environment, will perform on the inverse kinematics environment as described in \secref{sec:RL-Environment}. Further we will describe this kind of experiments as SAC baseline experiments. All Hyperparameters used for the SAC baseline experiments can be found in \chapref{chap:appendix}.
-\begin{figure}
-    \begin{center}
-        \subfloat[Mean reward per step over the last 20 episodes.]{
-            \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_baseline_mean_score.png}
-            \label{fig:SAC_baseline/reward}
-            }
-        \hfill
-        \subfloat[Mean episode length over the last 20 episodes]{
-        \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_baseline_episode_len.png}
-            \label{fig:SAC_baseline/episode_len}
-            }
-    \end{center}
-    \caption[SAC baseline experiment results]{SAC baseline experiment results with an increasing number of joints. We can clearly see that the algorithm does not scale well with an increasing number of joints and therefor drops in performance. Each experiment was conducted 10 times and the shaded areas resemble the standard deviation around the mean.}
-    \label{fig:SAC_baseline}
-\end{figure}
+In this section we will present the results on the conducted experiments how to train a Variational Autoencoder and supervised model. We train both models with two distinct loss functions: The distance loss and a weighted sum of the distance loss and imitation loss. 
 
-In \figref{fig:SAC_baseline} we plotted the mean reward per step and the average episode length over the last 20 epochs for different $N \in [2, 5, 10, 15, 20]$. Overall we can observe a decrease of collected reward per step in \figref{fig:SAC_baseline/reward} and an increasing amount of steps in one episode in \figref{fig:SAC_baseline/episode_len} while increasing the number of joints $N$. In \figref{fig:SAC_baseline/episode_len} the training curves are approaching the maximum step limit of one episode while increasing the number of joints. Additionally we can observe that the standard deviation over multiple experiments is decreasing while increasing the number of joints.
+\subsection{Variational Autoencoder}
 
-To show the actual behavior of an agent in a standardized setting we also plot an inference episode in \figref{fig:SAC_baseline_inference_trajectory} and the distance remaining to target in \figref{fig:SAC_baseline_inference_distance}. The standardization in \figref{fig:SAC_baseline_inference_trajectory} for one selected experiment for a relative consistent target position at $[-0.5, 0.5] \cdot N$. \\
-As expected from the performance statistics in \figref{fig:SAC_baseline} agents with two and five joints perform much better than agents with ten or more joints. \\
-Interesting to observe is that all agents are minimizing the distance to the target quite fast in their first couple of steps. But after missing the target closely the agent behavior becomes kind of desperate and the end effector moves towards the origin. After increasing the distance by moving towards the origin the distance starts to oscillate as we can see in \figref{fig:SAC_baseline_inference_trajectory/greedy_15} and \figref{fig:SAC_baseline_inference_trajectory/greedy_20} and nevers goes below the threshold of 0.1.
-\begin{figure}
-    \begin{center}
-        \subfloat[From experiment 2\textunderscore 1691621262 at checkpoint 5000]{
-            \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_2_1691621262_5000.png}
-            \label{fig:SAC_baseline_inference_trajectory/greedy_2}
-            }
-        \hfill
-        \subfloat[From experiment 5\textunderscore 1691624939 at checkpoint 5000. To make things more clear only every 5th robot arm is drawn]{
-            \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_5_1691624939_5000.png}
-            \label{fig:SAC_baseline_inference_trajectory/greedy_5}
-            }
-        \hfill
-        \subfloat[From experiment 10\textunderscore 1691622498 at checkpoint 5000.To make things more clear only every 5th robot arm is drawn]{
-            \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_10_1691622498_5000.png}
-            \label{fig:SAC_baseline_inference_trajectory/greedy_10}
-            }
-        \\
-        \subfloat[From experiment 15\textunderscore 1691619106 at checkpoint 5000. To make things more clear only every 40th robot arm is drawn]{
-            \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_15_1691619106_5000.png}
-            \label{fig:SAC_baseline_inference_trajectory/greedy_15}
-            }
-        \subfloat[From experiment 20\textunderscore 1691619159 at checkpoint 5000. To make things more clear only every 40th robot arm is drawn]{
-            \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_20_1691619159_5000.png}
-            \label{fig:SAC_baseline_inference_trajectory/greedy_20}
-            }
-    \end{center}
-    \caption[SAC baseline inference]{SAC inference. The trajectory is plotted in red. robot arms are drawn in yellow with the little dots as positions of each joint. Target position and start position are scattered in blue and green. The space an end-effector is able to reach is plotted in grey.}
-    \label{fig:SAC_baseline_inference_trajectory}
-\end{figure}
-\begin{figure}
-    \begin{center}
-        \subfloat[Distance to target policy from experiment 2\textunderscore 1691621262 at checkpoint 5000 ]{
-        \includegraphics[width=0.31 \linewidth]{figures/experiments/Distance_to_target_baseline_2_1691621262_5000.png}
-            \label{fig:SAC_baseline_inference/distance_2}
-            }
-        \hfill
-        \subfloat[Distance to target policy from experiment 5\textunderscore 1691624939 at checkpoint 5000 ]{
-        \includegraphics[width=0.31 \linewidth]{figures/experiments/Distance_to_target_baseline_5_1691624939_5000.png}
-            \label{fig:SAC_baseline_inference/distance_5}
-            }
-        \hfill
-        \subfloat[Distance to target policy from experiment 10\textunderscore 1691622498 at checkpoint 5000 ]{
-        \includegraphics[width=0.31 \linewidth]{figures/experiments/Distance_to_target_baseline_10_1691622498_5000.png}
-            \label{fig:SAC_baseline_inference/distance_10}
-            }
-        \\
-        \subfloat[Distance to target policy from experiment 15\textunderscore 1691619106 at checkpoint 5000 ]{
-        \includegraphics[width=0.31 \linewidth]{figures/experiments/Distance_to_target_baseline_15_1691619106_5000.png}
-            \label{fig:SAC_baseline_inference/distance_15}
-            }
-        \subfloat[Distance to target policy from experiment 20\textunderscore 1691619159 at checkpoint 5000 ]{
-        \includegraphics[width=0.31 \linewidth]{figures/experiments/Distance_to_target_baseline_20_1691619159_5000.png}
-            \label{fig:SAC_baseline_inference/distance_20}
-            }
-    \end{center}
-    \caption[SAC baseline inference]{Distance to target for each action outcome. The target is consistent at $[-0.5, 0.5] \cdot N$. The threshold of 0.1 at which an episode is concluded successfully is drawn in red.} 
-    \label{fig:SAC_baseline_inference_distance}
-\end{figure}
-Another interesting detail to observe is the strategy an agent is following to reach the target position. Instead of moving first closely to a straight line towards the target position the agent is moving its end-effector closely to the outer limit of its reach. As we have seen in section \secref{sec:vanilla_sampling} randomly having an end-effector position far away from the origin is less probable compared to a position close to the origin. 
+In the following section we will present the results of our experiments with the Variational-Autoencoder to encode and decode actions from the environment but also learn to solve inverse kinematics by minimizing the presented distance loss form \eqref{eqn:Distance-Loss}. Within the section we are covering two loss function setups. The first setup we are going to concentrate on only uses the distance loss while the second setup incorporates also an imitation loss.
 
-\section{VAE}
-
-In the following section I will present the results of our experiments with the Variational-Autoencoder to encode and decode actions from the environment but also learn to solve inverse kinematics by minimizing the presented distance loss form \eqref{eqn:Distance-Loss}. Within the section we are covering two loss function setups. The first setup we are going to concentrate on only uses the distance loss while the second setup incorporates also an imitation loss.
-
-\subsection{Distance Loss}
+\subsubsection{Distance Loss}
 
 Coming up are the training results for different latent dimensions but only with the distance loss enabled which means \texttt{dataset target mode = POSITION}.\\ 
 Because we only leverage the usage of the distance loss we do not need to encode and decode an action from an inverse kinematics solver, we just need to encode target information where we want to go plus state information as conditional information.
@@ -172,7 +85,7 @@ By observing the individual number of joints in each plot of \figref{fig:VAE_lat
 A significant difference in final performance can be observed with $N = 10$. Here the best performance is returned by experiments with a latent dimension of four closely followed by two. Comparing two and four in \figref{fig:VAE_latent_comparison_reconstruction_loss/10} shows that four is much more stable and faster in learning the problem as two. Last ranked are the experiments for a latent dimension of eight. Those experiments are by far not on the same level as with a latent dimension of two and four. A deeper look into the inference shows that the model fails to come up with an action to reach the given target position.\\
 In \figref{fig:VAE_latent_comparison_reconstruction_loss/15} a performance difference is noticeable with a latent dimension of two as best and eight as worst. But since the best performance of the experiments with a latent dimension of two is on the same level as eight in \figref{fig:VAE_latent_comparison_reconstruction_loss/10} we can conclude that the the VAE fails at $N = 15$ with the present hyperparameter as in \tabref{tab:VAE_Hyperparameters}.
 
-\subsection{Distance plus Imitation Loss}
+\subsubsection{Distance and Imitation Loss}
 
 In this section we are going to present the results of training the VAE with the imitation loss to pre-calculated solutions from \algoref{alg:CCD}. The important change in the config file is setting \texttt{dataset target mode = ACTION} to tell the dataset to also calculate action from ccd.  
 
@@ -203,7 +116,141 @@ Finally looking at the KL-divergence we do can note an almost indistinguishable 
     \label{fig:VAE_imitation}
 \end{figure}
 
-\section{SAC with VAE}
+\subsection{Supervised}
+
+For the supervised actions we only relied on state information as the input to predict an action to reach from the current state the given target position.  Since this approach is very similar to the Variational Autoencoder setting we are also able to apply the afore mentioned Inverse Kinematics Loss with distance and imitation loss as in \eqref{eqn:IK-Loss}.
+
+The results of the supervised experiments are divided into two parts. The first is only applying the distance loss while the second one is incorporating also an imitation loss with respect ot pre computed actions from the CCD solver.
+
+\subsubsection{Distance Loss}
+
+The distance loss results over different amount of joints in \figref{fig:supervised_distance} are very similar compared to \figref{fig:VAE_latent} (a) to (c). Parallel to \figref{fig:VAE_latent} we can also observe an overall increase in loss while increasing $N$ and finishing at different convergence levels. Different to the experiments on the VAE is the standard deviation between the experiments. The supervised experiments show a significant smaller standard deviation across the whole training period compared to the VAE experiments.
+
+\begin{figure}
+    \begin{center}
+        \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_2_distance_loss.png}
+    \end{center}
+    \caption[Supervised Distance Loss]{Distance loss for supervised experiments over different $N \in [2, 5, 10, 15, 20]$. For each $N$ we conducted 10 experiments. }
+    \label{fig:supervised_distance}
+\end{figure}
+
+\subsubsection{Distance and Imitation Loss}
+
+For this series of experiments we also want to emphasis solutions close to solutions computed by the CCD by setting the dataset mode to \texttt{ACTION} and setting the imitation loss weight to 0.01. 
+
+Unlike as in the previous section the distance loss differs a lot from \figref{fig:supervised_distance}. We do not see a steady increase in loss over different numbers of joints instead we do see vastly different levels of final distance loss performances starting with two joints at around 1.1 and ending with 15 joints at XXX.\\
+A bit more interesting are the results on the imitation loss. Similar to \figref{fig:VAE_imitation/imitation_loss} all curves have a drop in the first couple of epochs but are constant for the rest of the training. Comparing those curves with respect to the number of joints we observed that all mean curves have vastly different levels of convergence which seems not to be linear correlated with $N$.
+
+
+\begin{figure}
+    \begin{center}
+        \subfloat[Distance Loss]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_imitation_2_latent_4 4 4 4_distance_loss.png}
+            \label{fig:supervised_imitation/distance_loss}
+            }
+        \hfill
+        \subfloat[Imitation Loss]{
+        \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_imitation_2_latent_4 4 4 4_imitation_loss.png}
+            \label{fig:supervised_imitation/imitation_loss}
+            }
+    \end{center}
+    \caption[Supervised Distance and Imitation Loss]{Validation results for supervised experiments on distance and imitation loss. }
+    \label{fig:supervised_imitation}
+\end{figure}
+
+\section{Reinforcement Learning}
+
+In this section we will present results on the reinforcement learning experiments on the 2D inverse kinematics environment. \\
+First we will set a benchmark with the plane Soft Actor-Critic. Further we will combine Soft Actor-Critic with pre-trained latent models and have a look into their performance statistics but also comparing it to the plane Soft Actor-Critic results. 
+
+\subsection{Baseline Soft Actor-Critic}
+
+First we would like to have a look how a the plain SAC algorithm, where the actor network directly calculates actions for the environment, performs on the inverse kinematics environment as described in \secref{sec:RL-Environment}. Further we will describe this kind of experiments as SAC baseline experiments. All Hyperparameters used for the SAC baseline experiments can be found in \chapref{chap:appendix}.
+\begin{figure}
+    \begin{center}
+        \subfloat[Mean reward per step over the last 20 episodes.]{
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_baseline_mean_score.png}
+            \label{fig:SAC_baseline/reward}
+            }
+        \hfill
+        \subfloat[Mean episode length over the last 20 episodes]{
+        \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_baseline_episode_len.png}
+            \label{fig:SAC_baseline/episode_len}
+            }
+    \end{center}
+    \caption[SAC baseline experiment results]{SAC baseline experiment results with an increasing number of joints. We can clearly see that the algorithm does not scale well with an increasing number of joints and therefor drops in performance. Each experiment was conducted 10 times and the shaded areas resemble the standard deviation around the mean.}
+    \label{fig:SAC_baseline}
+\end{figure}
+
+In \figref{fig:SAC_baseline} we plotted the mean reward per step and the average episode length over the last 20 epochs for different $N \in [2, 5, 10, 15, 20]$. Overall we can observe a decrease of collected reward per step in \figref{fig:SAC_baseline/reward} and an increasing amount of steps in one episode in \figref{fig:SAC_baseline/episode_len} while increasing the number of joints $N$. In \figref{fig:SAC_baseline/episode_len} the training curves are approaching the maximum step limit of one episode while increasing the number of joints. Additionally we can observe that the standard deviation over multiple experiments is decreasing while increasing the number of joints.
+
+To show the actual behavior of an agent in a standardized setting we also plot an inference episode in \figref{fig:SAC_baseline_inference_trajectory} and the distance remaining to target in \figref{fig:SAC_baseline_inference_distance}. The standardization in \figref{fig:SAC_baseline_inference_trajectory} for one selected experiment for a relative consistent target position at $[-0.5, 0.5] \cdot N$. \\
+As expected from the performance statistics in \figref{fig:SAC_baseline} agents with two and five joints perform much better than agents with ten or more joints. \\
+Interesting to observe is that all agents are minimizing the distance to the target quite fast in their first couple of steps. But after missing the target closely the agents behavior starts to oscillate.
+For closer inspection please refer to \figref{fig:SAC_baseline_inference_trajectory/greedy_15} and \figref{fig:SAC_baseline_inference_trajectory/greedy_20}. 
+
+
+\begin{figure}
+    \begin{center}
+        \subfloat[From experiment 2\textunderscore 1691621262.]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_2_1691621262_5000.png}
+            \label{fig:SAC_baseline_inference_trajectory/greedy_2}
+            }
+        \hfill
+        \subfloat[From experiment 5\textunderscore 1691624939. To make things more clear only every 5th robot arm is drawn]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_5_1691624939_5000.png}
+            \label{fig:SAC_baseline_inference_trajectory/greedy_5}
+            }
+        \hfill
+        \subfloat[From experiment 10\textunderscore 1691622498. To make things more clear only every 5th robot arm is drawn]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_10_1691622498_5000.png}
+            \label{fig:SAC_baseline_inference_trajectory/greedy_10}
+            }
+        \\
+        \subfloat[From experiment 15\textunderscore 1691619106. To make things more clear only every 40th robot arm is drawn]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_15_1691619106_5000.png}
+            \label{fig:SAC_baseline_inference_trajectory/greedy_15}
+            }
+        \subfloat[From experiment 20\textunderscore 1691619159. To make things more clear only every 40th robot arm is drawn]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/greedy_inference_baseline_20_1691619159_5000.png}
+            \label{fig:SAC_baseline_inference_trajectory/greedy_20}
+            }
+    \end{center}
+    \caption[SAC baseline inference]{SAC inference. The trajectory is plotted in red. robot arms are drawn in yellow with the little dots as positions of each joint. Target position and start position are scattered in blue and green. The space an end-effector is able to reach is plotted in grey.}
+    \label{fig:SAC_baseline_inference_trajectory}
+\end{figure}
+\begin{figure}
+    \begin{center}
+        \subfloat[Experiment 2\textunderscore 1691621262.]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/Distance_to_target_baseline_2_1691621262_5000.png}
+            \label{fig:SAC_baseline_inference/distance_2}
+            }
+        \hfill
+        \subfloat[Experiment 5\textunderscore 1691624939 ]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/Distance_to_target_baseline_5_1691624939_5000.png}
+            \label{fig:SAC_baseline_inference/distance_5}
+            }
+        \hfill
+        \subfloat[Experiment 10\textunderscore 1691622498 ]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/Distance_to_target_baseline_10_1691622498_5000.png}
+            \label{fig:SAC_baseline_inference/distance_10}
+            }
+        \\
+        \subfloat[Experiment 15\textunderscore 1691619106 ]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/Distance_to_target_baseline_15_1691619106_5000.png}
+            \label{fig:SAC_baseline_inference/distance_15}
+            }
+        \subfloat[Experiment 20\textunderscore 1691619159 ]{
+        \includegraphics[width=0.31 \linewidth]{figures/experiments/Distance_to_target_baseline_20_1691619159_5000.png}
+            \label{fig:SAC_baseline_inference/distance_20}
+            }
+    \end{center}
+    \caption[SAC baseline inference]{Distance to target for each action outcome. The target is consistent at $[-0.5, 0.5] \cdot N$. The threshold of 0.1 at which an episode is concluded successfully is drawn in red.} 
+    \label{fig:SAC_baseline_inference_distance}
+\end{figure}
+Another interesting detail to observe is the strategy an agent is following to reach the target position. Instead of moving almost in a straight line towards the target position the agent is moving its end-effector closely to the outer limit of its reach and then is descending towards the target. \todo{discussion}As we have seen in section \secref{sec:vanilla_sampling} randomly having an end-effector position far away from the origin is less probable compared to a position close to the origin. 
+
+\subsection{Soft Actor-Critic + Variational Autoencoder}
 
 In this section we are going to talk about the experimental results of combining the decoder from a Variational Autoencoder with soft actor critic. As we know from \chapref{chap:Methodology} we only use the decoder of the trained Variational Autoencoder with input from the corresponding state and a latent action directly sampled from the parameterized distribution from the actor network.
 
@@ -361,50 +408,7 @@ On the performed experiments with 15 joints we can see that none of the latent e
 
 Because we have seen a lack in performance between the baseline SAC experiments we additional trained VAEs with the imitation loss enabled to minimize the distance between the state angle distribution the decoder is receiving as in \figref{fig:SAC_action_correlation_comp} versus the state angle distribution the decoder is trained as in \figref{fig:dataset_action_correlation}. But if we have a look into \figref{fig:SAC_action_correlation_comp/latent_4_imitation} and compare to the plots on the left we do not see a significant change. This could be extrapolated to higher $N$ and explain the missing improvement we would expect. But since this is not the main focus of this thesis we leaf these steps for future research.
 
-\section{Supervised}
-
-For the supervised actions we only relied on state information as the input to predict an action to reach from the current state the given target position.  Since this approach is very similar to the Variational Autoencoder setting we are also able to apply the afore mentioned Inverse Kinematics Loss with distance and imitation loss as in \eqref{eqn:IK-Loss}.
-
-The results of the supervised experiments are divided into two parts. The first is only applying the distance loss while the second one is incorporating also an imitation loss with respect ot pre computed actions from the CCD solver.
-
-\subsection{Distance Loss}
-
-The distance loss results over different amount of joints in \figref{fig:supervised_distance} are very similar compared to \figref{fig:VAE_latent} (a) to (c). Parallel to \figref{fig:VAE_latent} we can also observe an overall increase in loss while increasing $N$ and finishing at different convergence levels. Different to the experiments on the VAE is the standard deviation between the experiments. The supervised experiments show a significant smaller standard deviation across the whole training period compared to the VAE experiments.
-
-\begin{figure}
-    \begin{center}
-        \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_2_distance_loss.png}
-    \end{center}
-    \caption[Supervised Distance Loss]{Distance loss for supervised experiments over different $N \in [2, 5, 10, 15, 20]$. For each $N$ we conducted 10 experiments. }
-    \label{fig:supervised_distance}
-\end{figure}
-
-\subsection{Distance + Imitation Loss}
-
-For this series of experiments we also want to emphasis solutions close to solutions computed by the CCD by setting the dataset mode to \texttt{ACTION} and setting the imitation loss weight to 0.01. 
-
-Unlike as in the previous section the distance loss differs a lot from \figref{fig:supervised_distance}. We do not see a steady increase in loss over different numbers of joints instead we do see vastly different levels of final distance loss performances starting with two joints at around 1.1 and ending with 15 joints at XXX.\\
-A bit more interesting are the results on the imitation loss. Similar to \figref{fig:VAE_imitation/imitation_loss} all curves have a drop in the first couple of epochs but are constant for the rest of the training. Comparing those curves with respect to the number of joints we observed that all mean curves have vastly different levels of convergence which seems not to be linear correlated with $N$.
-
-
-\begin{figure}
-    \begin{center}
-        \subfloat[Distance Loss]{
-            \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_imitation_2_latent_4 4 4 4_distance_loss.png}
-            \label{fig:supervised_imitation/distance_loss}
-            }
-        \hfill
-        \subfloat[Imitation Loss]{
-        \includegraphics[width=0.46 \linewidth]{figures/experiments/supervised_imitation_2_latent_4 4 4 4_imitation_loss.png}
-            \label{fig:supervised_imitation/imitation_loss}
-            }
-    \end{center}
-    \caption[Supervised Distance and Imitation Loss]{Validation results for supervised experiments on distance and imitation loss. }
-    \label{fig:supervised_imitation}
-\end{figure}
-
-\section{SAC with Supervised}
-
+\subsection{Soft Actor-Critic + Supervised}
 \begin{figure}
     \begin{center}
         \subfloat[Mean score per step]{
@@ -421,8 +425,7 @@ A bit more interesting are the results on the imitation loss. Similar to \figref
     \label{fig:sac_supervised}
 \end{figure}
 
-Merging the supervised model with SAC yields performances as in \figref{fig:sac_supervised}. We do can see very similar performances as with merging SAC with VAE. 
-
+Merging the supervised model with SAC yields performances as in \figref{fig:sac_supervised}. We do can see very similar performances as with merging SAC with VAE.
 \begin{table}
     \begin{center}
         \begin{tabular}{ l | c  c | c  c | c  c}

@@ -10,7 +10,7 @@ In this section we will present the results on the conducted experiments how to 
 
 \subsection{Variational Autoencoder}
 
-In the following section we will present the results of our experiments with the Variational-Autoencoder to encode and decode actions from the environment but also learn to solve inverse kinematics by minimizing the presented distance loss form \eqref{eqn:Distance-Loss}. Within the section we are covering two loss function setups. The first setup we are going to concentrate on only uses the distance loss while the second setup incorporates also an imitation loss.
+The outcomes of the experiments with the Variational-Autoencoder to encode and decode actions from the environment but also learn to solve inverse kinematics by minimizing the presented distance loss form \eqref{eqn:Distance-Loss} that were conducted will be presented in this section. Within the section we are covering two loss function setups. The first setup we are going to concentrate on only uses the distance loss while the second setup incorporates also an imitation loss.
 
 \subsubsection{Distance Loss}
 
@@ -277,7 +277,7 @@ As we have seen in the previous section we carried out VAE experiments with thre
 \begin{figure}
     \begin{center}
         \subfloat[mean episode reward per step averaged over the last 20 episodes. With a \textbf{latent dimension = 2}]{
-            \includegraphics[width=0.31 \linewidth]{figures/place_holder.png}
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/sac_latent_actor_2_mean_score.png}
             \label{fig:SAC_latent_4/reward}
             }
         \hfill
@@ -292,7 +292,7 @@ As we have seen in the previous section we carried out VAE experiments with thre
             }
         \\
         \subfloat[mean episode length avergaed over the last 20 episodes. With a \textbf{latent dimension = 2}]{
-            \includegraphics[width=0.31 \linewidth]{figures/place_holder.png}
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/sac_latent_actor_4_episode_len.png}
             \label{fig:SAC_latent_4/episode_len}
             }
         \hfill
@@ -373,12 +373,12 @@ On the performed experiments with 15 joints we can see that none of the latent e
 \begin{figure}
     \begin{center}
         \subfloat[mean episode reward per step averaged over the last 20 episodes. ]{
-            \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+            \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_vae_imitation_[2, 5, 10, 15]_mean_score.png}
             \label{fig:SAC_latent_8/reward}
             }
         \hfill
         \subfloat[mean episode length avergaed over the last 20 episodes]{
-        \includegraphics[width=0.46 \linewidth]{figures/place_holder.png}
+        \includegraphics[width=0.46 \linewidth]{figures/experiments/sac_vae_imitation_[2, 5, 10, 15]_episode_len.png}
             \label{fig:SAC_latent_8/episode_len}
             }
     \end{center}
@@ -477,8 +477,8 @@ A further property is the log probability the imitation loss regressor experimen
             \includegraphics[width=0.31 \linewidth]{figures/experiments/action_correlations_supervised_dist_loss_2_1693272467_3000.png}
             \label{fig:SAC_action_correlation_supervised/supervised}
             }
-        \subfloat[SAC + Supervised model trained only with distance loss enabled]{
-            \includegraphics[width=0.31 \linewidth]{figures/place_holder.png}
+        \subfloat[SAC + Supervised model trained only with distance and imitation loss enabled]{
+            \includegraphics[width=0.31 \linewidth]{figures/experiments/action_correlations_supervised_imitation_2_1693487256_3000.png}
             \label{fig:SAC_action_correlation_supervised/supervised_imitation}
             }
     \end{center}

@@ -261,20 +261,17 @@ While training VAE and Supervised model you have to account the additional hyper
 
 \section{Software}
 
-In the following section we are going to present the developed software stack to train the latent models as well as the reinforcement learning agent.
+In this section, we present the software stack developed to train the latent models and the reinforcement learning agent for our research. The software tools are available on the following GitHub repositories:
 
-\subsection{Inverse kinematics Environment}
+\begin{itemize}
+    \item Latent Models and RL Agent: \url{https://github.com/RobinU434/Bachelorthesis}
+    \item Inverse Kinematics Environment: \url{https://github.com/RobinU434/IK-RL}
+\end{itemize}
 
-As presented previously in \secref{sec:RL-Environment} we tackle the problem of inverse kinematics of a robot arm with $N$ many joints in a two dimensional setting. 
-The implemented environment
+\subsection{Inverse Kinematics Environment}
 
-\subsection{Latent Module}
+As described earlier in Section \ref{sec:RL-Environment}, our research focuses on solving the inverse kinematics problem for a robot arm with $N$ joints in a two-dimensional setting. To facilitate this, we have implemented an environment, which is available at \url{https://github.com/RobinU434/IK-RL}. This environment is developed in Python and is integrated into the Farama Gymnasium framework \cite{Gymnasium}.
 
-The latent module contains every functionality regarding either a Variational Autoencoder or a simple feed forward supervised regression model.
-As a deep learning library we build on pytorch 1.\todo{find out version}. 
+\subsection{Machine Learning Software}
 
-You can find out about the functionality either with 
-
-
-
-\subsection{Soft actor critc}
+The machine learning software used in our experiments, including Variational Autoencoders (VAEs), supervised models, and the Soft Actor-Critic (SAC) algorithm, is hosted at \url{https://github.com/RobinU434/Bachelorthesis}. All the implemented artificial neural networks are based on the PyTorch framework. The RL algorithms are built upon the implementations provided by \url{https://github.com/seungeunrho/minimalRL} and have been further customized to suit our experimental requirements. For more detailed information, please refer to the respective GitHub repository.

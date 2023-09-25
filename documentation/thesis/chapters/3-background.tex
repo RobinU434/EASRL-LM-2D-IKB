@@ -467,10 +467,10 @@ VAEs and CVAEs are important because they can learn to generate realistic and di
 % Describe traditional autoencoders and their limitations
 % Explain how autoencoders can be used for unsupervised learning
 
-Lets start with a Autoencoder. An Autoencoder $f = d \circ e$ consists of two parameterized function approximators in series, one encoder $e_\phi$ and one decoder $d_\psi$. 
-The encoder maps the high dimensional input $x \in \mathbb{X}$ into a lower dimensional latent space $z \in \mathbb{Z}$, $z = e(x)$.
+Lets start with a Autoencoder. An Autoencoder $f = q \circ p$ consists of two parameterized function approximators in series, one encoder $q_\phi$ and one decoder $p_\psi$. 
+The encoder maps the high dimensional input $x \in \mathbb{X}$ into a lower dimensional latent space $z \in \mathbb{Z}$, $z = q(x)$.
 The latent vector $z$ is typically a lower dimensional representation of the input $x$. 
-In the second stage, we map the latent vector $z$ back into the high dimensional features space $\mathbb{X}$, $d: \mathbb{Z} \to \mathbb{X}$. This should optimally reconstruct the given input $\hat{x} = d(z) = d(e(x))$. 
+In the second stage, we map the latent vector $z$ back into the high dimensional features space $\mathbb{X}$, $d: \mathbb{Z} \to \mathbb{X}$. This should optimally reconstruct the given input $\hat{x} = p(z) = q(p(x))$. 
 
 Because Autoenders are designed to learn a compact determine representation in the latent space it follows that similar input values $x$ should correspond to similar latent vectors $z$ and similar latent vectors $z$ correspond to similar outputs $\hat{x}$.
 

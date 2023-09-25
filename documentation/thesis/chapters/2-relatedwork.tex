@@ -31,8 +31,8 @@ In the paper from Arthur Allshire, Roberto Martín-Martín, Charles Lin, Shawn M
 
 Researchers from NVIDIA  Chen Tessler et al. have developed Conditional Adversarial Latent Models (CALM)  in the paper ``CALM: Conditional Adversarial Latent Models for Directable Virtual Characters''\cite{CALM} to enable users to direct the behavior of virtual characters in interactive simulations. CALM combines imitation learning with a control policy and motion encoder to create a representation of human motion that is diverse and controllable. The key phases of CALM include:
 \begin{enumerate}
-    \item low-level training, where it learns a motion encoder and decoder
-    \item directionality control, where a high-level policy guides motion direction and style
-    \item and inference, where trained models are combined to compose complex character movements using a finite-state machine
+    \item low-level training, where it learns a motion encoder and decoder. The encoder converts a motion from a reference motion dataset into a low-dimensional latent representation using a time series of joint locations. A low-level policy called the decoder interacts with the simulator and produces movements that are similar to those in the reference dataset. 
+    \item directionality control, where a high-level policy guides motion direction and style in latent space which are than passed to the low level policy. 
+    \item and inference, where without additional training, complex movements are composed via a finite-state machine by combining the previously trained models (low-level policy and directional controller).
 \end{enumerate}
 This approach allows users to intuitively control virtual characters, making it applicable for interactive applications like video games.

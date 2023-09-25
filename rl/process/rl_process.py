@@ -161,6 +161,7 @@ class RLProcess(LearningProcess):
 
         min_distances = min_distances.reshape((sample_size_sqrt, sample_size_sqrt))
         min_distance_index = min_distance_index.reshape((sample_size_sqrt, sample_size_sqrt))
+        print("min distance mean: ", np.mean(min_distances).item())
 
         plot_pcolormesh(
             angle=th,

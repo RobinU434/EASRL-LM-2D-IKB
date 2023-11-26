@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, abstractclassmethod
+from abc import ABC, abstractmethod
 import logging
 from typing import Any, Callable, Literal
 from torch import Tensor
@@ -22,11 +22,11 @@ class LatentDataset(Dataset, ABC):
 
     @abstractmethod
     def __len__(self):
-        pass
+        raise NotImplementedError
 
-    @abstractclassmethod
-    def from_files(cls, file_path):
-        pass
+    @abstractmethod
+    def from_files(cls, file_path: str):
+        raise NotImplementedError
 
     def mean(self):
         raise NotImplementedError

@@ -1,7 +1,0 @@
-torch
-numpy 
-pandas
-progress
-tensorboard
-gym
-matplotlib

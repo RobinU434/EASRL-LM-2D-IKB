@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "bachelorthesis"
+version = "0.1.0"
+description = ""
+authors = ["Robin Uhrich <robin.uhrich@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+torch = "^2.2.1"
+numpy = "^1.26.4"
+pandas = "^2.2.1"
+progress = "^1.6"
+tensorboard = "^2.16.2"
+gym = "^0.26.2"
+matplotlib = "^3.8.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

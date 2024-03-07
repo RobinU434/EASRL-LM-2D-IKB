@@ -10,7 +10,7 @@ target_entropy: -40.0 # for automated alpha update,
 lr_alpha: 0.001
 n_epochs: 5000
 actor:
-  type: LatentActor  # also possible (SuperActor LatentActor)
+  type: Actor  # also possible (SuperActor LatentActor Actor)
   learning_rate: 0.0005
   learning_mode: 0  # regulates if we fine tune the model on data from rl agent or not
   latent_dim: 4  # only relevant for latent actor

@@ -9,11 +9,11 @@ readme = "README.md"
 requires-python = ">=3.12,<4.0.0"
 dependencies = [
     "torch (>=2.6.0,<3.0.0)",
-    "gymnasium (>=1.1.1,<2.0.0)",
+    "gymnasium[box2d] (>=1.1.1,<2.0.0)",
     "numpy (>=2.2.3,<3.0.0)",
     "contourpy (>=1.3.1,<2.0.0)",
     "stable-baselines3 (>=2.5.0,<3.0.0)",
-    "matplotlib (>=3.10.1,<4.0.0)",
+    "matplotlib (>=3.10.0,<4.0.0)",
     "pyargwriter @ git+ssh://git@github.com/RobinU434/PyArgWriter.git",
     "config2class @ git+ssh://git@github.com/RobinU434/Config2Class.git",
     "tensorboard (>=2.19.0,<3.0.0)"

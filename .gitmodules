@@ -1,4 +1,3 @@
-[submodule "envs/plane_robot_env"]
-	path = envs/plane_robot_env
+[submodule "project/environment/ik_rl"]
+	path = project/environment/ik_rl
 	url = git@github.com:RobinU434/IK-RL.git
-	branch = bachelor_thesis

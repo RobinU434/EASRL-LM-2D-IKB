@@ -1,2 +1,2 @@
 run:
-  dir: results/${hydra.job.name}/${now:%Y-%m-%d-%H-%M-%S}
+  dir: results/${hydra.job.name}/${ n_joints}/${now:%Y-%m-%d-%H-%M-%S}

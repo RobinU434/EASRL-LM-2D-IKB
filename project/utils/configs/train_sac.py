@@ -4,6 +4,21 @@ from config2class.api.base import StructuredConfig
 
 
 @dataclass
+class _Actor_kwargs(StructuredConfig):
+    latent_dim: int
+    latent_arch: list
+    conditional_decoder: bool
+
+
+@dataclass
+class _LatentSACPolicy(StructuredConfig):
+    actor_kwargs: _Actor_kwargs
+
+    def __post_init__(self):
+        self.actor_kwargs = _Actor_kwargs(**self.actor_kwargs)  #pylint: disable=E1134
+
+
+@dataclass
 class _SAC(StructuredConfig):
     learning_rate: float
     buffer_size: int
@@ -22,15 +37,21 @@ class _SAC(StructuredConfig):
     sde_sample_freq: int
     use_sde_at_warmup: bool
     stats_window_size: int
+    policy: str
+    LatentSACPolicy: _LatentSACPolicy
+
+    def __post_init__(self):
+        self.LatentSACPolicy = _LatentSACPolicy(**self.LatentSACPolicy)  #pylint: disable=E1134
 
 
 @dataclass
 class Config(StructuredConfig):
     step_budget: int
+    n_envs: int
     save_interval: int
     n_joints: int
     episode_steps: int
     SAC: _SAC
 
     def __post_init__(self):
-        self.SAC = _SAC(**self.SAC)  # pylint: disable=E1134
+        self.SAC = _SAC(**self.SAC)  #pylint: disable=E1134

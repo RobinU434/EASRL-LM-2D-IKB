@@ -10,9 +10,7 @@ def execute(args: dict) -> bool:
     module = Entrypoint()
     _, command_parser = setup_entrypoint_parser(ArgumentParser())
     match args["command"]:
-
         case "train-sac":
-
             api.hydra_plugin.hydra_wrapper(
                 module.train_sac,
                 args,
@@ -23,15 +21,20 @@ def execute(args: dict) -> bool:
                 config_name="train_sac.yaml",
             )
 
-        case _:
+        case "render-sac":
+            module.render_sac(
+                checkpoint=args["checkpoint"],
+                device=args["device"],
+                stochastic=args["stochastic"],
+            )
 
+        case _:
             return False
 
     return True
 
 
 def create_parser() -> ArgumentParser:
-
     parser = ArgumentParser(description="--no-documentation-exists--")
 
     parser = setup_parser(parser)
@@ -48,5 +51,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-
     main()

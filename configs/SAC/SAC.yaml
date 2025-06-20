@@ -23,3 +23,4 @@ LatentSACPolicy:
     latent_dim: 2
     latent_arch: [256, 256]
     conditional_decoder: false
+    constrain_latent_space: true

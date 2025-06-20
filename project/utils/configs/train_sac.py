@@ -8,6 +8,7 @@ class _Actor_kwargs(StructuredConfig):
     latent_dim: int
     latent_arch: list
     conditional_decoder: bool
+    constrain_latent_space: str
 
 
 @dataclass

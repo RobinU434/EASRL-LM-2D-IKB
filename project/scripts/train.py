@@ -1,6 +1,7 @@
 import hydra
 from omegaconf import DictConfig
 from stable_baselines3.sac import SAC
+import wandb
 from project.environment.ik_rl.ik_rl.environment import InvKinEnvContinuous
 from project.environment.ik_rl.ik_rl.wrapper import NormalizeRewardWrapper
 from project.models.policy import get_policy
@@ -13,11 +14,23 @@ from stable_baselines3.common.callbacks import (
 )
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.monitor import Monitor
+from wandb.integration.sb3 import WandbCallback
 
 
 def train_sac(config: DictConfig, force: bool = False, device: str = "cpu"):
     config: SACConfig = SACConfig.from_dict_config(config)
 
+    wandb_config = config.to_container()
+    wandb_config["env"] = InvKinEnvContinuous.__name__
+    run = wandb.init(
+        project="LatentSAC",
+        config=wandb_config,
+        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+        monitor_gym=True,  # auto-upload the videos of agents playing the game
+        save_code=False,  # optional
+    )
+
+    log_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
     env_fns = [
         lambda: Monitor(
             NormalizeRewardWrapper(
@@ -29,8 +42,6 @@ def train_sac(config: DictConfig, force: bool = False, device: str = "cpu"):
         for _ in range(config.n_envs)
     ]
     env = SubprocVecEnv(env_fns)
-
-    log_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
     policy, policy_kwargs = get_policy(config.SAC)
     sac = SAC(
         policy=policy,
@@ -60,21 +71,27 @@ def train_sac(config: DictConfig, force: bool = False, device: str = "cpu"):
     # setup logger and callbacks
     new_logger = configure(log_dir, ["stdout", "csv", "tensorboard"])
     sac.set_logger(new_logger)
-    eval_call_back = EvalCallback(
-        Monitor(
-            NormalizeRewardWrapper(
-                InvKinEnvContinuous(
-                    n_joints=config.n_joints, n_steps=config.episode_steps, seed=42
-                )
-            )
-        ),
-        verbose=0,
-        n_eval_episodes=10,
-        eval_freq=int(10_000 / config.n_envs),
+    # eval_call_back = EvalCallback(
+    #     Monitor(
+    #         NormalizeRewardWrapper(
+    #             InvKinEnvContinuous(
+    #                 n_joints=config.n_joints, n_steps=config.episode_steps, seed=42
+    #             )
+    #         )
+    #     ),
+    #     verbose=0,
+    #     n_eval_episodes=10,
+    #     eval_freq=int(10_000 / config.n_envs),
+    # )
+    wandb_callback = WandbCallback(
+        gradient_save_freq=0,
+        model_save_path=log_dir,
+        verbose=2,
+        log="all",
     )
     checkpoint_callback = CheckpointCallback(config.save_interval, log_dir, "sac_model")
-    callbacks = CallbackList([eval_call_back, checkpoint_callback])
-    
+    callbacks = CallbackList([wandb_callback, checkpoint_callback])
+
     print("======== ACTOR =========")
     print(sac.policy)
     if not force:
@@ -84,8 +101,4 @@ def train_sac(config: DictConfig, force: bool = False, device: str = "cpu"):
             return
 
     sac.learn(config.step_budget, callback=callbacks)
-
-
-
-def train_vae(config: DictConfig, force: bool = False, device: str = "cpu"):
-    pass
+    run.finish()

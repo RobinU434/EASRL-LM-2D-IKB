@@ -20,6 +20,7 @@ class LatentActor(Actor):
         latent_dim: int,
         latent_arch: List[int] = [256, 256],
         conditional_decoder: bool = False,
+        constrain_latent_space: bool = False,
         activation_fn=nn.ReLU,
         use_sde=False,
         log_std_init=-3,
@@ -56,7 +57,7 @@ class LatentActor(Actor):
         )
 
         self.conditional_decoder = conditional_decoder
-
+        self.constrain_latent_space = constrain_latent_space
         input_dim = latent_dim
         if self.conditional_decoder:
             input_dim += self.features_dim
@@ -69,22 +70,19 @@ class LatentActor(Actor):
                 activation_fn=activation_fn,
             )
         )
-        # self.decoder = nn.Sequential(
-        #     nn.Linear(latent_dim, hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(hidden_dim, hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(hidden_dim, get_action_dim(action_space)),
-        # )
         
+    def get_action_dist_params(self, obs):
+        mean_actions, log_std, kwargs = super().get_action_dist_params(obs)
+        if self.constrain_latent_space:
+            # squeeze mean into a constrained space [-1, 1]
+            mean_actions = torch.tanh(mean_actions)
+        return mean_actions, log_std, kwargs
+    
     def get_latent_action(self, observation: torch.Tensor, deterministic: bool = False
     ) -> torch.Tensor:
         return super().forward(observation, deterministic)
 
     def get_decoded_action(self, z: torch.Tensor, observation: torch.Tensor) -> torch.Tensor:
-        # box in latent space -> output space is also boxed
-        # z = torch.tanh(z)
-        
         # Apply additional network to the sampled action
         if self.conditional_decoder:
             z = torch.cat([z, observation], dim=-1)

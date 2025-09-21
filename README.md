@@ -1,6 +1,6 @@
-# Project: Latent & Flow Actor Extensions for SAC
+# SPARK ✨ — Stochastic Policies Augmented for Robust Knowledge/Exploration
 
-This subpackage implements two actor variants that extend the standard Gaussian actor used in Soft Actor-Critic (SAC) style agents. The goal of both designs is to transform and enrich the action-noise distribution in a non-linear, learned fashion to improve stability and exploration.
+This project implements two actor variants that extend the standard Gaussian actor used in Soft Actor-Critic (SAC) style agents. The goal of both designs is to transform and enrich the action-noise distribution in a non-linear, learned fashion to improve stability and exploration.
 
 High-level motivation
 ---------------------
@@ -124,3 +124,17 @@ Development tips
 License & contact
 -----------------
 This project uses the [MIT license](LICENSE). For questions, open an issue or contact the maintainer.
+
+Cite
+-----------------
+If you use this code in your research, please cite the repository: 
+```bibtex
+@misc{uhrich2025spark,
+  title={SPARK: Stochastic Policies Augmented for Robust Knowledge/Exploration},
+  author={Robin Uhrich},
+  year={2025},
+  publisher={GitHub},
+  journal={GitHub repository},
+  url={https://github.com/RobinU434/SPARK},
+}
+```

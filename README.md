@@ -1,52 +1,126 @@
+# Project: Latent & Flow Actor Extensions for SAC
 
-# EASRL-LM:2D-IKB - Expanding Action Space in Reinforcement Learning through Latent Models: A 2D Inverse Kinematics Benchmark
+This subpackage implements two actor variants that extend the standard Gaussian actor used in Soft Actor-Critic (SAC) style agents. The goal of both designs is to transform and enrich the action-noise distribution in a non-linear, learned fashion to improve stability and exploration.
 
-## Description:
+High-level motivation
+---------------------
+- Standard stochastic policies in actor-critic methods sample actions from simple parametric distributions (e.g. diagonal Gaussian). While effective, these distributions can limit the kinds of exploration the agent can perform.
+- By learning a richer, invertible or decodable transformation of the base noise distribution, we get more expressive action distributions while retaining tractable density evaluation via change-of-variables (important for off-policy algorithms that need log probabilities).
+- This repository contains two approaches: a LatentActor (decoded latent action) and a FlowActor (normalizing-flow based transformation).
 
-This repository contains the code and data for my Bachelor's thesis, titled "Expanding Action Space in Reinforcement Learning through Latent Models: A 2D Inverse Kinematics Benchmark". In this work, I investigated methods to expand the possible action space dimension in reinforcement learning using dimensionality reduction techniques with normal feed-forward networks, VAEs (Variational Autoencoders), and CVAEs (Conditional VAEs).
+Implemented actors
+------------------
+- `LatentActor` (in `project/models/actor.py`)
+  - Samples a latent action from the base diagonal Gaussian produced by the underlying `Actor`.
+  - Optionally decodes the latent action through a small MLP decoder (conditional on features if `conditional_decoder=True`) to produce the final environment action.
+  - Useful when you want a low-dimensional latent policy but richer decoding to the action space, or when you want to constrain the latent space (e.g., with `tanh` to keep values within [-1,1]).
+  - Provides `get_latent_action`, `get_decoded_action`, and `action_log_prob` that return both a decoded action and the latent log-probability.
 
-The experiments were conducted on a 2D inverse kinematics environment to allow for easy scaling of the action space without significantly altering the task itself. Different task variations were explored, including reaching a specific goal, imitating a known solver's behavior, and hybrid combinations of these tasks.
+- `FlowActor` (in `project/models/actor.py`)
+  - Samples a latent action from the base diagonal Gaussian.
+  - Transforms that latent sample through a conditional or unconditional normalizing flow (RealNVP implementation provided in `project/models/flow.py`) to obtain a flexible final action distribution.
+  - When using flows, the log-probability of the final action is obtained via change-of-variables: log p(x) = log p(z) - log|det df/dz| (or equivalently with the inverse Jacobian sign convention used by the flow implementation).
+  - Provides `get_flow_action` and a custom `action_log_prob` that adjusts the latent log-prob with the flow log-determinant.
 
-## Authors:
+Why these designs?
+-------------------
+- Latent decoding keeps the policy in a compact latent space while allowing a non-linear mapping to the action — this can regularize learning and reduce variance of the policy network outputs.
+- Normalizing flows give an exact (tractable) density under flexible transformations. They can represent multimodal and skewed distributions that diagonal Gaussians cannot.
+- Both methods try to improve exploration by changing how stochasticity is injected into actions, and they can improve numerical stability when the decoder/flow is trained alongside the actor.
 
-- Robin Uhrich
-- Supervisor: Jasper Hoffmann
+Quick usage notes
+-----------------
+- The actors extend the base `stable_baselines3` `Actor` class. They can be plugged into existing SAC training loops by replacing the policy actor with `LatentActor` or `FlowActor` variants where the rest of the agent expects the same interface.
+- Key constructor args in `LatentActor` / `FlowActor`:
+  - `latent_dim`: dimensionality of the latent action space (smaller => stronger bottleneck).
+  - `latent_arch` / `flow_arch`: MLP sizes for decoder or flow hidden layers.
+  - `conditional_decoder` / `conditional_flow`: whether to condition the decoder/flow on observation features.
+  - `constrain_latent_space`: if True, applies `tanh` to mean actions to keep them in [-1, 1].
 
-## License:
-MIT License
+Log probability & flows
+-----------------------
+- Careful: the sign used when applying the flow log-determinant depends on the convention used in the `flow` implementation:
+  - If your flow returns `logdet = log|det dx/dz|` (forward Jacobian), then use `log p(x) = log p(z) - logdet`.
+  - If it returns `logdet = log|det dz/dx|` (inverse Jacobian), add the logdet instead.
+- See the `FlowActor.action_log_prob` implementation for how the repository currently applies this term. If you want me to check `project/models/flow.py` and confirm the flow convention, I can do that and update the comment in code.
 
-## Installation:
+Where to look in the code
+-------------------------
+- `project/models/actor.py` : `LatentActor`, `FlowActor` implementations.
+- `project/models/flow.py` : Flow layers and RealNVP / ConditionalRealNVP implementations.
+- `project/models/policy.py` : Higher-level policy wiring that consumes actor outputs.
+- `scripts/train.py` : Example training entrypoint (if present) showing how the model is instantiated for experiments.
 
-This project uses Poetry for dependency management. To install the required dependencies, run the following command in the project directory:
+Experiments and results
+-----------------------
+- No experimental results are included yet. Recommended first experiments:
+  1. Compare SAC baseline (diagonal Gaussian actor) vs LatentActor vs FlowActor on a simple continuous control task (e.g., Pendulum / LunarLander).
+  2. Ablate latent dimensionality and conditional vs unconditional decoders/flows.
+  3. Track training stability (variance over seeds) and sample efficiency (reward vs wall-clock).
 
-```Bash
+Next steps / TODO
+-----------------
+- Add clear unit-tests for the flow log-determinant sign and the `action_log_prob` correctness. A small density check (sample z -> x and compare log-prob via change-of-variables) is a cheap sanity test.
+- Add CLI example or tutorial notebook showing how to instantiate and train with each actor.
+- Run experiments and populate a `results/` subfolder with plots and metrics.
+
+Inverse Kinematics environment (IK-RL)
+--------------------------------------
+This project uses a dedicated environment implementation for the 2D inverse kinematics benchmark. The environment is provided as the `ik_rl` subpackage inside `project/environment/ik_rl` and has its own packaging and documentation in that folder.
+
+Install the environment
+
+There are two ways to make the IK environment available to experiments:
+
+1) Install the local package (recommended for development):
+
+  - From the repository root run (uses Poetry-managed Python environment):
+
+```bash
 poetry install --no-root
+poetry run pip install -e project/environment/ik_rl
 ```
 
-## Usage:
+  This installs the `ik_rl` package in editable mode so you can modify the environment code and test changes immediately.
 
-The project utilizes the rl package for running experiments. You can access the help message for available commands and options by running:
+2) Use PYTHONPATH during development (quick, no install):
 
-```Bash
-python -m rl --help  # for reinforcement learning
-python -m latent --help  # for latent model learning
+```bash
+export PYTHONPATH="$PYTHONPATH:$(pwd)/project/environment/ik_rl"
+python -m project ...
 ```
 
-Further instructions and guidance can be found within the help messages provided by the `rl` and `latent` package.
+Usage via the project entrypoint
+--------------------------------
+The `project` package provides a small CLI wrapper that delegates to the `Entrypoint` class in `project/entrypoint.py`. Two main commands are provided:
 
-The environment is a dedicated submodule and can be found [here](https://github.com/RobinU434/IK-RL). Please Note that the main branch of this module has diverged from the source code needed for this environment. But there is a dedicated branch called `bachelor_thesis` in [`IK-RL`](https://github.com/RobinU434/IK-RL) containing the code compatible with this repo.
+- `train-sac` — start a SAC training run using the configured actor/policy.
+- `render-sac` — render a trained checkpoint.
 
-## Configuration:
+Examples (from repository root):
 
-Experiment hyperparameters are primarily defined within the configuration files located in the project directory. These files provide a centralized location for managing and modifying experiment settings.
+```bash
+# Train (uses Hydra config at configs/train_sac.yaml)
+python -m project train-sac --help
+python -m project train-sac
 
-## Data:
+# Render a checkpoint
+python -m project render-sac --checkpoint path/to/checkpoint --device cpu
+```
 
-While data is typically generated directly from the environment during training, the script create_complete_dataset.sh allows you to generate a custom dataset for supervised and semi-supervised learning approaches.
+Internals: the CLI uses `pyargwriter`'s hydra wrapper to pass the Hydra-config to `Entrypoint.train_sac`. The `Entrypoint` class in `project/entrypoint.py` calls `project.scripts.train.train_sac(config, force, device)` under the hood.
 
-## Documentation
+Notes and troubleshooting
+-------------------------
+- Make sure the `ik_rl` environment is importable (either installed or PYTHONPATH set). Missing environment imports will raise at runtime when constructing envs in `scripts/train.py`.
+- Use the `--help` flags to reveal available config overrides supported by `pyargwriter` and the entrypoint.
+- The project relies on Poetry and specific pinned dependencies (see `pyproject.toml`). If you prefer pip/venv, install the packages listed under `[project].dependencies` in `pyproject.toml` into your virtualenv.
 
-If you are interested in the final thesis you can find it [here](./documentation/thesis/thesis_main.pdf). Please not that the access to the original data can't be guaranteed in the future due to its size.   
-Code documentation  can be easily created with [`PyDoxyUML`](https://github.com/RobinU434/PyDoxyUML). 
+Development tips
+----------------
+- To iterate quickly on environments, use the editable install (`pip install -e project/environment/ik_rl`) and run the entrypoint from the repo root.
+- Unit tests for the environment are available in `project/environment/ik_rl/tests/` and can be run with `pytest` once dependencies are installed.
 
-I hope this README provides a clear and comprehensive overview of the project. Feel free to explore the code and experiment with different configurations!
+License & contact
+-----------------
+This project uses the [MIT license](LICENSE). For questions, open an issue or contact the maintainer.

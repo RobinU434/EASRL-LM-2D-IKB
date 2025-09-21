@@ -1,9 +1,15 @@
+from typing import Callable, List, Tuple
+import gymnasium
 import hydra
 from omegaconf import DictConfig
 from stable_baselines3.sac import SAC
 import wandb
 from project.environment.ik_rl.ik_rl.environment import InvKinEnvContinuous
-from project.environment.ik_rl.ik_rl.wrapper import NormalizeRewardWrapper
+from project.environment.ik_rl.ik_rl.wrapper import (
+    NormalizeRewardWrapper,
+    ActionScaleWrapper,
+)
+from config2class.api.base import StructuredConfig
 from project.models.policy import get_policy
 from project.utils.configs.train_sac import Config as SACConfig
 from stable_baselines3.common.logger import configure
@@ -17,11 +23,26 @@ from stable_baselines3.common.monitor import Monitor
 from wandb.integration.sb3 import WandbCallback
 
 
-def train_sac(config: DictConfig, force: bool = False, device: str = "cpu"):
-    config: SACConfig = SACConfig.from_dict_config(config)
+def setup_env(config: SACConfig) -> Tuple[SubprocVecEnv, str]:
+    _, name = hydra.utils.instantiate(config.env)
+    env_fns = [
+        lambda: Monitor(hydra.utils.instantiate(config.env)[0])
+        for _ in range(config.n_envs)
+    ]
+    env = SubprocVecEnv(env_fns)
+    return env, name
 
-    wandb_config = config.to_container()
-    wandb_config["env"] = InvKinEnvContinuous.__name__
+
+def train_sac(config: DictConfig, force: bool = False, device: str = "cpu"):
+    # config: SACConfig = SACConfig.from_dict_config(config)
+    env, env_name = setup_env(config)
+
+    wandb_config = (
+        config.to_container()
+        if isinstance(config, StructuredConfig)
+        else config.__dict__
+    )
+    wandb_config["env"] = env_name
     run = wandb.init(
         project="LatentSAC",
         config=wandb_config,
@@ -31,17 +52,6 @@ def train_sac(config: DictConfig, force: bool = False, device: str = "cpu"):
     )
 
     log_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
-    env_fns = [
-        lambda: Monitor(
-            NormalizeRewardWrapper(
-                InvKinEnvContinuous(
-                    n_joints=config.n_joints, n_steps=config.episode_steps
-                )
-            )
-        )
-        for _ in range(config.n_envs)
-    ]
-    env = SubprocVecEnv(env_fns)
     policy, policy_kwargs = get_policy(config.SAC)
     sac = SAC(
         policy=policy,
@@ -67,7 +77,7 @@ def train_sac(config: DictConfig, force: bool = False, device: str = "cpu"):
         policy_kwargs=policy_kwargs,
         verbose=0,
     )
-
+    
     # setup logger and callbacks
     new_logger = configure(log_dir, ["stdout", "csv", "tensorboard"])
     sac.set_logger(new_logger)

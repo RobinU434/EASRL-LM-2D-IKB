@@ -16,7 +16,10 @@ dependencies = [
     "matplotlib (>=3.10.0,<4.0.0)",
     "pyargwriter @ git+ssh://git@github.com/RobinU434/PyArgWriter.git",
     "config2class @ git+ssh://git@github.com/RobinU434/Config2Class.git",
-    "tensorboard (>=2.19.0,<3.0.0)"
+    "tensorboard (>=2.19.0,<3.0.0)",
+    "wandb (>=0.20.1,<0.21.0)",
+    "seaborn (>=0.13.2,<0.14.0)",
+    "scipy (>=1.16.2,<2.0.0)"
 ]
 
 

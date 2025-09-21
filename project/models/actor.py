@@ -178,28 +178,24 @@ class FlowActor(Actor):
         self.conditional_flow = conditional_flow
         self.constrain_latent_space = constrain_latent_space
         input_dim = latent_dim
+
         if self.conditional_flow:
             input_dim += self.features_dim
-            self.flow_model = nn.Sequential(
-                nn.Linear(latent_dim, get_action_dim(action_space)),
-                ConditionalRealNVP(
-                    dim=get_action_dim(action_space),
-                    cond_dim=features_dim,
-                    n_couplings=len(flow_arch),
-                    hidden_dim=flow_arch[0],
-                    device=self.device,
-                ),
+            self.flow_model = ConditionalRealNVP(
+                dim=get_action_dim(action_space),
+                cond_dim=features_dim,
+                n_couplings=len(flow_arch),
+                hidden_dim=flow_arch[0],
+                device=self.device,
             )
         else:
-            self.flow_model = nn.Sequential(
-                nn.Linear(latent_dim, get_action_dim(action_space)),
-                RealNVP(
-                    dim=get_action_dim(action_space),
-                    n_couplings=len(flow_arch),
-                    hidden_dim=flow_arch[0],
-                    device=self.device,
-                ),
+            self.flow_model = RealNVP(
+                dim=get_action_dim(action_space),
+                n_couplings=len(flow_arch),
+                hidden_dim=flow_arch[0],
+                device=self.device,
             )
+        self.linear_map = nn.Linear(latent_dim, get_action_dim(action_space))
 
     def get_action_dist_params(self, obs):
         mean_actions, log_std, kwargs = super().get_action_dist_params(obs)
@@ -207,24 +203,26 @@ class FlowActor(Actor):
             # squeeze mean into a constrained space [-1, 1]
             mean_actions = torch.tanh(mean_actions)
         return mean_actions, log_std, kwargs
-    
+
     def get_latent_action(
         self, observation: torch.Tensor, deterministic: bool = False
     ) -> torch.Tensor:
         return super().forward(observation, deterministic)
 
-
-    def get_flow_action(self, z: torch.Tensor, obs: torch.Tensor) -> torch.Tensor:
+    def get_flow_action(self, z: torch.Tensor, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        z = self.linear_map.forward(z)
         if self.conditional_flow:
-            z = torch.cat([z, obs], dim=-1)
-        action, log_det = self.flow_model.forward(z)
-        return torch.tanh(action), log_det
+            action, log_det = self.flow_model.forward(z, obs)
+        else:
+            action, log_det = self.flow_model.forward(z)
+        action = torch.tanh(action)
+        return action, log_det
 
     def forward(self, obs, deterministic=False):
         z = self.get_latent_action(obs, deterministic)
-        action = self.get_flow_action(z, obs)
+        action, _ = self.get_flow_action(z, obs)
         return action
-    
+
     def action_log_prob(self, obs: PyTorchObs) -> Tuple[torch.Tensor, torch.Tensor]:
         latent_action, log_prob = super().action_log_prob(obs)
         action, logdet = self.get_flow_action(latent_action, obs)

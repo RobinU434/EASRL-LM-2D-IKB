@@ -1,0 +1,8 @@
+defaults:
+  - _self_
+  - hydra: hydra
+  - VAE: VAE 
+
+n_joints: 10
+conditional: True
+epochs: 100

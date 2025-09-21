@@ -1,0 +1,7 @@
+_target_: project.models.actor.FlowActor
+
+actor_kwargs:
+  latent_dim: 2
+  flow_arch: [256, 256]
+  conditional_flow: true
+  constrain_latent_space: true

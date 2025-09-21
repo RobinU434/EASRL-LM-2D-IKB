@@ -1,11 +1,11 @@
 defaults:
   - _self_
   - hydra: hydra
-  - SAC: SAC 
+  - SAC: SAC
+  - env: InvKinEnvContinuous  # LunarLander 
+
+n_envs: 12
 
 step_budget: 500_000
-n_envs: 12
+action_spaces_scale: 0.3
 save_interval: 10_000
-
-n_joints: 10 
-episode_steps: 200
